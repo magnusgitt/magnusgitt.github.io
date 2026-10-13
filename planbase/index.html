@@ -107,6 +107,12 @@ button{cursor:pointer}
 .dc.today .dnum{background:var(--primary);color:var(--on-primary)}
 .dh{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-top:5px;min-width:0}
 .dc.red .dh{color:var(--red);font-weight:650}
+.dc.red{background:color-mix(in srgb,var(--red) 10%,var(--card))}
+.dc.red.out{background:color-mix(in srgb,var(--red) 6%,var(--out))}
+.dh.mk{font-style:italic;color:var(--muted);font-weight:500}
+.dh.mk::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--muted);margin-right:4px;vertical-align:1px;opacity:.7}
+.fri{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--red);border:1px solid color-mix(in srgb,var(--red) 50%,transparent);border-radius:4px;padding:0 4px;line-height:15px;flex:none;margin-top:4px}
+@media (max-width:760px){.fri{display:none}.dc.mkd .dnum{text-decoration:underline dotted;text-underline-offset:3px}}
 .ev{position:relative;z-index:1;margin:1px 3px;height:22px;border-radius:6px;font-size:12px;font-weight:650;display:flex;align-items:center;gap:5px;padding:0 7px;
   white-space:nowrap;overflow:hidden;min-width:0;text-align:left;cursor:pointer;
   border:1.5px solid var(--c);background:color-mix(in srgb,var(--c) 16%,var(--card));color:var(--ink)}
@@ -150,6 +156,9 @@ button{cursor:pointer}
 .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;padding-left:3px}
 .txt .h{color:var(--muted)}
 .day.red .txt .h{color:var(--red);font-weight:600}
+.day.red{background:color-mix(in srgb,var(--red) 10%,var(--card))}
+.day.red .wk{background:transparent}
+.txt .h.mk{font-style:italic}
 .txt b{font-weight:700;cursor:pointer}
 .lanes{position:relative;height:100%}
 .st{position:absolute;top:-1px;bottom:-1px;width:7px;background:var(--c)}
@@ -423,7 +432,8 @@ textarea.inp{height:120px;padding:8px 10px;font-family:ui-monospace,Menlo,Consol
     </div>
     <div class="card">
       <h3>Kalender</h3>
-      <label class="chk"><input type="checkbox" id="sMerk"> Vis merkedager (morsdag, sommertid, julaften …)</label>
+      <label class="chk"><input type="checkbox" id="sMerk"> Vis merkedager (morsdag, sommertid, julaften …). De er vanlige arbeidsdager.</label>
+      <label class="chk"><input type="checkbox" id="sFri"> Regn julaften, nyttårsaften og påskeaften som fridager</label>
       <div class="field"><span>Startvisning</span>
         <div><div class="seg" role="group" id="sDefault"><button data-m="month">Måned</button><button data-m="year">År</button></div></div></div>
       <p>Helligdager og ukenummer følger norsk kalender og regnes ut for alle år.</p>
@@ -488,6 +498,7 @@ function yearInfo(y){
   [[D(2,6),'Samefolkets dag'],[nthSun(y,1,2),'Morsdag'],[D(2,14),'Valentinsdag'],[addDays(E,-49),'Fastelavn'],[addDays(E,-7),'Palmesøndag'],
    [lastSun(y,2),'Sommertid'],[D(5,8),'Frigjøringsdagen'],[D(6,7),'Unionsoppløsningen'],[D(6,23),'Sankthansaften'],[D(7,29),'Olsok'],
    [D(10,24),'FN-dagen'],[lastSun(y,9),'Vintertid'],[nthSun(y,10,2),'Farsdag'],[D(12,24),'Julaften'],[D(12,31),'Nyttårsaften']].forEach(([d,n])=>add(d,n,false));
+  if(window.__pbExtraFri){[D(12,24),D(12,31)].forEach(d=>{const k=iso(d);if(map[k])map[k].red=true;});add(addDays(E,-1),'Påskeaften',true);}
   return infoCache[y]=map;
 }
 const isRed=d=>{const i=yearInfo(d.getFullYear())[iso(d)];return !!(i&&i.red)};
@@ -516,7 +527,7 @@ function normalize(s){
   s.title=typeof s.title==='string'?s.title:'';
   s.colorNames=Array.isArray(s.colorNames)?s.colorNames.slice(0,NCOL).map(x=>String(x||'')):[];
   while(s.colorNames.length<NCOL)s.colorNames.push('');
-  s.showMerk=s.showMerk!==false;s.calDefault=s.calDefault==='year'?'year':'month';
+  s.showMerk=s.showMerk!==false;s.extraFri=!!s.extraFri;s.calDefault=s.calDefault==='year'?'year':'month';
   s.n=s.n||s.acts.length;
   return s;
 }
@@ -544,8 +555,8 @@ let S=loadS()||normalize({acts:[],arrows:[]});
 /* rester etter eksempelprosjektet: fjern eksempeltittel og eksempelfarger når planen er tom */
 const SEED_COLS=['Rigg og grunnarbeid','Betong og råbygg','Tømrer','Tekniske fag','Innredning','Byggherre / møter'];
 function dropSeedLeftovers(){if(S.acts.length)return;if(/^Eksempel:/.test(S.title))S.title='';if(S.colorNames.join('|')===SEED_COLS.join('|'))S.colorNames=S.colorNames.map(()=>'');}
-dropSeedLeftovers();save();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+dropSeedLeftovers();save();window.__pbExtraFri=S.extraFri;
+function save(){if(window.__pbExtraFri!==!!S.extraFri){window.__pbExtraFri=!!S.extraFri;for(const k in infoCache)delete infoCache[k];}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const byId=id=>S.acts.find(a=>a.id===id);
 function cycleStatus(a){if(a)a.status=ST[(ST.indexOf(a.status)+1)%3]}
 
@@ -599,7 +610,7 @@ function setHint(){
 function renderLegend(){
   const named=S.colorNames.map((n,i)=>n?`<span class="lg"><span class="sq" style="--k:var(--m${i})"></span>${esc(n)}</span>`:'').join('');
   $('cLegend').innerHTML=ST.map(s=>`<span class="lg"><span class="ic">${stIcon(s)}</span>${STL[s]}</span>`).join('')
-    +'<span class="lg"><span class="sq" style="--k:var(--red)"></span>Helligdag</span><span class="lg" style="color:var(--accent);font-weight:700">U = ukenummer</span>'
+    +'<span class="lg"><span class="sq" style="--k:color-mix(in srgb,var(--red) 35%,var(--card));box-shadow:inset 0 0 0 1px var(--red)"></span>Fridag (helligdag)</span>'+(S.showMerk?'<span class="lg" style="font-style:italic"><span class="sq" style="--k:var(--muted);border-radius:50%;width:6px;height:6px"></span>Merkedag (vanlig arbeidsdag)</span>':'')+'<span class="lg"><span class="sq" style="--k:var(--weekend);box-shadow:inset 0 0 0 1px var(--line)"></span>Helg</span><span class="lg" style="color:var(--accent);font-weight:700">U = ukenummer</span>'
     +(named?'<span style="flex-basis:100%;height:0"></span>'+named:'');
 }
 function laneLayout(acts,from,to){
@@ -616,8 +627,8 @@ function renderMonth(){
     h+=`<div class="wkrow" style="grid-template-rows:30px repeat(${n},24px) minmax(10px,1fr)"><div class="wkc" title="Uke ${isoWeek(ws)}">${isoWeek(ws)}</div>`;
     for(let i=0;i<7;i++){
       const d=addDays(ws,i),k=iso(d),wd=d.getDay(),lab=dayLabel(k),cls=['dc'];
-      if(d.getMonth()!==cm)cls.push('out');if(wd===0||wd===6)cls.push('we');if(wd===0)cls.push('sun');if(lab&&lab.red)cls.push('red');if(k===TODAY)cls.push('today');if(k===pending)cls.push('pend');
-      h+=`<div class="${cls.join(' ')}" data-d="${k}" style="grid-column:${i+2}" title="${esc(fmt(k)+(lab?' – '+lab.name:''))}"><span class="dnum">${d.getDate()}</span>${lab?`<span class="dh">${esc(lab.name)}</span>`:''}</div>`;
+      if(d.getMonth()!==cm)cls.push('out');if(wd===0||wd===6)cls.push('we');if(wd===0)cls.push('sun');if(lab&&lab.red)cls.push('red');if(lab&&!lab.red)cls.push('mkd');if(k===TODAY)cls.push('today');if(k===pending)cls.push('pend');
+      h+=`<div class="${cls.join(' ')}" data-d="${k}" style="grid-column:${i+2}" title="${esc(fmt(k)+(lab?' – '+lab.name:''))}"><span class="dnum">${d.getDate()}</span>${lab?`<span class="dh${lab.red?'':' mk'}">${esc(lab.name)}</span>`:''}${lab&&lab.red?'<span class="fri">Fri</span>':''}</div>`;
     }
     list.forEach(a=>{
       const s=a.start<wsI?wsI:a.start,e=a.end>weI?weI:a.end,c1=dayDiff(wsI,s)+2,c2=dayDiff(wsI,e)+3;
@@ -677,7 +688,7 @@ function renderYear(){
       const cls=['day'];if(wd===1)cls.push('mon');if(wd===0||wd===6)cls.push('we');if(wd===0)cls.push('sun');if(i&&i.red)cls.push('red');if(k===TODAY)cls.push('today');if(pending===k)cls.push('pend');
       let txt='';
       ps.forEach(p=>{if(p.start===k||(day===1&&m===0&&p.start<k))txt+=`<b data-a="${p.id}" style="color:var(--m${p.c})">${p.type==='milepael'?'◆ ':''}${esc(p.name)}</b> `});
-      if(i)txt+=`<span class="h">${esc(i.name)}</span>`;
+      if(i)txt+=`<span class="h${i.red?'':' mk'}">${i.red?'Fri · ':''}${esc(i.name)}</span>`;
       const st=ps.map(p=>`<i class="st ${p.status}${p.start===k?' s':''}${p.end===k?' e':''}" style="left:${2+lane[p.id]*10}px;--c:var(--m${p.c})"></i>`).join('');
       h+=`<div class="${cls.join(' ')}" data-d="${k}" title="${esc(fmt(k)+' · uke '+isoWeek(d)+(i?' · '+i.name:''))}"><span class="wk">${(wd===1||day===1)?isoWeek(d):''}</span><span class="dn">${day}</span><span class="wd">${WD[wd]}</span><span class="txt">${txt}</span><span class="lanes">${st}</span></div>`;
     }
@@ -911,12 +922,13 @@ function renderSettings(){
   if(document.activeElement!==$('sTitle'))$('sTitle').value=S.title;
   if(!$('sColors').contains(document.activeElement))
     $('sColors').innerHTML=S.colorNames.map((n,i)=>`<div class="crow" style="--c:var(--m${i})"><span class="dot"></span><input class="inp" data-cn="${i}" value="${esc(n)}" placeholder="Farge ${i+1} (uten navn)" aria-label="Navn på farge ${i+1}"></div>`).join('');
-  $('sMerk').checked=S.showMerk;
+  $('sMerk').checked=S.showMerk;$('sFri').checked=S.extraFri;
   $$('#sDefault button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===S.calDefault));
 }
 $('sTitle').oninput=()=>{S.title=$('sTitle').value;save();$('ptop').textContent=S.title};
 $('sColors').addEventListener('input',e=>{const i=e.target.dataset.cn;if(i==null)return;S.colorNames[+i]=e.target.value;save()});
 $('sMerk').onchange=()=>{S.showMerk=$('sMerk').checked;save()};
+$('sFri').onchange=()=>{S.extraFri=$('sFri').checked;window.__pbExtraFri=S.extraFri;for(const k in infoCache)delete infoCache[k];save()};
 $('sDefault').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;S.calDefault=b.dataset.m;calMode=S.calDefault;save();saveUI();renderSettings()};
 $('xImg').onclick=()=>{if(!S.acts.length){$('xCopyRow').hidden=false;flash('xMsg','Ingen aktiviteter å vise.');return}
   gImage([...S.acts].sort((x,y)=>x.start<y.start?-1:x.start>y.start?1:(x.end<y.end?-1:1)))};
