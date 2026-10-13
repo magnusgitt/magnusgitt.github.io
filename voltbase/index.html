@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Voltbase</title>
+<meta name="description" content="Voltbase for Android: last ned og installer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: én smal kolonne med nedlastingsknapp øverst og installasjonssteg under. */
+:root{
+  --bg:#e9edef; --surface:#fbfcfc; --ink:#132026; --muted:#566870; --line:#d2dadd;
+  --accent:#0d6577; --accent-ink:#ffffff; --accent-soft:#dbecef; --warn:#986000;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1416; --surface:#162024; --ink:#e1e9eb; --muted:#8e9fa5; --line:#2a373b;
+  --accent:#5bbccf; --accent-ink:#05181c; --accent-soft:#16343a; --warn:#e5a54b; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1416; --surface:#162024; --ink:#e1e9eb; --muted:#8e9fa5; --line:#2a373b;
+  --accent:#5bbccf; --accent-ink:#05181c; --accent-soft:#16343a; --warn:#e5a54b; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:640px;margin:0 auto}
+nav{padding-block:22px 6px}
+nav a{color:var(--accent);text-decoration:none;font-size:14px}
+.hero{display:flex;gap:16px;align-items:center;margin:22px 0 18px}
+.ic{width:56px;height:56px;border-radius:14px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.ic svg{width:30px;height:30px}
+h1{margin:0;font-size:30px;line-height:1.1;letter-spacing:-.01em}
+.sub{margin:4px 0 0;color:var(--muted)}
+.dl{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:600;border-radius:9px;padding:13px 20px;font-size:16px;min-height:50px}
+.btn svg{width:20px;height:20px}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center}
+.note{font-size:13.5px;color:var(--muted);margin:0}
+h2{font-size:17px;margin:28px 0 10px}
+ol{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:12px}
+ol li{counter-increment:s;display:grid;grid-template-columns:30px minmax(0,1fr);gap:2px 12px}
+ol li::before{content:counter(s);grid-row:span 2;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:13px;font-weight:700}
+ol b{font-weight:600}
+ol span{color:var(--muted);font-size:14px}
+.warn{border-left:3px solid var(--warn);background:var(--surface);padding:10px 14px;border-radius:0 8px 8px 0;font-size:14px;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav><a href="../">← Base-verktøy</a></nav>
+  <div class="hero">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>
+    <div><h1>Voltbase</h1><p class="sub">Appen for elektrikere, for Android.</p></div>
+  </div>
+  <div class="dl">
+    <a class="btn" href="https://github.com/magnusgitt/magnusgitt.github.io/releases/latest/download/voltbase.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Last ned for Android</a>
+    <span class="meta">voltbase.apk · ca. 112 MB</span>
+    <p class="note">Last ned på mobilen der appen skal brukes, helst på wifi. Appen finnes ikke for iPhone.</p>
+  </div>
+  <h2>Slik installerer du</h2>
+  <ol>
+    <li><b>Last ned filen</b><span>Trykk «Last ned for Android». Godta hvis mobilen spør om du vil beholde filen.</span></li>
+    <li><b>Åpne filen</b><span>Trykk på varselet når nedlastingen er ferdig, eller åpne den fra «Filer» → «Nedlastinger».</span></li>
+    <li><b>Tillat installasjon</b><span>Første gang sier Android at nettleseren ikke har lov til å installere apper. Trykk «Innstillinger», slå på «Tillat fra denne kilden», og gå tilbake.</span></li>
+    <li><b>Installer</b><span>Trykk «Installer». Voltbase legger seg blant appene dine som en vanlig app.</span></li>
+  </ol>
+  <p class="warn">Appen er ikke fra Google Play, så Android og Play Protect kan advare om en ukjent app. Det er vanlig for apper som deles direkte. Installer bare filer fra denne siden.</p>
+  <h2>Ny versjon</h2>
+  <p class="note">Når det kommer en ny versjon, laster du den ned herfra på samme måte og installerer over den gamle. Dataene i appen blir vanligvis beholdt.</p>
+</div>
+</body>
+</html>
