@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#081128">
+<title>Gnist – Voltbase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --tekst:#eef5ff; --dempet:#a9bbd6; --glod:#8fe3ff; --varm:#ffc56b; --panel:rgba(9,17,36,.84); --kant:rgba(143,227,255,.3); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:#050a16; color:var(--tekst); overflow:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-user-select:none; user-select:none;
+    touch-action:none; overscroll-behavior:none; }
+  canvas#c { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  .serif { font-family:"Cormorant Garamond", Georgia, serif; }
+
+  #hud { position:fixed; left:0; right:0; top:0; display:flex; align-items:center; gap:14px;
+    padding:calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 10px calc(14px + env(safe-area-inset-left));
+    pointer-events:none; opacity:0; transition:opacity .4s; }
+  #hud.vis { opacity:1; }
+  .liv { display:flex; gap:6px; }
+  .liv i { width:15px; height:15px; border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, #fff 0 14%, #a6f1ff 34%, #2aa7d6 70%, rgba(42,167,214,0) 72%);
+    box-shadow:0 0 10px rgba(95,216,255,.9); }
+  .liv i.tom { background:rgba(255,255,255,.08); box-shadow:none; border:1px solid rgba(255,255,255,.25); }
+  .orbtall { font-size:15px; color:var(--glod); text-shadow:0 0 8px rgba(143,227,255,.7); font-weight:600; }
+  .evner { display:flex; gap:6px; flex-wrap:wrap; }
+  .evner span { font-size:12px; padding:3px 9px; border-radius:999px; background:rgba(255,197,107,.12);
+    border:1px solid rgba(255,197,107,.4); color:var(--varm); }
+  #menyKnapp { margin-left:auto; pointer-events:auto; width:42px; height:42px; border-radius:50%;
+    border:1px solid rgba(255,255,255,.22); background:rgba(10,18,36,.55); color:#fff; font-size:16px; cursor:pointer; }
+
+  #boss { position:fixed; left:50%; top:calc(58px + env(safe-area-inset-top)); transform:translateX(-50%);
+    text-align:center; pointer-events:none; opacity:0; transition:opacity .5s; }
+  #boss.vis { opacity:1; }
+  #boss .navn { font-size:22px; letter-spacing:.06em; color:#f3d9ff; text-shadow:0 0 14px rgba(200,140,255,.8); }
+  #boss .sik { display:flex; gap:8px; justify-content:center; margin-top:4px; }
+  #boss .sik i { width:26px; height:8px; border-radius:4px; background:#c58cff; box-shadow:0 0 10px #b070ff; }
+  #boss .sik i.av { background:rgba(255,255,255,.12); box-shadow:none; }
+
+  #hint { position:fixed; left:50%; top:30%; transform:translateX(-50%); width:min(92vw,560px); text-align:center;
+    font-size:clamp(19px,2.6vw,26px); line-height:1.25; color:#f1f8ff; text-shadow:0 0 18px rgba(120,210,255,.75), 0 2px 6px rgba(0,0,0,.8);
+    pointer-events:none; opacity:0; transition:opacity .6s; }
+  #hint.vis { opacity:1; }
+  #banner { position:fixed; left:50%; top:30%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;
+    opacity:0; transition:opacity 1s; white-space:nowrap; }
+  #banner.vis { opacity:1; }
+  #banner .stor { font-size:clamp(34px,6vw,64px); letter-spacing:.08em; color:#fff; text-shadow:0 0 30px rgba(143,227,255,.9); }
+  #banner .liten { font-size:clamp(14px,1.8vw,18px); color:var(--dempet); letter-spacing:.2em; text-transform:uppercase; }
+
+  #touch { position:fixed; left:0; right:0; bottom:0; display:none; justify-content:space-between; align-items:flex-end;
+    padding:0 calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    pointer-events:none; }
+  .touch #touch.vis { display:flex; }
+  #pad { pointer-events:auto; width:176px; height:84px; border-radius:42px; display:flex; position:relative;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.2); }
+  #pad span { flex:1; display:flex; align-items:center; justify-content:center; font-size:26px; color:rgba(255,255,255,.75); border-radius:42px; }
+  #pad[data-dir="v"] .v, #pad[data-dir="h"] .h { background:rgba(143,227,255,.22); color:#fff; }
+  .hoyreKnapper { display:flex; gap:14px; align-items:flex-end; }
+  .rund { pointer-events:auto; border-radius:50%; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08);
+    color:#fff; font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center; }
+  .rund.trykk { background:rgba(143,227,255,.3); }
+  #tHopp { width:86px; height:86px; }
+  #tStot { width:64px; height:64px; margin-bottom:34px; border-color:rgba(255,197,107,.5); color:var(--varm); }
+  #tStot.skjult { visibility:hidden; }
+
+  .lag { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px;
+    background:radial-gradient(ellipse at center, rgba(5,10,22,.2), rgba(5,10,22,.78)); }
+  .lag.vis { display:flex; }
+  .kort { width:100%; max-width:440px; max-height:calc(100% - 8px); overflow:auto; background:var(--panel); border:1px solid var(--kant);
+    border-radius:20px; padding:24px 22px; text-align:center; box-shadow:0 0 60px rgba(95,216,255,.16);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  .kort h1 { margin:0; font-size:56px; line-height:1; letter-spacing:.06em; color:#eefaff; text-shadow:0 0 26px rgba(143,227,255,.7); }
+  .kort h2 { margin:0 0 4px; font-size:34px; color:#fff6e4; text-shadow:0 0 22px rgba(255,197,107,.7); }
+  .kort .under { margin:6px 0 0; color:var(--dempet); font-size:13px; letter-spacing:.18em; text-transform:uppercase; }
+  .kort p { color:#d6e2f5; line-height:1.5; font-size:16px; margin:14px 0; }
+  .kort .ctrl { font-size:14px; color:var(--dempet); background:rgba(255,255,255,.05); border-radius:12px; padding:10px 12px; line-height:1.6; }
+  .kort .ctrl b { color:#fff; font-weight:600; }
+  .evneIkon { width:84px; height:84px; margin:0 auto 10px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:38px; background:radial-gradient(circle, rgba(255,230,170,.9), rgba(255,170,80,.25) 55%, rgba(255,170,80,0) 72%); }
+  .knapp { display:block; width:100%; padding:14px; margin-top:10px; border-radius:12px; cursor:pointer; font-size:17px; font-weight:600;
+    color:#fff; border:1px solid rgba(143,227,255,.5); background:linear-gradient(180deg, rgba(143,227,255,.26), rgba(143,227,255,.08)); }
+  .knapp.sek { background:transparent; border-color:rgba(255,255,255,.2); color:var(--dempet); }
+  .knapp:focus-visible { outline:2px solid var(--glod); outline-offset:2px; }
+  a.knapp { text-decoration:none; text-align:center; }
+  .liten { font-size:13px; color:var(--dempet); margin-top:12px; }
+  .bareTouch { display:none; } .touch .bareTouch { display:block; } .touch .barePC { display:none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="liv" id="liv"></div>
+  <div class="orbtall" id="orbtall">✦ 0</div>
+  <div class="evner" id="evner"></div>
+  <button id="menyKnapp" aria-label="Pause">❚❚</button>
+</div>
+<div id="boss"><div class="navn serif">Overspenningen</div><div class="sik" id="bossSik"><i></i><i></i><i></i></div></div>
+<div id="hint" class="serif"></div>
+<div id="banner"><div class="stor serif" id="bannerStor"></div><div class="liten" id="bannerLiten"></div></div>
+
+<div id="touch">
+  <div id="pad"><span class="v">◀</span><span class="h">▶</span></div>
+  <div class="hoyreKnapper">
+    <button class="rund skjult" id="tStot">Støt</button>
+    <button class="rund" id="tHopp">Hopp</button>
+  </div>
+</div>
+
+<div class="lag vis" id="lagMeny"><div class="kort">
+  <h1 class="serif">Gnist</h1>
+  <div class="under">Montøren i mørket</div>
+  <p>Strømmen har gått på byggeplassen. Følg gnisten, finn nye evner og få strømmen tilbake på hovedtavla.</p>
+  <div class="ctrl barePC"><b>← →</b> eller <b>A D</b>: gå &nbsp;·&nbsp; <b>Mellomrom</b>: hopp<br><b>Shift</b> eller <b>X</b>: støt &nbsp;·&nbsp; <b>Esc</b>: pause</div>
+  <div class="ctrl bareTouch"><b>Venstre tommel</b>: gå &nbsp;·&nbsp; <b>Høyre tommel</b>: hopp og støt</div>
+  <button class="knapp" id="bFortsett" style="display:none">Fortsett</button>
+  <button class="knapp" id="bNy">Start</button>
+  <div class="liten bareTouch" id="snuTips">Tips: snu telefonen på tvers for større bilde.</div>
+  <a class="knapp sek" href="../">Tilbake til Voltbase</a>
+</div></div>
+
+<div class="lag" id="lagEvne"><div class="kort">
+  <div class="evneIkon" id="evneIkon">⚡</div>
+  <div class="under">Ny evne</div>
+  <h2 class="serif" id="evneNavn"></h2>
+  <p id="evneTekst"></p>
+  <div class="ctrl" id="evneCtrl"></div>
+  <button class="knapp" id="bEvneOk">Fortsett</button>
+</div></div>
+
+<div class="lag" id="lagPause"><div class="kort">
+  <h2 class="serif">Pause</h2>
+  <button class="knapp" id="bPauseFortsett">Fortsett</button>
+  <button class="knapp sek" id="bLyd">Lyd: på</button>
+  <button class="knapp sek" id="bOmstart">Start helt på nytt</button>
+  <a class="knapp sek" href="../">Tilbake til Voltbase</a>
+</div></div>
+
+<div class="lag" id="lagSlutt"><div class="kort">
+  <h2 class="serif">Strømmen er tilbake!</h2>
+  <p id="sluttTekst"></p>
+  <p class="liten">Neste område kommer med flere evner: kabeltrommel, spenningstester og vinkelsliper.</p>
+  <button class="knapp" id="bIgjen">Spill igjen</button>
+  <a class="knapp sek" href="../">Tilbake til Voltbase</a>
+</div></div>
+
+<script>
+'use strict';
+// =============================================================
+//  Gnist – et lite metroidvania-spill for Voltbase.
+//  All grafikk tegnes med kode i canvas. Ingen eksterne bilder.
+// =============================================================
+const $ = s => document.querySelector(s);
+const cv = $('#c'), ctx = cv.getContext('2d');
+const T = 32, MW = 130, MH = 34;
+const AIR = 0, SOL = 1, ONE = 2, HAZ = 3, CUR = 4, DOOR = 5;
+const NOKKEL = 'voltbase-gnist-v1';
+
+// ---------- hjelpere ----------
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hs(x, y, k) { let n = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(k | 0, 982451653)) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177); n ^= n >>> 16; return (n >>> 0) / 4294967296; }
+function nyC(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+function mot(v, m, d) { return v < m ? Math.min(v + d, m) : Math.max(v - d, m); }
+function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+// ---------- kartet ----------
+const map = new Uint8Array(MW * MH);
+const dyp = new Uint8Array(MW * MH);
+function tile(x, y) { if (x < 0 || y < 0 || x >= MW || y >= MH) return SOL; return map[y * MW + x]; }
+function setT(x, y, v) { if (x >= 0 && y >= 0 && x < MW && y < MH) map[y * MW + x] = v; }
+function rect(x0, y0, x1, y1, v) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) setT(x, y, v); }
+function byggKart() {
+  map.fill(SOL);
+  // Område A: byggeplassen ved start
+  rect(1, 0, 34, 23, AIR); rect(35, 0, 38, 18, AIR);
+  rect(18, 21, 21, 21, ONE);
+  // Hull ned i kjelleren
+  rect(12, 24, 14, 26, AIR);
+  rect(10, 27, 48, 31, AIR);
+  rect(22, 31, 24, 31, HAZ); rect(32, 31, 34, 31, HAZ);
+  // Sjakt opp fra kjelleren (krever dobbelhopp)
+  rect(45, 19, 48, 26, AIR);
+  rect(47, 27, 48, 27, SOL); rect(45, 23, 46, 23, SOL);
+  // Område B: stillaset
+  rect(39, 0, 72, 18, AIR);
+  rect(49, 15, 53, 15, ONE); rect(55, 11, 59, 11, ONE); rect(49, 7, 53, 7, ONE);
+  rect(57, 3, 64, 4, SOL);
+  // Strømførende sperre og trafohallen
+  rect(73, 13, 73, 18, CUR);
+  rect(74, 6, 100, 18, AIR);
+  rect(77, 15, 79, 18, SOL); rect(95, 15, 97, 18, SOL);
+  rect(81, 13, 83, 13, ONE); rect(91, 13, 93, 13, ONE); rect(85, 10, 89, 10, ONE);
+  rect(101, 13, 101, 18, DOOR);
+  // Område D: sjakten og hovedtavla
+  rect(102, 0, 128, 18, AIR);
+  rect(105, 19, 117, 30, AIR); rect(105, 30, 117, 30, HAZ);
+}
+function beregnDyp() {
+  const q = [];
+  for (let i = 0; i < map.length; i++) { if (map[i] !== SOL) { dyp[i] = 0; q.push(i); } else dyp[i] = 255; }
+  let h = 0;
+  while (h < q.length) { const i = q[h++], x = i % MW, y = (i / MW) | 0, d = dyp[i];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= MW || ny >= MH) continue; const j = ny * MW + nx; if (dyp[j] > d + 1) { dyp[j] = d + 1; q.push(j); } } }
+}
+const dypAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? 6 : Math.min(6, dyp[y * MW + x]);
+function inne(x, y) { return (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
+const erHall = (x, y) => x >= 73 && x <= 101 && y >= 5 && y <= 19;
+
+// ---------- objekter ----------
+const SJEKK = [{ x: 4, y: 23 }, { x: 40, y: 31 }, { x: 69, y: 18 }, { x: 103, y: 18 }];
+const ORBER = [[8,22],[19,19],[27,22],[31,21],[17,29],[23,28],[33,28],[38,30],[46,25],[47,21],[43,16],[51,13],[57,9],[51,5],[60,1],[66,10],[70,16],[87,7],[110,12],[114,10],[124,9]];
+const FUNN = [
+  { id: 'dobbel', x: 44, y: 31, navn: 'Stigesko', ikon: '🥾', tekst: 'Du kan hoppe en gang til i lufta. Nå når du høyere opp.',
+    pc: 'Trykk <b>Mellomrom</b> igjen i lufta', mob: 'Trykk <b>Hopp</b> igjen i lufta' },
+  { id: 'hansker', x: 61, y: 2, navn: 'Isolerte hansker', ikon: '🧤', tekst: 'Du tåler strømførende sperrer. Gå rett gjennom dem.',
+    pc: 'Gå inn i sperren', mob: 'Gå inn i sperren' },
+  { id: 'stot', x: 87, y: 18, boss: true, navn: 'Strømstøt', ikon: '⚡', tekst: 'Kast deg fremover med et lyn, også i lufta. Ett støt per hopp.',
+    pc: 'Trykk <b>Shift</b> eller <b>X</b>', mob: 'Trykk <b>Støt</b>' },
+];
+const BRYTERE = [{ x: 78, y: 14, av: false }, { x: 87, y: 9, av: false }, { x: 96, y: 14, av: false }];
+const TAVLE = { x: 123, y: 17 };
+const hazListe = [];
+
+// ---------- tilstand ----------
+const S = { mode: 'meny', t: 0, ev: { dobbel: false, hansker: false, stot: false }, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
+  bossDone: false, tid: 0, ferdig: false, shake: 0, flash: 0, flashF: '255,255,255', dod: 0, ending: 0, power: 0,
+  hintSett: new Set(), mork: .55, frame: 0, panelT: 0 };
+const P = { x: 0, y: 0, w: 18, h: 30, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buf: 0, air: 0, dashT: 0, dashCd: 0,
+  canDash: true, inv: 0, hp: 4, max: 4, sx: 1, sy: 1, anim: 0, safeX: 0, safeY: 0, faller: 0 };
+const GN = { x: 0, y: 0, vx: 0, vy: 0 };
+const B = { aktiv: false, hp: 3, x: 87.5 * T, y: 7.4 * T, t: 0, stun: 0, skuddT: 2, slagT: 6, dod: 0, varsel: 0 };
+const prosj = [], bolger = [], partikler = [], lys = [];
+let lyn = null;
+const cam = { x: 0, y: 0, look: 0 };
+const I = { left: false, right: false, down: false, jumpHeld: false, jumpP: false, dashP: false };
+const K = {}, TS = { left: false, right: false, jump: false, dash: false };
+
+// ---------- lyd ----------
+let ac = null, lydPa = true;
+try { lydPa = localStorage.getItem(NOKKEL + '-lyd') !== 'av'; } catch (e) {}
+function lydInit() { if (!lydPa) return; try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) {} }
+function tone(f1, f2, dur, type, vol, delay) {
+  if (!lydPa || !ac) return;
+  try { const t = ac.currentTime + (delay || 0), o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.05); } catch (e) {}
+}
+function lyd(n) {
+  switch (n) {
+    case 'hopp': tone(380, 620, .12, 'sine', .05); break;
+    case 'dobbel': tone(620, 980, .16, 'triangle', .05); tone(930, 1400, .12, 'sine', .03, .04); break;
+    case 'orb': tone(1320, 1320, .25, 'sine', .04); tone(1980, 1980, .3, 'sine', .025, .06); break;
+    case 'au': tone(220, 70, .3, 'sawtooth', .06); break;
+    case 'evne': [523, 659, 784, 1046].forEach((f, i) => tone(f, f, .5, 'triangle', .05, i * .1)); break;
+    case 'bryter': tone(300, 120, .25, 'square', .05); tone(90, 50, .4, 'sawtooth', .07, .05); break;
+    case 'boss': tone(70, 40, 1.2, 'sawtooth', .09); tone(140, 60, 1, 'square', .03, .1); break;
+    case 'skudd': tone(800, 300, .18, 'square', .02); break;
+    case 'slag': tone(120, 40, .5, 'sawtooth', .08); break;
+    case 'lampe': tone(520, 520, .3, 'sine', .04); tone(780, 780, .4, 'sine', .035, .1); break;
+    case 'stot': tone(1200, 200, .22, 'sawtooth', .05); break;
+    case 'dod': tone(300, 40, .9, 'triangle', .07); break;
+    case 'bossdod': [200, 150, 100, 60].forEach((f, i) => tone(f, f / 2, .5, 'sawtooth', .07, i * .25)); break;
+    case 'slutt': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 1.4, 'triangle', .045, i * .16)); break;
+  }
+}
+
+// ---------- sprites ----------
+function glodSprite(r, g, b) { const c = nyC(64, 64), x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, `rgba(${r},${g},${b},1)`); gr.addColorStop(.25, `rgba(${r},${g},${b},.45)`); gr.addColorStop(.6, `rgba(${r},${g},${b},.12)`);
+  gr.addColorStop(1, `rgba(${r},${g},${b},0)`); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return c; }
+const SPR = { c: glodSprite(110, 220, 255), w: glodSprite(255, 190, 110), h: glodSprite(255, 255, 255), o: glodSprite(255, 140, 60),
+  p: glodSprite(190, 120, 255), r: glodSprite(255, 70, 70), g: glodSprite(110, 255, 160) };
+const HULL = (() => { const c = nyC(128, 128), x = c.getContext('2d'), gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(.45, 'rgba(0,0,0,.75)'); gr.addColorStop(.75, 'rgba(0,0,0,.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 128, 128); return c; })();
+const STRALE = (() => { const c = nyC(128, 512), x = c.getContext('2d'); let gr = x.createLinearGradient(0, 0, 128, 0);
+  gr.addColorStop(0, 'rgba(180,220,255,0)'); gr.addColorStop(.5, 'rgba(180,220,255,1)'); gr.addColorStop(1, 'rgba(180,220,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 128, 512); x.globalCompositeOperation = 'destination-in';
+  gr = x.createLinearGradient(0, 0, 0, 512); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 512); return c; })();
+
+// ---------- bakgrunn (malte parallakselag) ----------
+const LW = 1600, LH = 900;
+function flislag(fn, seed) { const c = nyC(LW, LH), g = c.getContext('2d');
+  for (const off of [-LW, 0, LW]) { g.save(); g.translate(off, 0); fn(g, rng(seed)); g.restore(); } return c; }
+function myk(g, x, y, rx, ry, farge, a) { g.save(); g.translate(x, y); g.scale(1, ry / rx); const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+  gr.addColorStop(0, `rgba(${farge},${a})`); gr.addColorStop(1, `rgba(${farge},0)`); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fill(); g.restore(); }
+function lagHimmel() {
+  const c = nyC(LW, LH), g = c.getContext('2d'), r = rng(7);
+  let gr = g.createLinearGradient(0, 0, 0, LH);
+  gr.addColorStop(0, '#050b1f'); gr.addColorStop(.38, '#0e2245'); gr.addColorStop(.66, '#22405f'); gr.addColorStop(.86, '#3b4a69'); gr.addColorStop(1, '#58506b');
+  g.fillStyle = gr; g.fillRect(0, 0, LW, LH);
+  myk(g, LW * .28, LH * .98, LW * .62, LH * .4, '255,165,115', .2);
+  myk(g, LW * .66, LH * .45, 700, 380, '70,175,195', .12);
+  for (let i = 0; i < 320; i++) { const x = r() * LW, y = r() * LH * .66, s = r() * 1.3 + .2, a = (.2 + r() * .75) * (1 - y / (LH * .7));
+    g.fillStyle = `rgba(225,238,255,${a})`; g.beginPath(); g.arc(x, y, s, 0, 7); g.fill(); }
+  for (let i = 0; i < 10; i++) myk(g, r() * LW, r() * LH * .5, 6, 6, '200,230,255', .5);
+  const mx = LW * .74, my = LH * .19;
+  myk(g, mx, my, 430, 430, '180,212,255', .2); myk(g, mx, my, 150, 150, '210,228,255', .25);
+  gr = g.createRadialGradient(mx - 10, my - 12, 4, mx, my, 50); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.85, '#dbe6ff'); gr.addColorStop(1, 'rgba(219,230,255,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(mx, my, 50, 0, 7); g.fill();
+  [[-14, -8, 9], [12, 6, 7], [-4, 16, 5], [16, -16, 4], [-20, 12, 4]].forEach(([dx, dy, s]) => { g.fillStyle = 'rgba(160,178,214,.28)'; g.beginPath(); g.arc(mx + dx, my + dy, s, 0, 7); g.fill(); });
+  for (let i = 0; i < 30; i++) { const x = r() * LW, y = LH * (.12 + r() * .55), w = 220 + r() * 520; myk(g, x, y, w, 18 + r() * 46, i % 3 ? '140,168,212' : '120,190,205', .05 + r() * .06); }
+  return c;
+}
+function lagFjern() {
+  return flislag((g, r) => {
+    const base = 600;
+    let x = -30;
+    while (x < LW) {
+      const w = 26 + r() * 70, h = 50 + Math.pow(r(), 1.6) * 270, s = r();
+      g.fillStyle = `rgb(${24 + s * 9 | 0},${38 + s * 11 | 0},${62 + s * 14 | 0})`; g.fillRect(x, base - h, w, h + 400);
+      g.fillStyle = 'rgba(120,160,210,.18)'; g.fillRect(x + w - 2, base - h, 2, h);
+      for (let yy = base - h + 8; yy < base - 6; yy += 9) for (let xx = x + 4; xx < x + w - 4; xx += 7)
+        if (r() < .2) { g.fillStyle = r() < .8 ? 'rgba(255,196,120,.55)' : 'rgba(170,220,255,.5)'; g.fillRect(xx, yy, 2, 3); }
+      if (r() < .22) { g.fillStyle = '#1d2c46'; g.fillRect(x + w / 2, base - h - 30, 2, 30); g.fillStyle = 'rgba(255,80,80,.9)'; g.beginPath(); g.arc(x + w / 2 + 1, base - h - 31, 2, 0, 7); g.fill(); }
+      x += w + r() * 14;
+    }
+    const gr = g.createLinearGradient(0, base - 200, 0, base + 60);
+    gr.addColorStop(0, 'rgba(70,98,135,0)'); gr.addColorStop(1, 'rgba(70,98,135,.6)'); g.fillStyle = gr; g.fillRect(0, base - 200, LW, 260);
+    g.fillStyle = '#26364f'; g.fillRect(0, base + 60, LW, LH);
+  }, 11);
+}
+function lagMidt(lit) {
+  return flislag((g, r) => {
+    const base = 700, mork = '#0f192b', kant = 'rgba(110,150,205,.32)';
+    g.fillStyle = 'rgba(40,62,92,.35)';
+    for (let i = 0; i < 6; i++) { const x = r() * LW; g.beginPath(); g.ellipse(x, base + 10, 160 + r() * 200, 40 + r() * 30, 0, 0, 7); g.fill(); }
+    function bygning(x0, et, br, nk) {
+      const eh = 62;
+      for (let e = 0; e < et; e++) {
+        const y = base - (e + 1) * eh, ufull = e === et - 1;
+        if (!ufull) { g.fillStyle = mork; g.fillRect(x0 - 8, y, br + 16, 9); g.fillStyle = kant; g.fillRect(x0 - 8, y, br + 16, 1.5); }
+        for (let k = 0; k <= nk; k++) {
+          const cx = x0 + k * br / nk, kort = ufull && r() < .5;
+          const yt = kort ? y + 30 : y + 9;
+          g.fillStyle = mork; g.fillRect(cx - 5, yt, 10, y + eh - yt); g.fillStyle = kant; g.fillRect(cx + 3.5, yt, 1.4, y + eh - yt);
+          if (ufull) { g.strokeStyle = 'rgba(150,90,60,.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx - 2, yt); g.lineTo(cx - 3, yt - 12); g.moveTo(cx + 2, yt); g.lineTo(cx + 4, yt - 10); g.stroke(); }
+          if (k < nk) { const vis = r(), farge = r();
+            if (lit && !ufull && vis < .6) { g.fillStyle = farge < .8 ? 'rgba(255,186,110,.32)' : 'rgba(190,225,255,.3)'; g.fillRect(cx + 6, y + 12, br / nk - 12, eh - 14);
+              g.fillStyle = 'rgba(255,215,150,.55)'; g.fillRect(cx + 6, y + 12, br / nk - 12, 2); } }
+        }
+      }
+      // tårnkran-flagg / presenning
+      g.fillStyle = 'rgba(30,60,90,.6)'; g.fillRect(x0 + br * .2, base - eh * 2 + 9, br * .3, eh - 9);
+    }
+    function kran(x, top, jl, jr) {
+      const w = 20; g.strokeStyle = mork; g.lineWidth = 3; g.beginPath();
+      g.moveTo(x, base); g.lineTo(x, top); g.moveTo(x + w, base); g.lineTo(x + w, top);
+      for (let y = base; y > top; y -= 22) { g.moveTo(x, y); g.lineTo(x + w, y - 22); g.moveTo(x, y); g.lineTo(x + w, y); }
+      g.stroke();
+      g.lineWidth = 2.4; g.beginPath(); g.moveTo(x - jl, top); g.lineTo(x + w + jr, top); g.moveTo(x - jl, top - 12); g.lineTo(x + w + jr, top - 6);
+      for (let xx = x - jl; xx < x + w + jr; xx += 18) { g.moveTo(xx, top); g.lineTo(xx + 9, top - 10); g.lineTo(xx + 18, top); } g.stroke();
+      g.lineWidth = 1.4; g.beginPath(); g.moveTo(x + w / 2, top - 56); g.lineTo(x - jl, top - 12); g.moveTo(x + w / 2, top - 56); g.lineTo(x + w + jr, top - 6);
+      g.moveTo(x, top); g.lineTo(x + w / 2, top - 56); g.lineTo(x + w, top); g.stroke();
+      g.fillStyle = mork; g.fillRect(x - jl, top, 44, 24); g.fillRect(x - 6, top + 4, 30, 20);
+      g.fillStyle = lit ? 'rgba(255,200,130,.8)' : 'rgba(120,160,200,.25)'; g.fillRect(x - 2, top + 8, 10, 7);
+      const hx = x + w + jr * (.45 + r() * .4), hl = 180 + r() * 160;
+      g.strokeStyle = 'rgba(15,25,43,.9)'; g.lineWidth = 1; g.beginPath(); g.moveTo(hx, top); g.lineTo(hx, top + hl); g.stroke();
+      g.fillStyle = mork; g.fillRect(hx - 6, top + hl, 12, 10);
+      g.strokeStyle = kant; g.lineWidth = 1; g.beginPath(); g.moveTo(x + w + 1.5, base); g.lineTo(x + w + 1.5, top); g.stroke();
+      myk(g, x + w / 2, top - 58, lit ? 16 : 9, lit ? 16 : 9, '255,60,60', lit ? .9 : .5);
+      g.fillStyle = '#ff5050'; g.beginPath(); g.arc(x + w / 2, top - 58, 2.4, 0, 7); g.fill();
+      myk(g, x + w + jr, top - 6, 8, 8, '255,60,60', .6);
+    }
+    bygning(90, 7, 360, 6);
+    bygning(1180, 4, 260, 4);
+    kran(560, 150, 130, 420);
+    kran(1520, 260, 90, 260);
+    // lyskastere (bare når strømmen er på)
+    [[700, 520], [1100, 600], [40, 560]].forEach(([x, y]) => {
+      g.strokeStyle = mork; g.lineWidth = 3; g.beginPath(); g.moveTo(x, base); g.lineTo(x, y); g.stroke();
+      g.fillStyle = mork; g.fillRect(x - 12, y - 8, 24, 10);
+      if (lit) { const gr = g.createLinearGradient(x, y, x, base); gr.addColorStop(0, 'rgba(255,230,170,.35)'); gr.addColorStop(1, 'rgba(255,230,170,0)');
+        g.fillStyle = gr; g.beginPath(); g.moveTo(x - 10, y); g.lineTo(x + 10, y); g.lineTo(x + 140, base); g.lineTo(x - 140, base); g.closePath(); g.fill();
+        myk(g, x, y - 3, 40, 26, '255,230,170', .8); }
+    });
+    g.fillStyle = '#0e1828'; g.fillRect(0, base, LW, LH);
+    const gr = g.createLinearGradient(0, base - 120, 0, base + 30); gr.addColorStop(0, 'rgba(60,95,125,0)'); gr.addColorStop(1, 'rgba(60,95,125,.35)');
+    g.fillStyle = gr; g.fillRect(0, base - 120, LW, 150);
+  }, 23);
+}
+function lagNaer() {
+  return flislag((g, r) => {
+    const base = 812, c = '#070d18';
+    let gr = g.createLinearGradient(0, base - 300, 0, base);
+    gr.addColorStop(0, 'rgba(80,130,150,0)'); gr.addColorStop(1, 'rgba(80,130,150,.17)'); g.fillStyle = gr; g.fillRect(0, base - 300, LW, 300);
+    g.strokeStyle = c; g.fillStyle = c;
+    function stillas(x0, nivå, fag) {
+      const fb = 70, nh = 64; g.lineWidth = 4; g.beginPath();
+      for (let k = 0; k <= fag; k++) { g.moveTo(x0 + k * fb, base); g.lineTo(x0 + k * fb, base - nivå * nh - 20); }
+      for (let n = 1; n <= nivå; n++) { g.moveTo(x0 - 6, base - n * nh); g.lineTo(x0 + fag * fb + 6, base - n * nh); }
+      g.stroke(); g.lineWidth = 2; g.beginPath();
+      for (let n = 0; n < nivå; n++) for (let k = 0; k < fag; k++) if (r() < .55) { g.moveTo(x0 + k * fb, base - n * nh); g.lineTo(x0 + (k + 1) * fb, base - (n + 1) * nh); }
+      g.stroke();
+      for (let n = 1; n <= nivå; n++) g.fillRect(x0 - 6, base - n * nh - 6, fag * fb + 12, 6);
+      g.strokeStyle = 'rgba(120,160,210,.12)'; g.lineWidth = 1; g.beginPath();
+      for (let k = 0; k <= fag; k++) { g.moveTo(x0 + k * fb + 2, base); g.lineTo(x0 + k * fb + 2, base - nivå * nh - 20); } g.stroke(); g.strokeStyle = c;
+    }
+    stillas(200, 4, 3);
+    stillas(1240, 2, 2);
+    // gjerde
+    for (let x = 560; x < 900; x += 68) { g.lineWidth = 3; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - 92); g.stroke();
+      g.lineWidth = .7; g.globalAlpha = .7; g.beginPath(); for (let i = 0; i < 68; i += 6) { g.moveTo(x + i, base - 90); g.lineTo(x + i, base - 4); }
+      for (let j = 0; j < 90; j += 6) { g.moveTo(x, base - j); g.lineTo(x + 68, base - j); } g.stroke(); g.globalAlpha = 1;
+      g.fillRect(x - 6, base - 4, 20, 6); }
+    // gravemaskin
+    g.save(); g.translate(1000, base);
+    rr(g, -10, -18, 130, 20, 8); g.fill(); g.fillRect(10, -70, 70, 52); g.fillRect(70, -56, 50, 38);
+    g.lineWidth = 12; g.lineCap = 'round'; g.beginPath(); g.moveTo(100, -60); g.lineTo(170, -150); g.lineTo(240, -70); g.stroke();
+    g.beginPath(); g.moveTo(240, -70); g.lineTo(262, -30); g.lineTo(225, -30); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(120,160,210,.16)'; g.fillRect(18, -64, 30, 22); g.restore(); g.lineCap = 'butt'; g.fillStyle = c;
+    // kabel som henger mellom stolper
+    g.lineWidth = 3; g.beginPath(); g.moveTo(410, base - 280); g.lineTo(410, base); g.stroke();
+    g.lineWidth = 1.5; g.beginPath(); g.moveTo(410, base - 270); g.quadraticCurveTo(480, base - 180, 560, base - 250); g.quadraticCurveTo(620, base - 200, 700, base - 300); g.stroke();
+    g.fillRect(400, base - 286, 20, 8);
+    // gress
+    g.fillStyle = c; g.fillRect(0, base, LW, LH);
+    for (let x = 0; x < LW; x += 3) { const h = 6 + Math.pow(r(), 2) * 34, l = (r() - .5) * 14;
+      g.beginPath(); g.moveTo(x - 2, base + 1); g.quadraticCurveTo(x + l * .3, base - h * .5, x + l, base - h); g.lineTo(x + 2, base + 1); g.fill(); }
+    for (let i = 0; i < 18; i++) { const x = r() * LW; g.beginPath(); g.ellipse(x, base + 4, 30 + r() * 70, 10 + r() * 14, 0, Math.PI, 0); g.fill(); }
+    gr = g.createLinearGradient(0, base - 40, 0, base + 30); gr.addColorStop(0, 'rgba(50,85,105,0)'); gr.addColorStop(1, 'rgba(50,85,105,.25)');
+    g.fillStyle = gr; g.fillRect(0, base - 40, LW, 70);
+  }, 37);
+}
+let BG = null;
+function lagBakgrunn() { BG = { himmel: lagHimmel(), fjern: lagFjern(), midt: lagMidt(false), midtLys: null, naer: lagNaer() }; }
+
+// ---------- terreng (malte biter, bufret) ----------
+const PAL = {
+  ute: { c: ['#000', '#2c3d57', '#212f45', '#192437', '#131c2c', '#0f1623', '#0b111c'], mose: '#2c6a5e', stra: ['#5cbf9f', '#7fdcbc', '#45a088'] },
+  kjeller: { c: ['#000', '#3a3542', '#2d2934', '#231f2a', '#1b1821', '#16131b', '#110f15'], mose: '#57515f', stra: ['#6d6676', '#857c8e', '#5d5866'] },
+  hall: { c: ['#000', '#30344a', '#25283b', '#1c1e2d', '#161723', '#11121b', '#0d0e15'], mose: '#4b516b', stra: ['#5c6380', '#6b7392', '#4f5670'] },
+};
+const palAt = (x, y) => erHall(x, y) ? PAL.hall : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
+const CH = 12, CPX = CH * T;
+let chunkRes = 1;
+const chunks = new Map();
+const erSol = (x, y) => tile(x, y) === SOL;
+
+function bakvegg(g, x, y) {
+  const X = x * T, Y = y * T;
+  const hall = erHall(x, y);
+  g.fillStyle = hall ? '#141628' : '#131823'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
+  if (hall) {
+    if (x % 2 === 0) { g.fillStyle = 'rgba(150,160,230,.06)'; g.fillRect(X, Y, 1.5, T); }
+    if (y === 18) { g.save(); g.beginPath(); g.rect(X, Y + 18, T, 14); g.clip();
+      for (let i = -2; i < 4; i++) { g.fillStyle = i % 2 ? 'rgba(240,195,60,.16)' : 'rgba(0,0,0,.25)'; g.beginPath(); g.moveTo(X + i * 12, Y + 32); g.lineTo(X + i * 12 + 12, Y + 32); g.lineTo(X + i * 12 + 26, Y + 18); g.lineTo(X + i * 12 + 14, Y + 18); g.fill(); } g.restore(); }
+    if (y === 8) { g.fillStyle = '#1f2236'; g.fillRect(X, Y + 10, T, 8); g.fillStyle = 'rgba(160,170,240,.1)'; g.fillRect(X, Y + 10, T, 1.5); }
+    if (y === 11 && x % 6 === 0) { g.fillStyle = '#222538'; rr(g, X + 4, Y - 10, 24, 34, 3); g.fill(); g.fillStyle = 'rgba(255,200,80,.25)'; g.beginPath(); g.moveTo(X + 16, Y - 2); g.lineTo(X + 22, Y + 9); g.lineTo(X + 10, Y + 9); g.fill(); }
+  } else {
+    if (x % 3 === 0) { g.fillStyle = 'rgba(255,255,255,.035)'; g.fillRect(X, Y, 1.2, T); }
+    if (y % 2 === 0) { g.fillStyle = 'rgba(255,255,255,.02)'; g.fillRect(X, Y, T, 1); }
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(X + 8, Y + 9, 1.6, 0, 7); g.arc(X + 24, Y + 25, 1.6, 0, 7); g.fill();
+    if (y === 28 && x < 45) { g.fillStyle = '#272d3c'; g.fillRect(X, Y + 8, T, 10); g.fillStyle = 'rgba(160,190,235,.16)'; g.fillRect(X, Y + 9, T, 1.5);
+      if (x % 5 === 0) { g.fillStyle = '#1b202c'; g.fillRect(X + 12, Y + 5, 6, 16); } }
+    if (hs(x, y, 91) < .12) { g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(X + 16, Y + 22, 10, 18, 0, 0, 7); g.fill(); }
+  }
+  if (erSol(x, y - 1)) { const gr = g.createLinearGradient(0, Y, 0, Y + 14); gr.addColorStop(0, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(X, Y, T, 14); }
+  if (erSol(x - 1, y)) { const gr = g.createLinearGradient(X, 0, X + 12, 0); gr.addColorStop(0, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(X, Y, 12, T); }
+  if (erSol(x + 1, y)) { const gr = g.createLinearGradient(X + T, 0, X + T - 12, 0); gr.addColorStop(0, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(X + T - 12, Y, 12, T); }
+}
+function topp(g, x, y, pal) {
+  const X = x * T, Y = y * T, hv = k => hs(x, y, k);
+  if (pal === PAL.ute) {
+    const d = hv(1);
+    if (d < .1) { g.strokeStyle = '#8a5236'; g.lineWidth = 2; g.beginPath(); const bx = X + 6 + hv(2) * 18;
+      g.moveTo(bx, Y + 2); g.lineTo(bx - 3 + hv(3) * 6, Y - 10 - hv(4) * 10); g.moveTo(bx + 5, Y + 2); g.lineTo(bx + 4 + hv(5) * 6, Y - 8 - hv(6) * 8); g.stroke(); }
+    else if (d < .16) { g.fillStyle = '#4b566c'; rr(g, X + 5, Y - 9, 18, 11, 2); g.fill(); g.fillStyle = 'rgba(200,220,255,.18)'; g.fillRect(X + 6, Y - 9, 16, 1.5); }
+    else if (d < .2) { g.fillStyle = '#e2722e'; g.beginPath(); g.moveTo(X + 9, Y + 1); g.lineTo(X + 23, Y + 1); g.lineTo(X + 16, Y - 16); g.closePath(); g.fill();
+      g.fillStyle = '#f2efe6'; g.fillRect(X + 12.5, Y - 8, 7, 2.5); g.fillStyle = '#2a2a2a'; g.fillRect(X + 7, Y - 1, 18, 3); }
+    g.fillStyle = pal.mose; g.beginPath(); g.moveTo(X - 1, Y + 8);
+    g.lineTo(X - 1, Y - 1); for (let i = 1; i <= 4; i++) g.quadraticCurveTo(X + (i - .5) * 8, Y - 2.5 - hv(20 + i) * 3, X + i * 8 + (i === 4 ? 1 : 0), Y - .5);
+    g.lineTo(X + T + 1, Y + 8); g.closePath(); g.fill();
+    const gr = g.createLinearGradient(0, Y, 0, Y + 12); gr.addColorStop(0, 'rgba(20,40,40,0)'); gr.addColorStop(1, 'rgba(10,20,30,.35)'); g.fillStyle = gr; g.fillRect(X, Y + 3, T, 9);
+    g.strokeStyle = 'rgba(160,240,210,.35)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X, Y - 1); g.lineTo(X + T, Y - 1); g.stroke();
+    const n = 4 + (hv(30) * 6 | 0);
+    for (let i = 0; i < n; i++) { const bx = X + hv(40 + i) * T, bh = 5 + hv(50 + i) * 12, l = (hv(60 + i) - .5) * 9;
+      g.strokeStyle = pal.stra[i % 3]; g.lineWidth = 1.4; g.beginPath(); g.moveTo(bx, Y + 1); g.quadraticCurveTo(bx + l * .3, Y - bh * .6, bx + l, Y - bh); g.stroke(); }
+    if (hv(70) < .13) { const px = X + 8 + hv(71) * 16, ph = 10 + hv(72) * 10;
+      g.strokeStyle = '#3f8f7c'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(px, Y); g.quadraticCurveTo(px + 4, Y - ph * .5, px, Y - ph); g.stroke();
+      const gb = g.createRadialGradient(px, Y - ph, 0, px, Y - ph, 8); gb.addColorStop(0, '#effeff'); gb.addColorStop(.35, 'rgba(120,230,255,.9)'); gb.addColorStop(1, 'rgba(120,230,255,0)');
+      g.fillStyle = gb; g.beginPath(); g.arc(px, Y - ph, 8, 0, 7); g.fill(); }
+  } else {
+    g.fillStyle = pal.mose; g.fillRect(X - .5, Y - 1, T + 1, 4);
+    g.fillStyle = 'rgba(220,225,255,.16)'; g.fillRect(X - .5, Y - 1, T + 1, 1);
+    if (pal === PAL.hall) { g.fillStyle = 'rgba(0,0,0,.3)'; for (let i = 3; i < T; i += 6) g.fillRect(X + i, Y + 3, 2, 5); }
+    else { if (hv(3) < .3) { g.fillStyle = '#4a4552'; g.beginPath(); g.ellipse(X + 8 + hv(4) * 16, Y - 1, 3 + hv(5) * 4, 2.5, 0, Math.PI, 0); g.fill(); }
+      if (hv(6) < .12) { g.fillStyle = 'rgba(120,170,230,.22)'; g.beginPath(); g.ellipse(X + 16, Y + 1, 14, 2, 0, 0, 7); g.fill(); } }
+  }
+}
+function heng(g, x, y, pal) {
+  const X = x * T, Y = (y + 1) * T, hv = k => hs(x, y, k);
+  if (pal === PAL.ute) {
+    if (hv(80) < .5) { const n = 1 + (hv(81) * 3 | 0); g.strokeStyle = '#0d1524'; for (let i = 0; i < n; i++) { const bx = X + hv(82 + i) * T, l = 8 + hv(85 + i) * 24;
+      g.lineWidth = 1 + hv(88 + i) * 1.5; g.beginPath(); g.moveTo(bx, Y - 2); g.quadraticCurveTo(bx + 4, Y + l * .5, bx - 2, Y + l); g.stroke(); } }
+  } else {
+    if (hv(80) < .28 && !erSol(x + 1, y + 1)) { g.strokeStyle = '#0f1118'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(X + 4, Y); g.quadraticCurveTo(X + T, Y + 14, X + T * 2 - 4, Y); g.stroke(); }
+    if (hv(83) < .07) { g.strokeStyle = '#0f1118'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X + 16, Y); g.lineTo(X + 16, Y + 16); g.stroke();
+      g.fillStyle = '#3a3e4a'; g.beginPath(); g.arc(X + 16, Y + 19, 4, 0, 7); g.fill(); }
+  }
+}
+function planke(g, x, y) {
+  const X = x * T, Y = y * T;
+  const gr = g.createLinearGradient(0, Y, 0, Y + 9); gr.addColorStop(0, '#9c7649'); gr.addColorStop(1, '#5a3f27');
+  g.fillStyle = gr; g.fillRect(X - .5, Y, T + 1, 9);
+  g.fillStyle = 'rgba(255,230,180,.28)'; g.fillRect(X, Y, T, 1.2);
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(X, Y + 1, 1, 8);
+  g.fillStyle = '#b8c0cc'; g.beginPath(); g.arc(X + 6, Y + 4.5, 1.2, 0, 7); g.arc(X + 26, Y + 4.5, 1.2, 0, 7); g.fill();
+  for (const side of [-1, 1]) {
+    if (tile(x + side, y) === ONE) continue;
+    const px = side < 0 ? X + 3 : X + T - 6;
+    const pg = g.createLinearGradient(0, Y + 9, 0, Y + 9 + T * 1.7); pg.addColorStop(0, 'rgba(140,152,170,.95)'); pg.addColorStop(1, 'rgba(140,152,170,0)');
+    g.fillStyle = pg; g.fillRect(px, Y + 9, 3, T * 1.7);
+    g.fillStyle = '#c9d0db'; g.fillRect(px - 1.5, Y + 8, 6, 3);
+  }
+}
+function lagChunk(cx, cy) {
+  const pad = 2, r = chunkRes, c = nyC(Math.ceil((CPX + pad * 2) * r), Math.ceil((CPX + pad * 2) * r)), g = c.getContext('2d');
+  g.scale(r, r); g.translate(-cx * CPX + pad, -cy * CPX + pad);
+  const xa = cx * CH - 1, xb = cx * CH + CH, ya = cy * CH - 1, yb = cy * CH + CH;
+  const alle = f => { for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) f(x, y); };
+  alle((x, y) => { if (!erSol(x, y) && inne(x, y)) bakvegg(g, x, y); });
+  alle((x, y) => { if (!erSol(x, y)) return; const pal = palAt(x, y); g.fillStyle = pal.c[1]; g.fillRect(x * T - .5, y * T - .5, T + 1, T + 1);
+    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) if (!erSol(x + dx, y + dy)) { const rad = T * (.44 + hs(x, y, dx * 3 + dy + 5) * .12);
+      g.beginPath(); g.arc(x * T + T / 2 + dx * T * .1, y * T + T / 2 + dy * T * .1, rad, 0, 7); g.fill(); } });
+  for (let d = 2; d <= 6; d++) alle((x, y) => { if (!erSol(x, y) || dypAt(x, y) < d) return; g.fillStyle = palAt(x, y).c[d];
+    g.beginPath(); g.arc(x * T + T / 2 + (hs(x, y, d) - .5) * 6, y * T + T / 2 + (hs(x, y, d + 9) - .5) * 6, T * .8, 0, 7); g.fill(); });
+  alle((x, y) => { if (!erSol(x, y)) return; const d = dypAt(x, y);
+    for (let k = 0; k < 3; k++) { const a = hs(x, y, 10 + k); g.fillStyle = a < .5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.13)';
+      g.beginPath(); g.ellipse(x * T + hs(x, y, 20 + k) * T, y * T + hs(x, y, 30 + k) * T, 5 + hs(x, y, 40 + k) * 10, 1.5 + hs(x, y, 50 + k) * 3.5, (hs(x, y, 60 + k) - .5) * .8, 0, 7); g.fill(); }
+    if (d >= 2 && d <= 4 && hs(x, y, 77) < .07) { g.fillStyle = 'rgba(70,90,120,.35)'; g.beginPath(); g.ellipse(x * T + 16, y * T + 16, 7, 5, .3, 0, 7); g.fill();
+      g.fillStyle = 'rgba(200,220,255,.08)'; g.beginPath(); g.ellipse(x * T + 15, y * T + 13.5, 5, 2, .3, 0, 7); g.fill(); }
+    if (!erSol(x + 1, y)) { g.fillStyle = 'rgba(140,180,230,.10)'; g.fillRect(x * T + T - 5, y * T, 5, T); }
+    if (!erSol(x - 1, y)) { g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x * T, y * T, 6, T); }
+    if (!erSol(x, y + 1)) { g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x * T, y * T + T - 8, T, 8); } });
+  alle((x, y) => { if (erSol(x, y) && !erSol(x, y - 1)) topp(g, x, y, palAt(x, y)); });
+  alle((x, y) => { if (erSol(x, y) && !erSol(x, y + 1)) heng(g, x, y, palAt(x, y)); });
+  alle((x, y) => { if (tile(x, y) === ONE) planke(g, x, y); });
+  return c;
+}
+function hentChunk(cx, cy) {
+  const key = cx + ',' + cy; let c = chunks.get(key);
+  if (!c) { c = { cv: lagChunk(cx, cy), brukt: 0 }; chunks.set(key, c);
+    if (chunks.size > 30) { let eldst = null, min = Infinity; for (const [k, v] of chunks) if (v.brukt < min) { min = v.brukt; eldst = k; } chunks.delete(eldst); } }
+  c.brukt = S.frame; return c.cv;
+}
+
+// ---------- skjerm ----------
+let dpr = 1, cssW = 0, cssH = 0, skala = 1, lysC = nyC(2, 2), lysG = lysC.getContext('2d'), vign = null;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2); cssW = innerWidth; cssH = innerHeight;
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
+  skala = Math.min(cssW / (T * 24), cssH / (T * 14));
+  skala = clamp(Math.max(skala, cssH / (T * MH)), .45, 3);
+  const nr = clamp(skala * dpr, .75, 2);
+  if (Math.abs(nr - chunkRes) > .15) { chunkRes = nr; chunks.clear(); }
+  lysC = nyC(Math.ceil(cv.width / 3), Math.ceil(cv.height / 3)); lysG = lysC.getContext('2d');
+  vign = nyC(cv.width / 2, cv.height / 2); const vg = vign.getContext('2d'), w = vign.width, h = vign.height;
+  const gr = vg.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .75);
+  gr.addColorStop(0, 'rgba(0,0,8,0)'); gr.addColorStop(1, 'rgba(0,0,8,.6)'); vg.fillStyle = gr; vg.fillRect(0, 0, w, h);
+  $('#snuTips').style.display = cssH > cssW ? '' : 'none';
+  oppdaterKamera(0, true);
+}
+
+// ---------- kollisjon ----------
+function fast(tx, ty) { const t = tile(tx, ty); return t === SOL || t === DOOR || (t === CUR && !S.ev.hansker); }
+function flyttX(p, dx) {
+  p.x += dx;
+  const y0 = Math.floor(p.y / T), y1 = Math.floor((p.y + p.h - .01) / T);
+  if (dx > 0) { const tx = Math.floor((p.x + p.w) / T); for (let y = y0; y <= y1; y++) if (fast(tx, y)) { p.x = tx * T - p.w - .001; p.vx = 0; traffVegg(tx, y, -1); return; } }
+  else if (dx < 0) { const tx = Math.floor(p.x / T); for (let y = y0; y <= y1; y++) if (fast(tx, y)) { p.x = (tx + 1) * T + .001; p.vx = 0; traffVegg(tx, y, 1); return; } }
+}
+function flyttY(p, dy) {
+  const forrigeBunn = p.y + p.h; p.y += dy;
+  const x0 = Math.floor(p.x / T), x1 = Math.floor((p.x + p.w - .01) / T);
+  if (dy > 0) { const ty = Math.floor((p.y + p.h) / T);
+    for (let x = x0; x <= x1; x++) { const t = tile(x, ty);
+      if (fast(x, ty) || (t === ONE && forrigeBunn <= ty * T + .5 && !I.down)) { p.y = ty * T - p.h; p.vy = 0; return 1; } } }
+  else if (dy < 0) { const ty = Math.floor(p.y / T); for (let x = x0; x <= x1; x++) if (fast(x, ty)) { p.y = (ty + 1) * T; p.vy = 0; return -1; } }
+  return 0;
+}
+function traffVegg(tx, ty, retning) {
+  const t = tile(tx, ty);
+  if (t === CUR && !S.ev.hansker) {
+    hint('sperre', 'Strømførende sperre! Du trenger isolerte hansker.');
+    if (Math.random() < .5) gnister(tx * T + T / 2, P.y + P.h / 2, 3, 'c');
+    P.vx = retning * 200; P.vy = Math.min(P.vy, -120);
+  }
+}
+
+// ---------- partikler ----------
+function part(x, y, vx, vy, liv, str, farge, grav, add) { if (partikler.length > 450) partikler.shift();
+  partikler.push({ x, y, vx, vy, liv, max: liv, str, farge, grav: grav || 0 }); }
+function gnister(x, y, n, f) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = 60 + Math.random() * 220; part(x, y, Math.cos(a) * s, Math.sin(a) * s - 60, .3 + Math.random() * .4, 3 + Math.random() * 4, f || 'w', 500); } }
+function stov(x, y, n) { for (let i = 0; i < n; i++) part(x + (Math.random() - .5) * 16, y, (Math.random() - .5) * 120, -Math.random() * 60, .4 + Math.random() * .3, 5 + Math.random() * 5, 'd', 80); }
+function sprut(x, y, n, f, fart) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = (fart || 200) * (.3 + Math.random()); part(x, y, Math.cos(a) * s, Math.sin(a) * s, .5 + Math.random() * .7, 6 + Math.random() * 10, f, 0); } }
+
+// ---------- HUD og paneler ----------
+let hintTid = 0;
+function hint(key, tekst, varighet) { if (key && S.hintSett.has(key)) return; if (key) S.hintSett.add(key); const h = $('#hint'); h.textContent = tekst; h.classList.add('vis'); hintTid = varighet || 4.5; }
+let bannerTid = 0;
+function banner(stor, liten) { $('#bannerStor').textContent = stor; $('#bannerLiten').textContent = liten || ''; $('#banner').classList.add('vis'); bannerTid = 3; }
+function hud() {
+  $('#liv').innerHTML = Array.from({ length: P.max }, (_, i) => `<i class="${i < P.hp ? '' : 'tom'}"></i>`).join('');
+  $('#orbtall').textContent = '✦ ' + S.orbTatt.size + ' / ' + ORBER.length;
+  const e = []; if (S.ev.dobbel) e.push('Stigesko'); if (S.ev.hansker) e.push('Hansker'); if (S.ev.stot) e.push('Strømstøt');
+  $('#evner').innerHTML = e.map(n => `<span>${n}</span>`).join('');
+  $('#tStot').classList.toggle('skjult', !S.ev.stot);
+  $('#boss').classList.toggle('vis', B.aktiv && B.dod <= 0);
+  [...$('#bossSik').children].forEach((el, i) => el.classList.toggle('av', i >= B.hp));
+}
+function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
+  $('#hud').classList.toggle('vis', id === null || id === '#lagPause' || id === '#lagEvne'); $('#touch').classList.toggle('vis', id === null);
+  if (id) { const k = $(id + ' .knapp'); if (k) setTimeout(() => k.focus({ preventScroll: true }), 50); } }
+function primar() { if (performance.now() - S.panelT < 350) return; const l = document.querySelector('.lag.vis'); if (!l) return; const k = [...l.querySelectorAll('.knapp')].find(b => b.offsetParent); if (k) k.click(); }
+
+// ---------- lagring ----------
+function lagre() { try { localStorage.setItem(NOKKEL, JSON.stringify({ ev: S.ev, cp: S.cp, cpLit: [...S.cpLit], orb: [...S.orbTatt], boss: S.bossDone, tid: S.tid, ferdig: S.ferdig })); } catch (e) {} }
+function hentLagret() { try { const d = JSON.parse(localStorage.getItem(NOKKEL) || 'null'); return d && d.ev ? d : null; } catch (e) { return null; } }
+
+// ---------- spillets gang ----------
+function nyttSpill(lagret) {
+  byggKart();
+  S.ev = { dobbel: false, hansker: false, stot: false }; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.tid = 0; S.ferdig = false;
+  S.ending = 0; S.power = 0; S.dod = 0; S.hintSett = new Set();
+  if (lagret) { Object.assign(S.ev, lagret.ev); S.cp = lagret.cp || 0; S.cpLit = new Set(lagret.cpLit || [0]); S.orbTatt = new Set(lagret.orb || []); S.bossDone = !!lagret.boss; S.tid = lagret.tid || 0; }
+  BRYTERE.forEach(b => b.av = S.bossDone);
+  if (S.bossDone) rect(101, 13, 101, 18, AIR);
+  B.aktiv = false; B.hp = S.bossDone ? 0 : 3; B.dod = 0; prosj.length = 0; bolger.length = 0; partikler.length = 0;
+  respawn(true);
+  hud();
+}
+function respawn(stille) {
+  const c = SJEKK[S.cp];
+  P.x = c.x * T + T / 2 - P.w / 2; P.y = (c.y + 1) * T - P.h; P.vx = P.vy = 0; P.hp = P.max; P.inv = stille ? 0 : 1; P.dashT = 0; P.safeX = P.x; P.safeY = P.y;
+  P.air = 0; P.faller = 0;
+  if (B.aktiv && !S.bossDone) resetBoss();
+  GN.x = P.x; GN.y = P.y - 30;
+  oppdaterKamera(0, true); hud();
+}
+function resetBoss() { B.aktiv = false; B.hp = 3; B.stun = 0; B.dod = 0; B.t = 0; B.x = 87.5 * T; B.y = 7.4 * T; BRYTERE.forEach(b => b.av = false); prosj.length = 0; bolger.length = 0; rect(73, 13, 73, 18, CUR); hud(); }
+function startBoss() {
+  B.aktiv = true; B.hp = 3; B.t = 0; B.skuddT = 2.2; B.slagT = 5.5; B.stun = 0; B.x = 87.5 * T; B.y = 7.4 * T;
+  rect(73, 13, 73, 18, DOOR); lyd('boss'); S.shake = .6; banner('Overspenningen', 'Trafohallen');
+  hint(null, 'Slå av de tre sikringene for å stoppe Overspenningen!', 5); hud();
+}
+function skade(fraX, felle) {
+  if (P.inv > 0 || S.ending || S.dod > 0) return;
+  P.hp--; P.inv = 1.3; S.shake = .35; S.flash = .45; S.flashF = '255,60,60'; lyd('au');
+  sprut(P.x + P.w / 2, P.y + P.h / 2, 14, 'r', 220); hud();
+  if (P.hp <= 0) { S.dod = 1.2; lyd('dod'); sprut(P.x + P.w / 2, P.y + P.h / 2, 40, 'c', 300); return; }
+  if (felle) { P.x = P.safeX; P.y = P.safeY; P.vx = P.vy = 0; P.dashT = 0; }
+  else { P.vx = (P.x + P.w / 2 < fraX ? -1 : 1) * 330; P.vy = -360; P.dashT = 0; }
+}
+function faaEvne(f) {
+  S.ev[f.id] = true; lagre(); lyd('evne'); S.flash = .9; S.flashF = '255,235,190'; S.shake = .3;
+  sprut(f.x * T + T / 2, f.y * T + T / 2, 60, 'w', 320); sprut(f.x * T + T / 2, f.y * T + T / 2, 30, 'c', 200);
+  if (f.id === 'dobbel') P.air = 1;
+  $('#evneIkon').textContent = f.ikon; $('#evneNavn').textContent = f.navn; $('#evneTekst').textContent = f.tekst;
+  $('#evneCtrl').innerHTML = erTouch ? f.mob : f.pc;
+  hud(); S.mode = 'evne'; nullInput(); visLag('#lagEvne');
+}
+function nullInput() { I.jumpP = I.dashP = false; for (const k in K) K[k] = false; TS.left = TS.right = TS.jump = TS.dash = false; oppdaterTaster(); }
+
+function oppdaterSpiller(dt) {
+  const p = P;
+  if (S.dod > 0) return;
+  const laast = S.ending > 0;
+  const L = I.left && !laast, R = I.right && !laast;
+  if (I.jumpP) { I.jumpP = false; if (!laast) p.buf = .13; }
+  if (I.dashP) { I.dashP = false; if (!laast && S.ev.stot && p.canDash && p.dashCd <= 0 && p.dashT <= 0) {
+    if (L) p.face = -1; if (R) p.face = 1;
+    p.dashT = .17; p.canDash = false; p.dashCd = .35; p.vy = 0; lyd('stot'); S.shake = .12; sprut(p.x + p.w / 2, p.y + p.h / 2, 10, 'c', 160); } }
+  p.buf -= dt; p.dashCd -= dt; p.inv -= dt;
+  p.coyote = p.onGround ? .1 : p.coyote - dt;
+  if (p.dashT > 0) {
+    p.dashT -= dt; p.vx = p.face * 900; p.vy = 0;
+    if (Math.random() < .8) part(p.x + p.w / 2, p.y + p.h / 2 + (Math.random() - .5) * 20, -p.face * 40, (Math.random() - .5) * 40, .35, 8, 'c', 0);
+    if (p.dashT <= 0) p.vx = p.face * 280;
+  } else {
+    const dir = (R ? 1 : 0) - (L ? 1 : 0); if (dir) p.face = dir;
+    p.vx = mot(p.vx, dir * 250, (p.onGround ? 2600 : 1700) * dt);
+    const gm = p.vy < 0 && !I.jumpHeld ? 2.4 : (p.vy > 0 ? 1.15 : 1);
+    p.vy = Math.min(p.vy + 2000 * gm * dt, 820);
+    if (p.buf > 0) {
+      if (p.coyote > 0) { p.vy = -640; p.coyote = 0; p.buf = 0; p.onGround = false; p.sy = 1.25; p.sx = .8; lyd('hopp'); stov(p.x + p.w / 2, p.y + p.h, 5); }
+      else if (p.air > 0) { p.vy = -600; p.air--; p.buf = 0; p.sy = 1.2; p.sx = .85; lyd('dobbel');
+        for (let i = 0; i < 14; i++) { const a = i / 14 * 6.28; part(p.x + p.w / 2, p.y + p.h, Math.cos(a) * 140, Math.sin(a) * 50, .4, 6, 'w', 0); } }
+    }
+  }
+  const varBakke = p.onGround, vyFor = p.vy;
+  p.onGround = false;
+  flyttX(p, p.vx * dt);
+  if (flyttY(p, p.vy * dt) === 1) p.onGround = true;
+  if (p.onGround) { p.air = S.ev.dobbel ? 1 : 0; p.canDash = true;
+    if (!varBakke && vyFor > 250) { p.sx = 1.25; p.sy = .8; stov(p.x + p.w / 2, p.y + p.h, vyFor > 600 ? 10 : 5); } }
+  p.sx += (1 - p.sx) * Math.min(1, dt * 12); p.sy += (1 - p.sy) * Math.min(1, dt * 12);
+  if (p.onGround && Math.abs(p.vx) > 20) p.anim += dt * Math.abs(p.vx) * .055;
+  // feller (strømførende kabler)
+  const x0 = Math.floor((p.x + 3) / T), x1 = Math.floor((p.x + p.w - 3) / T), y0 = Math.floor(p.y / T), y1 = Math.floor((p.y + p.h - 1) / T);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (tile(x, y) === HAZ && p.y + p.h > y * T + T * .55) { skade(0, true); return; }
+  // trygt sted
+  if (p.onGround) { const fy = Math.floor((p.y + p.h + 1) / T), lx = Math.floor(p.x / T), hx = Math.floor((p.x + p.w) / T);
+    let ok = tile(lx, fy) !== AIR && tile(hx, fy) !== AIR && tile(lx, fy) !== HAZ && tile(hx, fy) !== HAZ;
+    for (let k = -2; k <= 2 && ok; k++) if (tile(lx + k, fy - 1) === HAZ || tile(lx + k, fy) === HAZ) ok = false;
+    if (ok) { p.safeX = p.x; p.safeY = p.y; } }
+}
+function oppdaterVerden(dt) {
+  const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
+  if (S.dod > 0) { S.dod -= dt; if (S.dod <= 0) { respawn(); } return; }
+  // sjekkpunkt
+  SJEKK.forEach((c, i) => { const cx = c.x * T + T / 2, cy = c.y * T + T / 2;
+    if (Math.abs(pcx - cx) < T * 1.2 && Math.abs(pcy - cy) < T * 1.4) {
+      if (!S.cpLit.has(i)) { S.cpLit.add(i); lyd('lampe'); sprut(cx, cy - 10, 24, 'w', 160); }
+      if (S.cp !== i || P.hp < P.max) { S.cp = i; P.hp = P.max; hud(); lagre(); } } });
+  // lysorber
+  ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const ox = x * T + T / 2, oy = y * T + T / 2 + Math.sin(S.t * 2 + i) * 4;
+    if (Math.abs(pcx - ox) < 20 && Math.abs(pcy - oy) < 24) { S.orbTatt.add(i); lyd('orb'); sprut(ox, oy, 16, 'c', 140); hud(); lagre(); } });
+  // funn
+  for (const f of FUNN) { if (S.ev[f.id] || (f.boss && !S.bossDone)) continue; const fx = f.x * T + T / 2, fy = f.y * T + T / 2;
+    if (Math.abs(pcx - fx) < 22 && Math.abs(pcy - fy) < 26) { faaEvne(f); return; } }
+  // brytere
+  if (B.aktiv && B.dod <= 0) BRYTERE.forEach(b => { if (b.av) return; const bx = b.x * T + T / 2, by = b.y * T + T / 2;
+    if (Math.abs(pcx - bx) < 20 && Math.abs(pcy - by) < 26) { b.av = true; B.hp--; B.stun = 1.6; lyd('bryter'); S.shake = .5; S.flash = .5; S.flashF = '200,150,255';
+      sprut(bx, by, 26, 'p', 240); lyn = { x1: bx, y1: by, x2: B.x, y2: B.y, t: .3 }; prosj.length = 0;
+      if (B.hp <= 0) { B.dod = 2.2; lyd('bossdod'); } hud(); } });
+  oppdaterBoss(dt);
+  // hint
+  const tx = Math.floor(pcx / T), ty = Math.floor(pcy / T);
+  if (!S.ev.dobbel && tx >= 30 && tx <= 34 && ty >= 20 && ty <= 23) hint('vegg', 'For høyt å hoppe. Kanskje noe nede i kjelleren kan hjelpe?');
+  if (S.ev.dobbel && !S.ev.hansker && tx >= 40 && tx <= 46 && ty <= 18) hint('stillas', 'Klatre opp stillaset. Noe glitrer helt på toppen.');
+  if (!S.ev.stot && tx >= 102 && tx <= 104) hint('sjakt', 'For langt å hoppe. Hent Strømstøtet i trafohallen.');
+  if (S.ev.stot && tx >= 102 && tx <= 104) hint('sjakt2', 'Hopp, hopp igjen og bruk Strømstøt for å komme over.');
+  // hovedtavla
+  if (!S.ending && !B.aktiv && pcx > TAVLE.x * T - 6 && pcx < (TAVLE.x + 2) * T + 6 && pcy > (TAVLE.y - 1) * T) {
+    S.ending = .001; lyd('slutt'); S.flash = 1; S.flashF = '255,245,220'; S.ferdig = true; lagre();
+    SJEKK.forEach((c, i) => S.cpLit.add(i)); banner('Strømmen er tilbake', '');
+  }
+  if (S.ending > 0) {
+    S.ending += dt; S.power = clamp((S.ending - .4) / 2.5, 0, 1);
+    if (!BG.midtLys) BG.midtLys = lagMidt(true);
+    if (Math.random() < dt * 30) part(cam.x + Math.random() * cssW / skala, cam.y + cssH / skala + 10, (Math.random() - .5) * 20, -60 - Math.random() * 90, 3 + Math.random() * 2, 5 + Math.random() * 8, Math.random() < .5 ? 'w' : 'c', -5);
+    if (S.ending > 4.2 && S.mode === 'spill') { S.mode = 'slutt'; visSlutt(); }
+  }
+}
+function oppdaterBoss(dt) {
+  if (!B.aktiv) { if (!S.bossDone && P.x / T >= 75 && P.x / T <= 100 && P.y / T > 5 && P.y / T < 19) startBoss(); return; }
+  B.t += dt * (1 + (3 - B.hp) * .25);
+  if (B.dod > 0) {
+    B.dod -= dt; S.shake = Math.max(S.shake, .2);
+    if (Math.random() < .6) sprut(B.x + (Math.random() - .5) * 60, B.y + (Math.random() - .5) * 50, 3, Math.random() < .5 ? 'p' : 'c', 260);
+    if (B.dod <= 0) { S.bossDone = true; B.aktiv = false; rect(73, 13, 73, 18, CUR); rect(101, 13, 101, 18, AIR); S.flash = 1; S.flashF = '230,210,255';
+      sprut(B.x, B.y, 90, 'p', 420); sprut(B.x, B.y, 50, 'w', 300); lagre(); hud(); banner('Overspenningen er slått ut', 'Hent Strømstøtet'); }
+    return;
+  }
+  const mx = 87.5 * T + Math.sin(B.t * .6) * 9 * T, my = 7.4 * T + Math.sin(B.t * 1.3) * .6 * T + (B.stun > 0 ? Math.sin(B.stun * 10) * 6 + 12 : 0);
+  B.x += (mx - B.x) * Math.min(1, dt * 3); B.y += (my - B.y) * Math.min(1, dt * 3);
+  const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
+  if (Math.hypot(pcx - B.x, pcy - B.y) < 36) skade(B.x, false);
+  if (B.stun > 0) { B.stun -= dt; return; }
+  B.skuddT -= dt;
+  if (B.skuddT <= 0) { const n = 2 + (3 - B.hp), tf = 1.15; lyd('skudd');
+    for (let i = 0; i < n; i++) { const dx = pcx - B.x, dy = pcy - B.y;
+      prosj.push({ x: B.x, y: B.y + 20, vx: dx / tf + (i - (n - 1) / 2) * 95, vy: (dy - .5 * 700 * tf * tf) / tf, liv: 4 }); }
+    B.skuddT = 2.6 - (3 - B.hp) * .45; }
+  B.slagT -= dt; B.varsel = B.slagT < .9 ? 1 - B.slagT / .9 : 0;
+  if (B.slagT <= 0) {
+    const col = Math.floor(B.x / T); let row = Math.floor(B.y / T) + 1; while (row < MH && tile(col, row) !== SOL) row++;
+    lyn = { x1: B.x, y1: B.y, x2: B.x, y2: row * T, t: .3 }; lyd('slag'); S.shake = .45;
+    bolger.push({ x: B.x, dir: 1, row, liv: 4 }, { x: B.x, dir: -1, row, liv: 4 });
+    B.slagT = 6.5 - (3 - B.hp) * 1.3; B.varsel = 0;
+  }
+}
+function oppdaterProsj(dt) {
+  const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
+  for (let i = prosj.length - 1; i >= 0; i--) { const q = prosj[i]; q.vy += 700 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.liv -= dt;
+    if (Math.random() < .5) part(q.x, q.y, 0, 0, .3, 7, 'p', 0);
+    const t = tile(Math.floor(q.x / T), Math.floor(q.y / T));
+    if (t === SOL || t === DOOR || q.liv <= 0) { gnister(q.x, q.y, 8, 'p'); prosj.splice(i, 1); continue; }
+    if (Math.abs(q.x - pcx) < 9 + P.w / 2 && Math.abs(q.y - pcy) < 9 + P.h / 2) { skade(q.x, false); gnister(q.x, q.y, 8, 'p'); prosj.splice(i, 1); } }
+  for (let i = bolger.length - 1; i >= 0; i--) { const b = bolger[i]; b.x += b.dir * 300 * dt; b.liv -= dt;
+    const col = Math.floor(b.x / T);
+    if (tile(col, b.row) !== SOL || fast(col, b.row - 1) || b.liv <= 0) { gnister(b.x, b.row * T - 10, 6, 'p'); bolger.splice(i, 1); continue; }
+    if (Math.random() < .7) part(b.x, b.row * T - 4, -b.dir * 30, -80 - Math.random() * 80, .3, 5, 'p', 0);
+    if (P.y + P.h > b.row * T - 24 && P.y < b.row * T && Math.abs(b.x - pcx) < 12 + P.w / 2) skade(b.x, false); }
+  if (lyn) { lyn.t -= dt; if (lyn.t <= 0) lyn = null; }
+}
+function oppdaterPartikler(dt) {
+  for (let i = partikler.length - 1; i >= 0; i--) { const q = partikler[i]; q.liv -= dt; if (q.liv <= 0) { partikler.splice(i, 1); continue; }
+    q.vy += q.grav * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= (1 - dt * 1.5); }
+  // gnisten følger montøren
+  const tx = P.x + P.w / 2 - P.face * 20, ty = P.y - 14 + Math.sin(S.t * 2.2) * 5;
+  GN.vx += ((tx - GN.x) * 30 - GN.vx * 8) * dt; GN.vy += ((ty - GN.y) * 30 - GN.vy * 8) * dt;
+  GN.x += GN.vx * dt; GN.y += GN.vy * dt;
+  if (Math.random() < dt * 14) part(GN.x, GN.y, (Math.random() - .5) * 20, 10 + Math.random() * 20, .7, 4, 'c', 0);
+  // gnister fra feller
+  for (const [x, y] of hazListe) { if (x * T < cam.x - T || x * T > cam.x + cssW / skala + T || y * T < cam.y - T || y * T > cam.y + cssH / skala + T) continue;
+    if (Math.random() < dt * 2.5) part(x * T + Math.random() * T, y * T + T - 8, (Math.random() - .5) * 120, -100 - Math.random() * 160, .4 + Math.random() * .3, 3 + Math.random() * 3, Math.random() < .5 ? 'o' : 'c', 600); }
+}
+function oppdaterKamera(dt, snap) {
+  const vw = cssW / skala, vh = cssH / skala;
+  cam.look += (P.face * vw * .08 - cam.look) * Math.min(1, dt * 1.8);
+  let tx = P.x + P.w / 2 - vw / 2 + cam.look, ty = P.y + P.h / 2 - vh * .55;
+  if (B.aktiv) { tx = lerp(tx, 87.5 * T - vw / 2, .55); ty = Math.min(12 * T - vh / 2, 5.6 * T); }
+  tx = clamp(tx, 0, MW * T - vw); ty = vh >= MH * T ? (MH * T - vh) / 2 : clamp(ty, 0, MH * T - vh);
+  if (snap) { cam.x = tx; cam.y = ty; return; }
+  cam.x += (tx - cam.x) * (1 - Math.exp(-dt * 6)); cam.y += (ty - cam.y) * (1 - Math.exp(-dt * 4.5));
+}
+
+// ---------- tegning ----------
+const MOTES = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), z: .3 + Math.random() * 1.1, ph: Math.random() * 6.28, f: .3 + Math.random() * .8, vx: (Math.random() - .5) * 14, c: Math.random() < .7 ? 'c' : 'w' }));
+function glod(spr, x, y, r, a) { if (a <= 0) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(spr, x - r, y - r, r * 2, r * 2); }
+function jagget(x1, y1, x2, y2, utslag, n, seed) { const r = rng(seed); ctx.beginPath(); ctx.moveTo(x1, y1);
+  for (let i = 1; i < n; i++) { const t = i / n, nx = -(y2 - y1), ny = x2 - x1, l = Math.hypot(nx, ny) || 1, o = (r() - .5) * 2 * utslag;
+    ctx.lineTo(lerp(x1, x2, t) + nx / l * o, lerp(y1, y2, t) + ny / l * o); } ctx.lineTo(x2, y2); ctx.stroke(); }
+
+function tegnBakgrunn(kx, ky) {
+  const cw = cv.width, ch = cv.height;
+  const maxY = Math.max(1, MH * T - cssH / skala), t = clamp(ky / maxY, 0, 1);
+  const hk = Math.max(cw / LW, ch / LH) * 1.08;
+  ctx.drawImage(BG.himmel, (cw - LW * hk) / 2 - (kx / (MW * T)) * LW * hk * .04, -(LH * hk - ch) * (.25 + t * .5), LW * hk, LH * hk);
+  const k = ch / 640, lw = LW * k, lh = LH * k, slakk = lh - ch;
+  const lag = (bilde, p, pv, a) => { if (!bilde || a <= 0) return; ctx.globalAlpha = a; const y = -slakk * (.5 + (t - .5) * pv);
+    let x0 = -((kx * skala * dpr * p) % lw); if (x0 > 0) x0 -= lw; for (let x = x0; x < cw; x += lw) ctx.drawImage(bilde, x, y, lw + 1, lh); ctx.globalAlpha = 1; };
+  lag(BG.fjern, .08, .25, 1);
+  // lysstråler fra månen
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) { ctx.save(); ctx.translate(cw * (.55 + i * .16) - (kx * skala * dpr * .05) % cw, -ch * .1); ctx.rotate(.42 + Math.sin(S.t * .2 + i) * .03);
+    ctx.globalAlpha = .045 + .02 * Math.sin(S.t * .5 + i * 2); ctx.drawImage(STRALE, -ch * .12, 0, ch * (.18 + i * .06), ch * 1.6); ctx.restore(); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  lag(BG.midt, .3, .5, 1);
+  if (BG.midtLys && S.power > 0) lag(BG.midtLys, .3, .5, S.power);
+  lag(BG.naer, .55, .8, 1);
+}
+function tegnMotes(nar) {
+  const cw = cv.width, ch = cv.height; ctx.globalCompositeOperation = 'lighter';
+  for (const m of MOTES) { if ((m.z >= 1) !== nar) continue;
+    const sx = ((m.x * cw - cam.x * skala * dpr * m.z * .6 + S.t * m.vx * dpr) % (cw + 60) + cw + 60) % (cw + 60) - 30;
+    const sy = ((m.y * ch - cam.y * skala * dpr * m.z * .6 + Math.sin(S.t * m.f + m.ph) * 22 * dpr) % (ch + 60) + ch + 60) % (ch + 60) - 30;
+    glod(m.c === 'c' ? SPR.c : SPR.w, sx, sy, (4 + m.z * 9) * dpr, (.25 + .3 * Math.sin(S.t * m.f * 2 + m.ph)) * (nar ? .6 : .8)); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
+function synlig(x, y, m) { const vw = cssW / skala, vh = cssH / skala; return x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m; }
+
+function tegnLampe(c, i) {
+  const X = c.x * T + T / 2, Y = (c.y + 1) * T, lit = S.cpLit.has(i);
+  ctx.strokeStyle = '#1b2232'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, Y - 26); ctx.lineTo(X - 9, Y); ctx.moveTo(X, Y - 26); ctx.lineTo(X + 9, Y); ctx.moveTo(X, Y - 26); ctx.lineTo(X, Y); ctx.stroke();
+  ctx.fillStyle = '#e8b730'; rr(ctx, X - 9, Y - 36, 18, 12, 3); ctx.fill();
+  ctx.fillStyle = lit ? '#fff6d2' : '#3a3f4e'; rr(ctx, X - 6, Y - 34, 12, 8, 2); ctx.fill();
+  if (lit) lys.push({ x: X, y: Y - 30, r: 230, i: .95 }); else lys.push({ x: X, y: Y - 30, r: 60, i: .4 });
+}
+function tegnBryter(b) {
+  const X = b.x * T + T / 2, Y = (b.y + 1) * T;
+  ctx.fillStyle = '#1b2232'; ctx.fillRect(X - 2, Y - 14, 4, 14);
+  ctx.fillStyle = '#39425a'; rr(ctx, X - 10, Y - 38, 20, 26, 3); ctx.fill(); ctx.strokeStyle = '#59647f'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(X, Y - 25); ctx.lineTo(X + 6, b.av ? Y - 17 : Y - 33); ctx.stroke(); ctx.lineCap = 'butt';
+  const blink = b.av ? 1 : (Math.sin(S.t * 8) > 0 ? 1 : .4);
+  ctx.fillStyle = b.av ? '#4dff9a' : `rgba(255,70,70,${blink})`; ctx.beginPath(); ctx.arc(X - 5, Y - 33, 2.5, 0, 7); ctx.fill();
+  lys.push({ x: X, y: Y - 26, r: b.av ? 60 : 90, i: .7 });
+}
+function tegnTavle() {
+  const X = TAVLE.x * T + 4, Y = (TAVLE.y + 2) * T, w = T * 2 - 8, h = 66;
+  const gr = ctx.createLinearGradient(X, 0, X + w, 0); gr.addColorStop(0, '#5a657d'); gr.addColorStop(1, '#3a4256');
+  ctx.fillStyle = gr; rr(ctx, X, Y - h, w, h, 4); ctx.fill(); ctx.strokeStyle = '#7d89a3'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(X + w / 2 - .5, Y - h + 6, 1, h - 12);
+  ctx.fillStyle = '#f2c23c'; ctx.beginPath(); ctx.moveTo(X + 14, Y - h + 12); ctx.lineTo(X + 22, Y - h + 26); ctx.lineTo(X + 6, Y - h + 26); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#222'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center'; ctx.fillText('⚡', X + 14, Y - h + 25);
+  const on = S.ending > 0; ctx.fillStyle = on ? '#4dff9a' : (Math.sin(S.t * 5) > 0 ? '#ff4646' : '#5a2020'); ctx.beginPath(); ctx.arc(X + w - 10, Y - h + 12, 3, 0, 7); ctx.fill();
+  lys.push({ x: X + w / 2, y: Y - h / 2, r: on ? 380 : 110, i: .9 });
+}
+function tegnFunn(f) {
+  const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2) * 4;
+  ctx.fillStyle = 'rgba(20,30,50,.6)'; ctx.beginPath(); ctx.arc(X, Y, 11, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(X, Y);
+  ctx.strokeStyle = '#fff2c8'; ctx.fillStyle = '#ffd36b'; ctx.lineWidth = 2;
+  if (f.id === 'dobbel') { ctx.beginPath(); ctx.moveTo(-5, -7); ctx.lineTo(-1, -7); ctx.lineTo(-1, 2); ctx.lineTo(6, 3); ctx.lineTo(6, 7); ctx.lineTo(-5, 7); ctx.closePath(); ctx.fill(); }
+  else if (f.id === 'hansker') { rr(ctx, -5, -4, 10, 11, 3); ctx.fill(); for (let i = 0; i < 3; i++) { rr(ctx, -5 + i * 3.4, -9, 2.6, 7, 1.3); ctx.fill(); } rr(ctx, 4, -2, 5, 2.6, 1.3); ctx.fill(); }
+  else { ctx.beginPath(); ctx.moveTo(2, -9); ctx.lineTo(-5, 1); ctx.lineTo(0, 1); ctx.lineTo(-2, 9); ctx.lineTo(5, -2); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+  lys.push({ x: X, y: Y, r: 170, i: .9 });
+}
+function tegnSpiller() {
+  const p = P; if (S.dod > 0) return;
+  const cx = p.x + p.w / 2, by = p.y + p.h;
+  ctx.save(); ctx.translate(cx, by); ctx.scale(p.face * p.sx, p.sy);
+  if (p.inv > 0 && Math.floor(p.inv * 18) % 2) ctx.globalAlpha = .45;
+  const iLufta = !p.onGround, sw = iLufta ? .6 : Math.sin(p.anim) * Math.min(1, Math.abs(p.vx) / 200);
+  ctx.lineCap = 'round';
+  const ben = (ox, a, farge) => { ctx.strokeStyle = farge; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(ox, -12);
+    const kx = ox + Math.sin(a) * 6, ky = -6 + (iLufta ? -2 : 0), fx = ox + Math.sin(a) * 9, fy = iLufta ? -3 : -Math.max(0, Math.cos(a)) * 0 - 1;
+    ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.fillStyle = S.ev.dobbel ? '#e08a2c' : '#20242e'; rr(ctx, fx - 3, fy - 2, 8, 4, 2); ctx.fill(); };
+  ben(-2, iLufta ? -.5 : -sw, '#22335a');
+  // kropp
+  const arm = (a, farge) => { ctx.strokeStyle = farge; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, -22);
+    const hx = Math.sin(a) * 7, hy = -14 + Math.abs(Math.cos(a)) * 1 + (iLufta ? -6 : 0); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = S.ev.hansker ? '#ffcf3a' : '#e9b88e'; ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, 7); ctx.fill(); };
+  arm(sw * 1.1, '#b8641f');
+  ben(2, iLufta ? .7 : sw, '#2a3d66');
+  ctx.fillStyle = '#ff962c'; rr(ctx, -7, -26, 14, 15, 4); ctx.fill();
+  ctx.fillStyle = '#e8f2ff'; ctx.fillRect(-7, -20, 14, 2); ctx.fillRect(-7, -15.5, 14, 2);
+  ctx.fillStyle = '#3a3226'; ctx.fillRect(-7, -12.5, 14, 2.5);
+  arm(-sw * 1.1, '#e07a22');
+  // hode
+  ctx.fillStyle = '#f0c39a'; ctx.beginPath(); ctx.arc(1, -31, 5.6, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1d1d24'; ctx.beginPath(); ctx.arc(3.4, -31.5, 1, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(1, -33, 6.6, Math.PI, 0); ctx.fill(); ctx.fillRect(-6, -33.6, 15, 2.4);
+  ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(-1, -36, 2, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#fff7d0'; ctx.beginPath(); ctx.arc(7.4, -34.6, 1.7, 0, 7); ctx.fill();
+  ctx.restore();
+  lys.push({ x: cx + p.face * 8, y: p.y + 2, r: 220, i: .95 });
+}
+function tegnBoss() {
+  if (!B.aktiv) return;
+  const X = B.x, Y = B.y, a = B.dod > 0 ? clamp(B.dod / 2.2, 0, 1) : 1, flimmer = B.stun > 0 && Math.sin(S.t * 40) > 0;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(X + (B.dod > 0 ? (Math.random() - .5) * 8 : 0), Y);
+  ctx.strokeStyle = '#141826'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  for (let i = 0; i < 5; i++) { const ox = -24 + i * 12, l = 34 + Math.sin(S.t * 2 + i) * 8;
+    ctx.beginPath(); ctx.moveTo(ox, 18); ctx.bezierCurveTo(ox + Math.sin(S.t * 1.7 + i) * 14, 18 + l * .5, ox - Math.sin(S.t * 1.3 + i) * 14, 18 + l * .8, ox + Math.sin(S.t + i) * 6, 18 + l); ctx.stroke(); }
+  ctx.fillStyle = '#a5683a';
+  for (const s of [-1, 1]) for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(s * 34, -12 + k * 8, 7, 4.5, 0, 0, 7); ctx.fill(); }
+  const gr = ctx.createLinearGradient(0, -30, 0, 30); gr.addColorStop(0, flimmer ? '#d9d4ff' : '#3a4157'); gr.addColorStop(1, flimmer ? '#8a80c0' : '#1b1f2e');
+  ctx.fillStyle = gr; rr(ctx, -30, -28, 60, 50, 10); ctx.fill(); ctx.strokeStyle = '#59607c'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#272c3f'; for (let i = -2; i <= 2; i++) ctx.fillRect(i * 10 - 2, -36, 4, 9);
+  ctx.fillStyle = '#d7dbe6'; for (const s of [-16, 16]) { rr(ctx, s - 4, -44, 8, 14, 3); ctx.fill(); }
+  const puls = .7 + .3 * Math.sin(S.t * 6) + B.varsel * .6;
+  const cg = ctx.createRadialGradient(0, -4, 0, 0, -4, 16); cg.addColorStop(0, '#ffffff'); cg.addColorStop(.4, `rgba(200,150,255,${puls})`); cg.addColorStop(1, 'rgba(120,60,220,0)');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -4, 16, 0, 7); ctx.fill();
+  ctx.fillStyle = B.stun > 0 ? '#ffffff' : '#ffe1ff';
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 6, -10); ctx.lineTo(s * 18, -14); ctx.lineTo(s * 17, -9); ctx.closePath(); ctx.fill(); }
+  ctx.restore(); ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+  lys.push({ x: X, y: Y, r: 300, i: .9 * a });
+}
+function tegnDynamiskeFliser() {
+  const vw = cssW / skala, vh = cssH / skala;
+  for (const [x, y] of hazListe) { const X = x * T, Y = y * T; if (!synlig(X, Y, T)) continue;
+    ctx.strokeStyle = '#11141b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(X - 2, Y + T - 3); ctx.quadraticCurveTo(X + T / 2, Y + T - 12 - hs(x, y, 1) * 6, X + T + 2, Y + T - 4); ctx.stroke();
+    ctx.strokeStyle = '#d07a3a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X + 14, Y + T - 9); ctx.lineTo(X + 18, Y + T - 16); ctx.moveTo(X + 16, Y + T - 9); ctx.lineTo(X + 21, Y + T - 13); ctx.stroke();
+    const fl = .6 + .4 * Math.sin(S.t * 30 + x * 3); lys.push({ x: X + T / 2, y: Y + T - 10, r: 70 * fl, i: .6 }); }
+  for (const kol of [73, 101]) { const t0 = tile(kol, 13); if (t0 === AIR) continue; const X = kol * T, Y0 = 13 * T, Y1 = 19 * T;
+    if (!synlig(X, Y0, 200)) continue;
+    ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 2, Y0 - 8, T + 4, 9); ctx.fillRect(X - 2, Y1 - 6, T + 4, 6);
+    ctx.fillStyle = Math.sin(S.t * 6) > 0 ? '#ff7a3a' : '#7a3a1a'; ctx.fillRect(X + 4, Y0 - 5, 4, 3);
+    if (t0 === DOOR) { const gr = ctx.createLinearGradient(X, 0, X + T, 0); gr.addColorStop(0, '#2b3044'); gr.addColorStop(.5, '#424a64'); gr.addColorStop(1, '#22263a');
+      ctx.fillStyle = gr; ctx.fillRect(X + 2, Y0, T - 4, Y1 - Y0 - 6); ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let y = Y0 + 8; y < Y1 - 6; y += 12) ctx.fillRect(X + 2, y, T - 4, 2);
+      ctx.fillStyle = 'rgba(255,120,60,.8)'; ctx.fillRect(X + T / 2 - 1.5, Y0, 3, Y1 - Y0 - 6);
+      lys.push({ x: X + T / 2, y: (Y0 + Y1) / 2, r: 120, i: .5 }); }
+    else lys.push({ x: X + T / 2, y: (Y0 + Y1) / 2, r: 170, i: S.ev.hansker ? .5 : .8 }); }
+}
+function tegnGlod() {
+  // additive lag: alt som lyser
+  ctx.globalCompositeOperation = 'lighter';
+  SJEKK.forEach((c, i) => { const X = c.x * T + T / 2, Y = (c.y + 1) * T - 30; if (!synlig(X, Y, 200)) return;
+    if (S.cpLit.has(i)) { glod(SPR.w, X, Y, 90, .55 + .05 * Math.sin(S.t * 3 + i)); glod(SPR.h, X, Y, 14, .6); } else glod(SPR.w, X, Y, 30, .25); });
+  ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const X = x * T + T / 2, Y = y * T + T / 2 + Math.sin(S.t * 2 + i) * 4; if (!synlig(X, Y, 60)) return;
+    glod(SPR.c, X, Y, 26, .8 + .2 * Math.sin(S.t * 4 + i)); glod(SPR.h, X, Y, 6, .9); lys.push({ x: X, y: Y, r: 55, i: .6 }); });
+  for (const f of FUNN) { if (S.ev[f.id] || (f.boss && !S.bossDone)) continue; const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2) * 4; if (!synlig(X, Y, 200)) continue;
+    glod(SPR.w, X, Y, 70 + 8 * Math.sin(S.t * 3), .8); glod(SPR.h, X, Y, 20, .5);
+    ctx.save(); ctx.translate(X, Y); ctx.rotate(S.t * .4); ctx.globalAlpha = .25; ctx.fillStyle = '#ffe9b0';
+    for (let i = 0; i < 6; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-4, 70); ctx.lineTo(4, 70); ctx.fill(); } ctx.restore(); }
+  for (const [x, y] of hazListe) { const X = x * T + T / 2, Y = y * T + T - 10; if (!synlig(X, Y, 60)) continue;
+    const fl = .5 + .5 * Math.sin(S.t * 37 + x * 7); glod(SPR.o, X, Y, 26 + fl * 10, .45 + fl * .3);
+    if (fl > .6) { ctx.strokeStyle = 'rgba(190,240,255,.9)'; ctx.lineWidth = 1.2; ctx.globalAlpha = 1; jagget(X - 10, Y + 2, X + 8, Y - 10 - fl * 6, 4, 4, (S.t * 20 | 0) + x); } }
+  for (const kol of [73, 101]) { const t0 = tile(kol, 13); if (t0 !== CUR) continue; const X = kol * T + T / 2; if (!synlig(X, 15 * T, 200)) continue;
+    const a = S.ev.hansker ? .5 : 1; ctx.globalAlpha = a; ctx.lineWidth = 1.6;
+    for (let k = 0; k < 3; k++) { ctx.strokeStyle = k ? 'rgba(140,220,255,.8)' : 'rgba(240,250,255,.95)'; jagget(X + (k - 1) * 6, 13 * T, X - (k - 1) * 6, 19 * T - 6, 7, 10, (S.t * 15 | 0) * 3 + k); }
+    for (let y = 13; y < 19; y++) glod(SPR.c, X, y * T + T / 2, 34, .35 * a); }
+  if (B.aktiv) { const a = B.dod > 0 ? clamp(B.dod / 2.2, 0, 1) : 1;
+    glod(SPR.p, B.x, B.y, 170 + B.varsel * 80, (.55 + .2 * Math.sin(S.t * 5)) * a); glod(SPR.h, B.x, B.y - 4, 22, .7 * a);
+    if (B.stun <= 0 && B.dod <= 0) { ctx.globalAlpha = .8; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(220,180,255,.9)';
+      for (let i = 0; i < 3; i++) { const v = (S.t * 3 + i * 2.1), r = 50 + 30 * Math.sin(v * 1.7); jagget(B.x, B.y - 4, B.x + Math.cos(v) * r, B.y + Math.sin(v) * r, 6, 5, (S.t * 18 | 0) + i * 7); } } }
+  for (const q of prosj) { glod(SPR.p, q.x, q.y, 28, .9); glod(SPR.h, q.x, q.y, 7, 1); lys.push({ x: q.x, y: q.y, r: 70, i: .7 }); }
+  for (const b of bolger) { const Y = b.row * T; ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(230,200,255,.95)';
+    jagget(b.x, Y, b.x + b.dir * 4, Y - 28, 6, 5, (S.t * 25 | 0) + (b.dir > 0 ? 1 : 9)); glod(SPR.p, b.x, Y - 12, 44, .8); lys.push({ x: b.x, y: Y - 12, r: 80, i: .7 }); }
+  if (lyn) { ctx.globalAlpha = clamp(lyn.t / .3, 0, 1); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(245,235,255,1)'; jagget(lyn.x1, lyn.y1, lyn.x2, lyn.y2, 14, 12, (S.t * 30 | 0));
+    ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(180,120,255,.35)'; jagget(lyn.x1, lyn.y1, lyn.x2, lyn.y2, 14, 12, (S.t * 30 | 0)); }
+  // tavla
+  { const X = TAVLE.x * T + T, Y = (TAVLE.y + 2) * T - 33; if (synlig(X, Y, 300)) glod(S.ending > 0 ? SPR.g : SPR.r, X, Y, S.ending > 0 ? 120 : 40, S.ending > 0 ? .5 : .35); }
+  // partikler
+  for (const q of partikler) { const k = q.liv / q.max, spr = q.farge === 'd' ? null : SPR[q.farge] || SPR.w; if (!spr) continue; glod(spr, q.x, q.y, q.str * (.4 + k * .6), k); }
+  // montørens hodelykt og gnisten
+  if (S.dod <= 0) { glod(SPR.w, P.x + P.w / 2 + P.face * 8, P.y + 2, 16, .7);
+    glod(SPR.c, GN.x, GN.y, 36 + 4 * Math.sin(S.t * 6), .75); glod(SPR.h, GN.x, GN.y, 8, 1); lys.push({ x: GN.x, y: GN.y, r: 130, i: .8 }); }
+  if (S.power > 0) { const vw = cssW / skala; for (let x = 0; x < MW * T; x += 260) if (x > cam.x - 300 && x < cam.x + vw + 300) lys.push({ x, y: 10 * T, r: 600, i: S.power * .6 }); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
+function tegnStov() { ctx.fillStyle = 'rgba(150,160,180,.35)'; for (const q of partikler) if (q.farge === 'd') { ctx.globalAlpha = q.liv / q.max * .6; ctx.beginPath(); ctx.arc(q.x, q.y, q.str * (1.4 - q.liv / q.max * .6), 0, 7); ctx.fill(); } ctx.globalAlpha = 1; }
+function tegnLys() {
+  const g = lysG, k = lysC.width / cv.width, s = skala * dpr * k;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, lysC.width, lysC.height);
+  const mork = S.mork * (1 - S.power * .75);
+  g.fillStyle = `rgba(3,7,20,${mork})`; g.fillRect(0, 0, lysC.width, lysC.height);
+  g.globalCompositeOperation = 'destination-out';
+  for (const l of lys) { const r = l.r * s, x = (l.x - camX) * s, y = (l.y - camY) * s; if (x < -r || y < -r || x > lysC.width + r || y > lysC.height + r) continue;
+    g.globalAlpha = clamp(l.i, 0, 1); g.drawImage(HULL, x - r, y - r, r * 2, r * 2); }
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(lysC, 0, 0, cv.width, cv.height);
+}
+let camX = 0, camY = 0;
+function tegn() {
+  S.frame++; lys.length = 0;
+  const sh = S.shake > 0 ? S.shake * 10 : 0;
+  camX = cam.x + (Math.random() - .5) * sh; camY = cam.y + (Math.random() - .5) * sh;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  tegnBakgrunn(camX, camY);
+  tegnMotes(false);
+  const m = skala * dpr;
+  ctx.setTransform(m, 0, 0, m, -camX * m, -camY * m);
+  const vw = cssW / skala, vh = cssH / skala;
+  const cx0 = Math.floor(camX / CPX), cx1 = Math.floor((camX + vw) / CPX), cy0 = Math.floor(camY / CPX), cy1 = Math.floor((camY + vh) / CPX);
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) { if (cx < 0 || cy < 0 || cx * CH >= MW || cy * CH >= MH) continue;
+    ctx.drawImage(hentChunk(cx, cy), cx * CPX - 2, cy * CPX - 2, CPX + 4, CPX + 4); }
+  // forhåndslag én bit utenfor skjermen per bilde
+  const nx = (S.frame % 2 ? cx1 + 1 : cx0 - 1), ny = cy0 + (S.frame >> 1) % (cy1 - cy0 + 1);
+  if (nx >= 0 && nx * CH < MW && !chunks.has(nx + ',' + ny)) hentChunk(nx, ny);
+  tegnDynamiskeFliser();
+  SJEKK.forEach((c, i) => { if (synlig(c.x * T, c.y * T, 100)) tegnLampe(c, i); });
+  if (synlig(TAVLE.x * T, TAVLE.y * T, 200)) tegnTavle();
+  if (B.aktiv || !S.bossDone) BRYTERE.forEach(b => { if (synlig(b.x * T, b.y * T, 100)) tegnBryter(b); });
+  for (const f of FUNN) if (!S.ev[f.id] && !(f.boss && !S.bossDone) && synlig(f.x * T, f.y * T, 100)) tegnFunn(f);
+  tegnBoss();
+  tegnSpiller();
+  tegnStov();
+  // glød registrerer også lys, så den tegnes på et eget lag etter mørket
+  const lysFor = lys.length;
+  ctx.save(); ctx.globalAlpha = 0; tegnGlodLys(); ctx.restore();
+  tegnLys();
+  ctx.setTransform(m, 0, 0, m, -camX * m, -camY * m);
+  tegnGlod();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  tegnMotes(true);
+  if (vign) ctx.drawImage(vign, 0, 0, cv.width, cv.height);
+  if (S.flash > 0) { ctx.fillStyle = `rgba(${S.flashF},${S.flash * .55})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+}
+// lys som ellers registreres i tegnGlod, må være med i mørkelaget før det tegnes
+function tegnGlodLys() {
+  ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const X = x * T + T / 2, Y = y * T + T / 2; if (synlig(X, Y, 60)) lys.push({ x: X, y: Y, r: 55, i: .6 }); });
+  for (const q of prosj) lys.push({ x: q.x, y: q.y, r: 70, i: .7 });
+  for (const b of bolger) lys.push({ x: b.x, y: b.row * T - 12, r: 80, i: .7 });
+  if (S.dod <= 0) lys.push({ x: GN.x, y: GN.y, r: 130, i: .8 });
+  if (S.power > 0) { const vw = cssW / skala; for (let x = 0; x < MW * T; x += 260) if (x > cam.x - 300 && x < cam.x + vw + 300) lys.push({ x, y: 10 * T, r: 600, i: S.power * .6 }); }
+  if (lyn) lys.push({ x: (lyn.x1 + lyn.x2) / 2, y: (lyn.y1 + lyn.y2) / 2, r: 260, i: .8 });
+}
+
+// ---------- løkke ----------
+let sist = performance.now();
+function loop(n) {
+  let dt = Math.min(.05, (n - sist) / 1000); sist = n;
+  if (S.mode !== 'pause') {
+    S.t += dt;
+    if (S.mode === 'spill') { S.tid += dt; const steg = Math.ceil(dt / (1 / 120)), h = dt / steg; for (let i = 0; i < steg; i++) { oppdaterSpiller(h); } oppdaterVerden(dt); oppdaterProsj(dt); }
+    else if (S.mode === 'slutt') oppdaterVerden(dt);
+    oppdaterPartikler(dt); oppdaterKamera(dt);
+    S.shake = Math.max(0, S.shake - dt); S.flash = Math.max(0, S.flash - dt * 1.4);
+    const ptx = Math.floor((P.x + P.w / 2) / T), pty = Math.floor((P.y + P.h / 2) / T);
+    S.mork += ((inne(ptx, pty) ? .68 : .5) - S.mork) * Math.min(1, dt * 2);
+    if (hintTid > 0) { hintTid -= dt; if (hintTid <= 0) $('#hint').classList.remove('vis'); }
+    if (bannerTid > 0) { bannerTid -= dt; if (bannerTid <= 0) $('#banner').classList.remove('vis'); }
+  }
+  tegn();
+  requestAnimationFrame(loop);
+}
+function visSlutt() {
+  const m = Math.floor(S.tid / 60), s = Math.floor(S.tid % 60);
+  $('#sluttTekst').textContent = `Hele byggeplassen lyser igjen. Du brukte ${m} min ${s} s og fant ${S.orbTatt.size} av ${ORBER.length} lysorber.`;
+  visLag('#lagSlutt');
+}
+
+// ---------- input ----------
+let erTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+document.documentElement.classList.toggle('touch', erTouch);
+const HOPP = ['ArrowUp', 'KeyW', 'Space', 'KeyZ', 'KeyK'], STOT = ['ShiftLeft', 'ShiftRight', 'KeyX', 'KeyJ', 'KeyL'];
+function oppdaterTaster() {
+  I.left = !!(K.ArrowLeft || K.KeyA || TS.left); I.right = !!(K.ArrowRight || K.KeyD || TS.right); I.down = !!(K.ArrowDown || K.KeyS);
+  I.jumpHeld = HOPP.some(k => K[k]) || TS.jump;
+}
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
+  lydInit();
+  if (c === 'Escape' || c === 'KeyP') { if (!e.repeat) pauseBytt(); return; }
+  if (S.mode !== 'spill') { if ((c === 'Enter' || c === 'Space') && !e.repeat) { e.preventDefault(); primar(); } return; }
+  if (e.repeat) return;
+  K[c] = true; oppdaterTaster();
+  if (HOPP.includes(c)) I.jumpP = true;
+  if (STOT.includes(c)) I.dashP = true;
+});
+addEventListener('keyup', e => { K[e.code] = false; oppdaterTaster(); });
+addEventListener('blur', () => { nullInput(); if (S.mode === 'spill') pauseBytt(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode === 'spill') pauseBytt(); });
+addEventListener('pointerdown', e => { if (e.pointerType === 'touch' && !erTouch) { erTouch = true; document.documentElement.classList.add('touch'); } }, { capture: true });
+const pad = $('#pad'); let padId = null;
+function padSett(e) { const r = pad.getBoundingClientRect(), v = e.clientX - r.left < r.width / 2; TS.left = v; TS.right = !v; pad.dataset.dir = v ? 'v' : 'h'; oppdaterTaster(); }
+pad.addEventListener('pointerdown', e => { e.preventDefault(); padId = e.pointerId; try { pad.setPointerCapture(e.pointerId); } catch (x) {} lydInit(); padSett(e); });
+pad.addEventListener('pointermove', e => { if (e.pointerId === padId) padSett(e); });
+const slippPad = e => { if (e.pointerId !== padId) return; padId = null; TS.left = TS.right = false; pad.dataset.dir = ''; oppdaterTaster(); };
+pad.addEventListener('pointerup', slippPad); pad.addEventListener('pointercancel', slippPad);
+function trykkKnapp(el, ned, opp) {
+  el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) {} el.classList.add('trykk'); lydInit(); ned(); });
+  const slipp = () => { el.classList.remove('trykk'); opp(); };
+  el.addEventListener('pointerup', slipp); el.addEventListener('pointercancel', slipp);
+}
+trykkKnapp($('#tHopp'), () => { TS.jump = true; I.jumpP = true; oppdaterTaster(); }, () => { TS.jump = false; oppdaterTaster(); });
+trykkKnapp($('#tStot'), () => { I.dashP = true; }, () => {});
+addEventListener('contextmenu', e => e.preventDefault());
+
+function pauseBytt() {
+  if (S.mode === 'spill') { S.mode = 'pause'; nullInput(); visLag('#lagPause'); }
+  else if (S.mode === 'pause') { S.mode = 'spill'; sist = performance.now(); visLag(null); }
+}
+$('#menyKnapp').addEventListener('click', pauseBytt);
+$('#bPauseFortsett').addEventListener('click', pauseBytt);
+$('#bLyd').addEventListener('click', () => { lydPa = !lydPa; $('#bLyd').textContent = 'Lyd: ' + (lydPa ? 'på' : 'av'); try { localStorage.setItem(NOKKEL + '-lyd', lydPa ? 'på' : 'av'); } catch (e) {} if (lydPa) lydInit(); });
+$('#bLyd').textContent = 'Lyd: ' + (lydPa ? 'på' : 'av');
+function start(lagret) { lydInit(); nyttSpill(lagret); S.mode = 'spill'; sist = performance.now(); visLag(null);
+  if (!lagret) { banner('Gnist', 'Byggeplassen'); setTimeout(() => hint(null, erTouch ? 'Gå med venstre tommel. Hopp med høyre.' : 'Gå med piltastene. Hopp med mellomrom.', 5), 2600); } }
+$('#bNy').addEventListener('click', () => start(null));
+$('#bFortsett').addEventListener('click', () => start(hentLagret()));
+$('#bOmstart').addEventListener('click', () => { try { localStorage.removeItem(NOKKEL); } catch (e) {} start(null); });
+$('#bIgjen').addEventListener('click', () => { try { localStorage.removeItem(NOKKEL); } catch (e) {} BG.midtLys = null; start(null); });
+$('#bEvneOk').addEventListener('click', () => { if (S.mode !== 'evne') return; S.mode = 'spill'; sist = performance.now(); visLag(null);
+  if (S.ev.stot && !S.hintSett.has('stotbruk')) hint('stotbruk', 'Hovedtavla er på andre siden av sjakten.'); });
+
+// ---------- oppstart ----------
+lagBakgrunn();
+byggKart(); beregnDyp();
+for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (tile(x, y) === HAZ) hazListe.push([x, y]);
+const lagret = hentLagret();
+if (lagret && !lagret.ferdig) { $('#bFortsett').style.display = ''; $('#bNy').textContent = 'Nytt spill'; $('#bNy').classList.add('sek'); }
+nyttSpill(null);
+resize(); addEventListener('resize', resize);
+visLag('#lagMeny');
+requestAnimationFrame(loop);
+window.__gnist = { S, P, B, tile, rect, faaEvne, FUNN, respawn, SJEKK };
+</script>
+</body>
+</html>
