@@ -452,6 +452,31 @@ canvas.cmp{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multi
 .tool svg{width:19px;height:19px}
 .tool[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft);font-weight:500}
 .tgroup{margin:8px 4px}
+/* grupperte verktøy: liten pil åpner et valg over verktøylinjen */
+.tgw{position:relative;display:flex;flex:none}
+.tchev{position:absolute;top:1px;right:1px;width:20px;height:18px;border:0;border-radius:5px;background:transparent;color:var(--muted);display:grid;place-items:center;padding:0;cursor:pointer}
+.tchev svg{width:10px;height:10px}
+.tchev:hover,.tchev[aria-expanded="true"]{background:var(--surface-2);color:var(--ink)}
+.tool[data-group="more"]:not([data-tool]){color:var(--muted)}
+.tfly{position:fixed;z-index:46;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:6px;width:min(300px,calc(100vw - 16px));display:flex;flex-direction:column;max-height:70vh;overflow:auto}
+.tfh{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px 4px}
+.fi{display:flex;align-items:center;gap:12px;border:0;background:transparent;border-radius:8px;padding:8px 10px;min-height:48px;text-align:left;cursor:pointer;color:var(--ink);width:100%}
+.fi svg{width:20px;height:20px;flex:none;color:var(--muted)}
+.fi span{display:flex;flex-direction:column;min-width:0}
+.fi b{font-weight:600;font-size:14px}
+.fi small{font-size:12px;color:var(--muted);line-height:1.3}
+.fi:hover{background:var(--surface-2)}
+.fi[aria-checked="true"]{background:var(--accent-soft)}
+.fi[aria-checked="true"] svg{color:var(--accent)}
+.fi:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* menyen: overskrifter for hver gruppe */
+.mhd{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 12px 2px}
+.mhd:first-child{padding-top:4px}
+.menu{max-height:calc(100vh - 76px);overflow:auto}
+.menu .mi{min-height:38px;padding:8px 12px}
+@media (max-width:720px){#measureBtn .lbl{display:inline}}
+#tools .tool{min-height:48px;justify-content:center}
+@media (max-width:480px){#tools .tool{width:56px}}
 #dock[data-tool="select"] .hint{display:none}
 .hint{padding:2px 8px 2px}
 .app.measuring .dock .tools,.app.measuring .dock .ctx{display:none!important}
@@ -593,7 +618,7 @@ canvas.cmp{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multi
     <button class="btn ghost icon doc-only" id="redoBtn" type="button" title="Gjør om (Ctrl+Shift+Z)" aria-label="Gjør om" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
     <span class="tsep doc-only"></span>
     <button class="btn ghost icon doc-only" id="searchBtn" type="button" title="Søk i teksten (Ctrl+F)" aria-label="Søk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
-    <button class="btn ghost doc-only" id="measureBtn" type="button" title="Tegningsmåler: målestokk, telling, lengde, areal og mengder" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17 17 3l4 4L7 21H3z"/><path d="m14 6 2 2M11 9l2 2M8 12l2 2M5 15l2 2"/></svg><span class="lbl">Mål</span></button>
+    <button class="btn ghost doc-only" id="measureBtn" type="button" title="Tegningsmåler: målestokk, telling, lengde, areal og mengder" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7.5" width="20" height="9" rx="1.5"/><path d="M6 7.5v3M10 7.5v4.5M14 7.5v3M18 7.5v4.5"/></svg><span class="lbl">Mål</span></button>
     <button class="btn ghost doc-only" id="orgBtn" type="button" title="Organiser sider"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="9"/><rect x="3" y="15" width="7" height="6"/><rect x="14" y="15" width="7" height="6"/></svg><span class="lbl">Sider</span></button>
     <button class="btn ghost icon" id="helpBtn" type="button" title="Hjelp og funksjoner" aria-label="Hjelp og funksjoner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></svg></button>
     <button class="btn ghost icon" id="menuBtn" type="button" title="Flere valg" aria-label="Flere valg" aria-haspopup="menu"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
@@ -654,10 +679,10 @@ canvas.cmp{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multi
         <div class="sec">
           <div class="shead" style="margin-bottom:12px"><h2 style="margin:0">Verktøy</h2><button class="blink" type="button" id="batchLink">Behandle mange filer samtidig →</button></div>
           <div class="tgrid">
+            <label class="tcard" for="fileOpen" data-next="measure" id="measureCard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7.5" width="20" height="9" rx="1.5"/><path d="M6 7.5v3M10 7.5v4.5M14 7.5v3M18 7.5v4.5"/></svg></span><span><b>Mål på tegning</b><span>Tell punkter, mål lengder og arealer</span></span></label>
+            <button class="tcard" type="button" id="bsCard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg></span><span><b>Beskrivelse og priser</b><span>Kontroller mengder og priser</span></span></button>
             <label class="tcard" for="fileOpen" data-next="edit"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></span><span><b>Rediger og kommenter</b><span>Tekst, markering, piler og former</span></span></label>
             <label class="tcard" for="fileOpen" data-next="sign"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17c3-6 5-9 6-8s-2 8 0 8 3-4 4-4 1 3 3 3 3-2 5-2M3 21h18"/></svg></span><span><b>Signer og fyll ut</b><span>Signatur, skjemafelt og avkrysning</span></span></label>
-            <label class="tcard" for="fileOpen" data-next="measure" id="measureCard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17 17 3l4 4L7 21H3z"/><path d="m14 6 2 2M11 9l2 2M8 12l2 2M5 15l2 2"/></svg></span><span><b>Mål på tegning</b><span>Tell punkter, mål lengder og arealer</span></span></label>
-            <button class="tcard" type="button" id="bsCard"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg></span><span><b>Beskrivelse og priser</b><span>Kontroller mengder og priser</span></span></button>
             <label class="tcard" for="fileMerge" data-next="organize"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4v6a4 4 0 0 0 4 4h0a4 4 0 0 1 4 4v2M16 4v6a4 4 0 0 1-4 4"/></svg></span><span><b>Slå sammen</b><span>Flere PDF-er eller bilder til én fil</span></span></label>
             <label class="tcard" for="fileOpen" data-next="organize"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="9"/><rect x="3" y="15" width="7" height="6"/><rect x="14" y="15" width="7" height="6"/></svg></span><span><b>Organiser sider</b><span>Flytt, roter, slett og trekk ut</span></span></label>
             <label class="tcard" for="fileOpen" data-next="convert"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg></span><span><b>Konverter</b><span>Til bilder, tekst eller Word</span></span></label>
@@ -1527,7 +1552,13 @@ function shapeSVG(a,r,g,pw,ph){
 }
 
 /* ================= tools ================= */
-$('#tools').addEventListener('click',e=>{const b=e.target.closest('.tool');if(!b||b.dataset.tool==='img')return;setTool(b.dataset.tool);});
+$('#tools').addEventListener('click',e=>{
+  const ch=e.target.closest('.tchev');if(ch){toggleFly(ch.dataset.group);return;}
+  const b=e.target.closest('.tool');if(!b)return;
+  const g=b.dataset.group&&TG[b.dataset.group];
+  if(g&&(g.menu||g.tools.includes(S.tool))){toggleFly(g.id);return;}
+  if(b.dataset.tool==='img'){if(b.tagName!=='LABEL')$('#fileImg').click();return;}
+  if(b.dataset.tool)setTool(b.dataset.tool);});
 $('#tools').addEventListener('keydown',e=>{const b=e.target.closest('label.tool');if(b&&(e.key==='Enter'||e.key===' ')){e.preventDefault();$('#fileImg').click();}});
 function setTool(t){
   if(S.mtool&&t!=='select')setMTool(null);
@@ -1537,6 +1568,7 @@ function setTool(t){
   S.tool=t;updateMode();
 }
 function updateMode(){
+  if(typeof syncGroups==='function')syncGroups();
   $$('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===S.tool?'true':'false'));
   const placing=S.tool!=='select';$$('.sheet').forEach(s=>s.classList.toggle('placing',placing));
   $('#hint').textContent=HINTS[S.tool]||'';$('#dock').dataset.tool=S.tool;renderCtx();
@@ -2169,23 +2201,24 @@ function openMenu(){
   const m=document.createElement('div');m.className='menu';m.setAttribute('role','menu');
   const ic=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${p}</svg>`;
   m.innerHTML=(doc?`
+    <div class="mhd" role="presentation">Fil</div>
     <label class="mi" for="fileOpen" role="menuitem">${ic('<path d="M3 7h6l2 2h10v10H3z"/>')}Åpne annen fil<small>Ctrl O</small></label>
     <label class="mi" for="fileAdd" role="menuitem">${ic('<path d="M12 5v14M5 12h14"/>')}Legg til filer (slå sammen)</label>
     <label class="mi" for="fileScan" role="menuitem">${ic('<path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3"/><circle cx="12" cy="12" r="3.2"/>')}Skann side med kamera</label>
-    <div class="msep"></div>
+    <button class="mi" data-m="batch" role="menuitem" type="button">${ic('<rect x="6" y="3" width="12" height="15" rx="1"/><path d="M3 7v13a1 1 0 0 0 1 1h12"/>')}Behandle mange filer</button>
+    <button class="mi" data-m="save" role="menuitem" type="button">${ic('<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/>')}Lagre som PDF<small>Ctrl S</small></button>
+    <div class="mhd" role="presentation">Dokument</div>
     <button class="mi" data-m="org" role="menuitem" type="button">${ic('<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="9"/><rect x="3" y="15" width="7" height="6"/><rect x="14" y="15" width="7" height="6"/>')}Organiser sider</button>
+    <button class="mi" data-m="deco" role="menuitem" type="button">${ic('<path d="M4 4h16M4 20h16M9 9l6 6M15 9l-6 6"/>')}Sidetall og vannmerke</button>
+    <button class="mi" data-m="redact" role="menuitem" type="button">${ic('<rect x="3" y="9" width="18" height="6" fill="currentColor"/>')}Sladd</button>
     <button class="mi" data-m="convert" role="menuitem" type="button">${ic('<path d="M4 7h13l-3-3M20 17H7l3 3"/>')}Konverter</button>
     <button class="mi" data-m="compress" role="menuitem" type="button">${ic('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>')}Komprimer</button>
-    <button class="mi" data-m="bs" role="menuitem" type="button">${ic('<path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7"/>')}Beskrivelse og priser</button>
     <button class="mi" data-m="props" role="menuitem" type="button">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>')}Egenskaper og metadata</button>
-    <div class="msep"></div>
-    <button class="mi" data-m="deco" role="menuitem" type="button">${ic('<path d="M4 4h16M4 20h16M9 9l6 6M15 9l-6 6"/>')}Sidetall og vannmerke</button>
+    <div class="mhd" role="presentation">Kontroll</div>
+    <button class="mi" data-m="bs" role="menuitem" type="button">${ic('<path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7"/>')}Beskrivelse og priser</button>
     <button class="mi" data-m="comments" role="menuitem" type="button">${ic('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>')}Kommentaroversikt</button>
     <button class="mi" data-m="ocr" role="menuitem" type="button">${ic('<path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 10h8M8 14h5"/>')}Gjør tekst søkbar (OCR)</button>
-    <button class="mi" data-m="batch" role="menuitem" type="button">${ic('<rect x="6" y="3" width="12" height="15" rx="1"/><path d="M3 7v13a1 1 0 0 0 1 1h12"/>')}Behandle mange filer</button>
-    <button class="mi" data-m="redact" role="menuitem" type="button">${ic('<rect x="3" y="9" width="18" height="6" fill="currentColor"/>')}Sladd</button>
     <div class="msep"></div>
-    <button class="mi" data-m="save" role="menuitem" type="button">${ic('<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/>')}Lagre som PDF<small>Ctrl S</small></button>
     <button class="mi" data-m="help" role="menuitem" type="button">${ic('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/>')}Hjelp og funksjoner</button>
     <button class="mi" data-m="keys" role="menuitem" type="button">${ic('<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>')}Hurtigtaster</button>
     <button class="mi" data-m="close" role="menuitem" type="button">${ic('<path d="M6 6l12 12M18 6 6 18"/>')}Lukk dokument</button>`
@@ -2214,6 +2247,7 @@ function openKeys(){modal({title:'Hurtigtaster',body:`<dl class="kv">
 document.addEventListener('keydown',e=>{
   if($('.modal'))return;
   if(e.key==='Escape'&&$('.menu')){$('.menu').remove();$('#menuBtn').focus();return;}
+  if(e.key==='Escape'&&$('.tfly')){closeFly();return;}
   const ae=document.activeElement,editing=ae&&(ae.isContentEditable||/INPUT|SELECT|TEXTAREA/.test(ae.tagName));
   if(e.key==='Escape'&&ae&&ae.isContentEditable){ae.blur();return;}
   const mod=e.ctrlKey||e.metaKey,k=e.key.toLowerCase(),doc=$('#app').dataset.view==='doc';
@@ -3077,6 +3111,59 @@ $('#ctx').addEventListener('click',e=>{const b=e.target.closest('[data-c="cropal
   renderAll();toast(n?`Beskjæringen er brukt på ${n} andre sider`:'Ingen andre sider har samme størrelse');});
 /* toolbar buttons */
 $('#tools').insertAdjacentHTML('beforeend',`<button class="tool" data-tool="redact" aria-pressed="false" type="button" title="Sladd: fjern tekst og bilder for godt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" fill="currentColor"/><path d="M3 4h7M14 20h7"/></svg>Sladd</button><button class="tool" data-tool="crop" aria-pressed="false" type="button" title="Beskjær siden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/></svg>Beskjær</button>`);
+/* grouped toolbar: the most used tools are one tap away, related tools sit in a group with a small chooser */
+const TD={},TG={};
+const TDESC={text:'Skriv tekst rett på siden',note:'Notat eller tekstboks med ramme',replace:'Dekk over tekst og skriv ny oppå',
+  pen:'Tegn frihånd',arrow:'Pil som peker på noe',line:'Rett strek',rect:'Firkant rundt et område',ellipse:'Sirkel eller ring rundt noe',
+  sig:'Tegn, skriv eller last opp signaturen din',check:'Hake eller kryss, for eksempel i avkrysningsbokser',stamp:'Stempel med dato, «Godkjent» og lignende',field:'Felt som andre kan fylle ut',
+  img:'Sett inn logo, bilde eller foto',white:'Dekk et område med hvitt',redact:'Fjern tekst og bilder for godt',crop:'Beskjær siden til et utsnitt'};
+const MORE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>';
+(function groupTools(){
+  $$('#tools .tool').forEach(b=>{TD[b.dataset.tool]={svg:b.querySelector('svg').outerHTML,label:b.textContent.trim(),title:b.title||b.textContent.trim()};});
+  TD.check.label='Hake og kryss';TD.stamp.label='Stempel og dato';
+  let saved={};try{saved=JSON.parse(localStorage.getItem('pdfbase.toolgroups')||'{}')||{};}catch(e){}
+  [{id:'text',label:'Tekst',title:'Tekst',tools:['text','note','replace']},
+   {id:'draw',label:'Tegn',title:'Tegn og merk',tools:['pen','arrow','line','rect','ellipse']},
+   {id:'sign',label:'Signer',title:'Signer og fyll ut',tools:['sig','check','stamp','field']},
+   {id:'more',label:'Mer',title:'Flere verktøy',tools:['img','white','redact','crop'],menu:true}]
+   .forEach(g=>{g.cur=g.tools.includes(saved[g.id])?saved[g.id]:g.tools[0];TG[g.id]=g;});
+  const chev='<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 6 4.5l3 3"/></svg>';
+  const one=t=>`<button class="tool" data-tool="${t}" aria-pressed="false" type="button" title="${esc(TD[t].title)}">${TD[t].svg}${esc(TD[t].label)}</button>`;
+  const grp=id=>{const g=TG[id];return`<span class="tgw" data-group="${id}"><button class="tool" data-group="${id}" aria-pressed="false" type="button"></button>${g.menu?'':`<button class="tchev" type="button" data-group="${id}" aria-haspopup="menu" aria-label="Velg verktøy: ${esc(g.title.toLowerCase())}" title="Flere valg">${chev}</button>`}</span>`;};
+  $('#tools').innerHTML=one('select')+'<span class="tgroup"></span>'+grp('text')+one('mark')+grp('draw')+'<span class="tgroup"></span>'+grp('sign')+grp('more');
+  syncGroups();
+})();
+function syncGroups(){
+  for(const id in TG){const g=TG[id],act=g.tools.includes(S.tool);if(act&&!g.menu)g.cur=S.tool;
+    const t=g.menu?(act?S.tool:null):g.cur,b=$(`#tools .tool[data-group="${id}"]`);if(!b)continue;
+    if(b.dataset.show!==(t||'-')){b.dataset.show=t||'-';
+      b.innerHTML=t?TD[t].svg+esc(g.menu?TD[t].label:TD[t].label.split(' ')[0]):MORE_SVG+'Mer';
+      b.title=g.menu?(t?TD[t].title+' – trykk for flere verktøy':'Flere verktøy: bilde, dekk over, sladd og beskjær'):TD[t].title+' – trykk igjen for flere valg';}
+    if(t)b.dataset.tool=t;else delete b.dataset.tool;}
+  try{const o={};for(const id in TG)o[id]=TG[id].cur;localStorage.setItem('pdfbase.toolgroups',JSON.stringify(o));}catch(e){}
+}
+function closeFly(){const f=$('.tfly');if(f){f.remove();$$('.tchev,.tool[data-group]').forEach(b=>b.setAttribute('aria-expanded','false'));}document.removeEventListener('pointerdown',flyOut,true);}
+function flyOut(e){if(!e.target.closest('.tfly')&&!e.target.closest('.tgw'))closeFly();}
+function toggleFly(id){
+  const open=$('.tfly');if(open){const same=open.dataset.group===id;closeFly();if(same)return;}
+  const g=TG[id],anchor=$(`.tgw[data-group="${id}"]`);if(!g||!anchor)return;
+  const tt=$('#toast');if(tt)tt.hidden=true;
+  const f=document.createElement('div');f.className='tfly';f.dataset.group=id;f.setAttribute('role','menu');f.setAttribute('aria-label',g.title);
+  f.innerHTML=`<div class="tfh">${esc(g.title)}</div>`+g.tools.map(t=>`<button class="fi" type="button" role="menuitemradio" aria-checked="${S.tool===t}" data-tool="${t}">${TD[t].svg}<span><b>${esc(TD[t].label)}</b><small>${esc(TDESC[t]||'')}</small></span></button>`).join('');
+  document.body.appendChild(f);
+  const r=anchor.getBoundingClientRect(),fw=f.offsetWidth;
+  f.style.left=Math.max(8,Math.min(innerWidth-fw-8,r.left+r.width/2-fw/2))+'px';f.style.bottom=(innerHeight-r.top+8)+'px';
+  $$(`.tgw[data-group="${id}"] button`).forEach(b=>b.setAttribute('aria-expanded','true'));
+  f.addEventListener('click',e=>{const it=e.target.closest('.fi');if(!it)return;const t=it.dataset.tool;closeFly();if(!g.menu)g.cur=t;
+    if(t==='img'){syncGroups();$('#fileImg').click();return;}setTool(t);});
+  f.addEventListener('keydown',e=>{const its=$$('.fi',f),i=its.indexOf(document.activeElement);
+    if(e.key==='Escape'){e.stopPropagation();closeFly();anchor.querySelector('.tool').focus();}
+    else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();its[(i+(e.key==='ArrowDown'?1:-1)+its.length)%its.length].focus();}});
+  setTimeout(()=>document.addEventListener('pointerdown',flyOut,true),0);
+  const cur=$('.fi[aria-checked="true"]',f)||$('.fi',f);cur&&cur.focus({preventScroll:true});
+}
+addEventListener('resize',()=>closeFly());
+const toolGroup=t=>{for(const id in TG)if(TG[id].tools.includes(t))return id;return null;};
 /* redact every search hit */
 $('#searchCount').insertAdjacentHTML('afterend','<button class="btn ghost sm" id="searchRedact" type="button" hidden title="Legg sladding over alle treff">Sladd alle</button>');
 new MutationObserver(()=>{const b=$('#searchRedact');if(b)b.hidden=!(S.search&&S.search.hits&&S.search.hits.length);}).observe($('#searchCount'),{childList:true,characterData:true,subtree:true});
@@ -3433,7 +3520,7 @@ $('#batchLink').onclick=()=>openBatch();
 /* ================= Hjelp: om pdfbase, kom i gang og funksjonsoversikt ================= */
 const HELP_STEPS=[
   ['Åpne en fil','Trykk «Åpne fil», eller dra filen inn i vinduet. pdfbase åpner PDF, DWG, DXF og bilder. Hver fil får sin egen fane øverst, og med + åpner du flere.'],
-  ['Kommenter og rediger','Velg et verktøy i linjen nederst, for eksempel Tekst, Marker eller Pil, og klikk eller dra på siden. Med Velg flytter og endrer du det du har lagt til. Ctrl Z angrer.'],
+  ['Kommenter og rediger','Velg et verktøy i linjen nederst: Tekst, Marker, Tegn, Signer eller Mer. Den lille pilen på et verktøy viser flere valg, for eksempel pil, firkant og sirkel under Tegn. Klikk eller dra på siden. Med Velg flytter og endrer du det du har lagt til. Ctrl Z angrer.'],
   ['Tell og mål på tegninger','Trykk «Mål» øverst. Sjekk målestokken (pdfbase finner den ofte selv, og i DWG er den alltid riktig). Velg en kategori og klikk på symbolene. Mengdene finner du under «Mengder».'],
   ['Kontroller beskrivelsen','Velg ⋯ og «Beskrivelse og priser», og last inn beskrivelsen som PDF. Du får varsler om feil, kan koble poster til tellingene på tegningen og se hva som er endret mellom to versjoner.'],
   ['Lagre','Trykk «Lagre» øverst. Velg sider, sidetall, vannmerke, bokmerker eller passord, og filen lastes ned som PDF. Målinger og tellinger kan følge med, så filen kan åpnes og endres igjen.']];
@@ -4136,7 +4223,7 @@ $('#sampleBtn').onclick=async()=>{busy(true,'Åpner eksempel …');try{resetDoc(
 $('#bsCard').onclick=()=>openBView();bsRestoreLast();$('#demoBtn').onclick=openDemoProject;
 if(!window.pdfjsLib||!window.PDFLib){$('#start .drop').innerHTML='<h1>Kunne ikke laste PDF-motoren</h1><p>Programkoden fra cdnjs ble ikke lastet. Sjekk nettforbindelsen og last siden på nytt.</p>';}
 showStart();
-if(location.hash==='#qa')window.__pdfv={S,buildPdf,openFiles,runSearch,parseRange,renderAll,setTool,openOrg,openExport,markMM,markM2,dispDims,mmPerPt,bsParse,bsWarnings,bsDrawingQty,openBView,linkSuggestions,detectScale,tellForPost,openDemoProject,batchOne,openBatch,cadParse,cadMakePdf,cadLib,runOcr,pageHasText,bsDiff,renderBView,decoItems,encryptDoc,flattenLib};
+if(location.hash==='#qa')window.__pdfv={S,toolGroup,buildPdf,openFiles,runSearch,parseRange,renderAll,setTool,openOrg,openExport,markMM,markM2,dispDims,mmPerPt,bsParse,bsWarnings,bsDrawingQty,openBView,linkSuggestions,detectScale,tellForPost,openDemoProject,batchOne,openBatch,cadParse,cadMakePdf,cadLib,runOcr,pageHasText,bsDiff,renderBView,decoItems,encryptDoc,flattenLib};
 })();
 </script>
 
