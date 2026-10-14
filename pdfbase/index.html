@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<style>:root{color-scheme:light}</style></head><body>
 <title>pdfbase</title>
+<style>:root{color-scheme:light}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Caveat:wght@500;700&family=Dancing+Script:wght@600&family=Great+Vibes&display=swap">
+</head><body>
 <style>
 /* Layout: one-screen app shell. Header and view bar on top, the document is the main scroll area,
    thumbnails in a collapsible side panel, editing tools in a dock at the bottom (thumb reach on phones). */
@@ -602,6 +603,16 @@ canvas.cmp{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multi
 @media (max-width:720px){.app[data-view="doc"] #helpBtn{display:none}}
 .cadd{font-weight:400;color:var(--muted);font-size:12.5px}
 .cadrow .cadn b{white-space:normal;overflow-wrap:anywhere}
+/* v13: mobile measuring panel full width, tools first; toast clear of the panel; bigger touch targets; post cards on phones */
+@media (max-width:860px){.mpanel{width:auto;max-height:52%}.mbody .msec.mtools{order:-1;border-top:0;padding-top:0}.mbody .msec.mtools+.msec{border-top:1px solid var(--line);padding-top:12px}
+  #app.measuring~.toast,#app.bs-open~.toast{bottom:auto;top:calc(116px + env(safe-area-inset-top,0px))}}
+@media (pointer:coarse){.dtx{width:36px;height:36px}.pbtn{padding:11px}.viewbar input{min-height:40px}}
+@media (max-width:720px){.bt.bpost{min-width:0}.bt.bpost thead{display:none}
+  .bt.bpost tr.bp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .bt.bpost tr.bp td{border:0;padding:0}.bt.bpost tr.bp .nr{grid-column:1}.bt.bpost tr.bp .c-t{grid-column:2/4;font-weight:500}.bt.bpost tr.bp .c-u{display:none}
+  .bt.bpost tr.bp .r{text-align:left}.bt.bpost tr.bp [data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted)}
+  .bt.bpost tr.bp .c-l{grid-column:1/4}.bt.bpost tr.bp .c-l .bsel{width:100%;max-width:none;min-height:40px}
+  .bt.bpost tr.bk,.bt.bpost tr.bdet{display:block}.bt.bpost tr.bk td,.bt.bpost tr.bdet td{display:block}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation-duration:2s!important}}
 </style>
 
@@ -1107,13 +1118,17 @@ const IDB={
   del(id,store){return this.run('readwrite',st=>st.delete(id),store);},
   async clearAll(){for(const n of['recent','projects','sources']){try{for(const r of await this.all(n))await this.del(r.id,n);}catch(e){}}}
 };
+async function pruneSources(){const used=new Set((await IDB.all('projects')).flatMap(r=>r.src.map(x=>x.id)));for(const s of await IDB.all('sources'))if(!used.has(s.id))await IDB.del(s.id,'sources');}
 const recentOn=()=>{try{return localStorage.getItem('pdfv-recent')!=='0';}catch(e){return true;}};
 async function rememberFile(name,bytes){
   if(bytes.length>40*1048576||!recentOn())return;
   try{const id=name+'|'+bytes.length;await IDB.put({id,name,size:bytes.length,date:Date.now(),blob:new Blob([bytes],{type:'application/pdf'})});
     const all=(await IDB.all()).sort((a,b)=>b.date-a.date);for(const r of all.slice(6))await IDB.del(r.id);}catch(e){}
 }
-$('#recentToggle').addEventListener('change',async e=>{try{localStorage.setItem('pdfv-recent',e.target.checked?'1':'0');}catch(x){}
+$('#recentToggle').addEventListener('change',async e=>{
+  if(!e.target.checked){let np=0;try{np=(await IDB.all('projects')).length;}catch(x){}
+    if(np&&!(await confirmBox(`Slå av og slette ${np} ${np===1?'lagret prosjekt':'lagrede prosjekter'} med tellinger, målinger og kommentarer fra denne enheten? Det kan ikke angres. Lagre gjerne PDF med prosjekt vedlagt først.`,'Slett og slå av',true))){e.target.checked=true;return;}}
+  try{localStorage.setItem('pdfv-recent',e.target.checked?'1':'0');}catch(x){}
   if(!e.target.checked){await IDB.clearAll();toast('Nylige filer og prosjekter er slettet og blir ikke lagret');}renderRecent();});
 async function renderRecent(){
   $('#recentToggle').checked=recentOn();
@@ -1129,7 +1144,7 @@ async function renderRecent(){
 }
 $('#recent').addEventListener('click',async e=>{
   const o=e.target.closest('[data-open]'),d=e.target.closest('[data-del]'),pj=e.target.closest('[data-proj]'),pd=e.target.closest('[data-pdel]');
-  if(pd){try{await IDB.del(pd.dataset.pdel,'projects');const used=new Set((await IDB.all('projects')).flatMap(r=>r.src.map(x=>x.id)));for(const s of await IDB.all('sources'))if(!used.has(s.id))await IDB.del(s.id,'sources');}catch(x){}renderRecent();return;}
+  if(pd){try{await IDB.del(pd.dataset.pdel,'projects');await pruneSources();}catch(x){}renderRecent();return;}
   if(pj){openSavedProject(pj.dataset.proj);return;}
   if(d){try{await IDB.del(d.dataset.del);}catch(x){}renderRecent();return;}
   if(o){try{const all=await IDB.all();const r=all.find(x=>x.id===o.dataset.open);if(!r)return;
@@ -1181,12 +1196,12 @@ function restore(str){const o=JSON.parse(str,(k,v)=>k==='src'&&typeof v==='strin
 function undo(){if(!S.hist.length)return;S.redo.push(stateStr());restore(S.hist.pop());markDirty();updUndo();toast('Angret',1200);}
 function redo(){if(!S.redo.length)return;S.hist.push(stateStr());restore(S.redo.pop());markDirty();updUndo();toast('Gjort om',1200);}
 function updUndo(){$('#undoBtn').disabled=!S.hist.length;$('#redoBtn').disabled=!S.redo.length;}
-function markDirty(v){S.dirty=v!==false;updTitle();scheduleAutosave();}
+function markDirty(v){S.dirty=v!==false;S.localSaved=false;updTitle();scheduleAutosave();}
 function updTitle(){
-  {const dd=!!(S.dirty&&S.docs.length&&!S.sample);const st=$('#saveState');if(st){st.classList.toggle('isdirty',dd);st.textContent=S.sample?'Eksempel':dd?'Ikke lagret':'Lagret';}$('#saveBtn').classList.toggle('isdirty',dd);$('#saveBtn').title=dd?'Du har endringer som ikke er lagret (Ctrl+S)':'Lagre som PDF (Ctrl+S)';}
+  {const dd=!!(S.dirty&&S.docs.length&&!S.sample);const st=$('#saveState');if(st){st.classList.toggle('isdirty',dd);const loc=dd&&S.localSaved;st.textContent=S.sample?'Eksempel':loc?'Lagret på enheten':dd?'Ikke lagret':'Lagret';st.title=loc?'Arbeidet er lagret i nettleseren på denne enheten. Trykk Lagre for å lage en PDF-fil.':'';}$('#saveBtn').classList.toggle('isdirty',dd);$('#saveBtn').title=dd?'Du har endringer som ikke er lagret (Ctrl+S)':'Lagre som PDF (Ctrl+S)';}
   if(!S.docs.length){$('#docTitle').textContent='pdfbase';$('#docSub').textContent='Alt behandles lokalt på enheten din';return;}
   $('#docTitle').textContent=S.name+'.pdf';
-  const n=S.pages.length;$('#docSub').innerHTML=`${n} ${n===1?'side':'sider'}${S.sample?' · eksempel':''}${S.dirty?' · <span class="dirty">ikke lagret</span>':''}`;
+  const n=S.pages.length;$('#docSub').innerHTML=`${n} ${n===1?'side':'sider'}${S.sample?' · eksempel':''}${S.dirty&&!S.sample?(S.localSaved?' · lagret på enheten, PDF ikke lagret':' · <span class="dirty">ikke lagret</span>'):''}`;
 }
 $('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;
 window.addEventListener('beforeunload',e=>{if(S.dirty&&!S.sample){e.preventDefault();e.returnValue='';}});
@@ -2319,7 +2334,11 @@ function ptArea(p,pts){const[dw,dh]=dispDims(p);let s=0;for(let i=0;i<pts.length
 function markMM(p,m){const k=mmPerPt(p);if(k==null||m.kind!=='len')return null;return ptLen(p,m.pts)*k;}
 function markM2(p,m){const k=mmPerPt(p);if(k==null||m.kind!=='area')return null;return ptArea(p,m.pts)*k*k/1e6;}
 const nf0=new Intl.NumberFormat('nb-NO',{maximumFractionDigits:0}),nf2=new Intl.NumberFormat('nb-NO',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtMM=v=>v==null?'–':nf0.format(Math.round(v))+' mm';
+const fmtMM=v=>v==null?'–':nf2.format(v/1000)+' m'; /* lengths are stored in mm and shown in metres */
+/* allowance for drops and waste: percent, plus fixed metres per measured run */
+const hasAdd=c=>!!(c&&((+c.addPct||0)||(+c.addM||0)));
+function lenQty(c,mm){if(mm==null)return null;return mm*(1+(+(c&&c.addPct)||0)/100)+(+(c&&c.addM)||0)*1000;}
+const addLbl=c=>hasAdd(c)?`inkl. tillegg${+c.addPct?' '+nf0.format(+c.addPct)+' %':''}${+c.addM?(+c.addPct?' og':'')+' '+String(+c.addM).replace('.',',')+' m per strekning':''}`:'';
 const fmtM2=v=>v==null?'–':nf2.format(v)+' m²';
 
 /* ---- drawing the marks layer (screen and export share this) ---- */
@@ -2416,22 +2435,25 @@ function finishDraft(){
   marksOf(p).push(m);S.mdraft=null;renderMarks(p);renderPanel();updMStatus();
   if(!mmPerPt(p))toast('Lagret, men siden har ingen målestokk. Velg målestokk eller kalibrer for å få mål.',5000);
 }
+/* hold Shift for a straight horizontal or vertical line from the previous point */
+function ortho(p,pt,e){const d=S.mdraft;if(!e||!e.shiftKey||!d||!d.pts.length)return pt;const l=d.pts[d.pts.length-1];const[dw,dh]=dispDims(p);return Math.abs((pt[0]-l[0])*dw)>=Math.abs((pt[1]-l[1])*dh)?[pt[0],l[1]]:[l[0],pt[1]];}
 function sheetFrac(e){const sh=e.target.closest&&e.target.closest('.sheet');if(!sh)return null;const L=sh.getBoundingClientRect();return{p:pageOf(sh),x:(e.clientX-L.left)/L.width,y:(e.clientY-L.top)/L.height};}
 /* taps/clicks place points, so a finger can still scroll and pinch on a phone */
 $('#pages').addEventListener('click',e=>{
   if(!S.mtool||S.mtool==='sel')return;const f=sheetFrac(e);if(!f||!f.p)return;if(f.x<0||f.y<0||f.x>1||f.y>1)return;
   e.preventDefault();const p=f.p;
   if(S.mtool==='count'){const c=catOf(S.mp.activeCat);if(!c||c.type!=='point'){toast('Velg en punktkategori først');return;}
+    const L=e.target.closest('.sheet').getBoundingClientRect();if((p.marks||[]).some(m=>m.kind==='pt'&&m.cat===c.id&&Math.hypot((m.x-f.x)*L.width,(m.y-f.y)*L.height)<8)){toast('Det ligger allerede et punkt her, så det ble ikke telt to ganger. Zoom inn hvis symbolene står tett.',3500);return;}
     snap();marksOf(p).push({id:mid(),kind:'pt',cat:c.id,x:f.x,y:f.y,room:S.mp.activeRoom||null,note:''});renderMarks(p);renderPanel();updMStatus();return;}
   if(S.mtool==='zone'&&!S.mp.activeRoom){toast('Velg eller opprett et rom først');return;}
   if(S.mdraft&&S.mdraft.pid!==p.id){toast('Fullfør målingen på samme side, eller trykk Avbryt',3500);return;}
   if(!S.mdraft)S.mdraft={pid:p.id,kind:S.mtool,pts:[]};
-  S.mdraft.pts.push([f.x,f.y]);renderMarks(p);updMStatus();
+  S.mdraft.pts.push(ortho(p,[f.x,f.y],e));renderMarks(p);updMStatus();
   if(S.mtool==='cal'&&S.mdraft.pts.length===2)askCalibration(p);
 });
 $('#pages').addEventListener('dblclick',e=>{if(!S.mdraft||S.mdraft.kind==='cal')return;e.preventDefault();const d=S.mdraft;
   if(d.pts.length>1){const a=d.pts[d.pts.length-1],b=d.pts[d.pts.length-2];if(Math.hypot(a[0]-b[0],a[1]-b[1])<0.004)d.pts.pop();}finishDraft();});
-let mmRaf=0;$('#pages').addEventListener('pointermove',e=>{if(!S.mdraft||e.pointerType==='touch')return;const f=sheetFrac(e);if(!f||!f.p||f.p.id!==S.mdraft.pid)return;S.mdraft.cursor=[f.x,f.y];
+let mmRaf=0;$('#pages').addEventListener('pointermove',e=>{if(!S.mdraft||e.pointerType==='touch')return;const f=sheetFrac(e);if(!f||!f.p||f.p.id!==S.mdraft.pid)return;S.mdraft.cursor=ortho(f.p,[f.x,f.y],e);
   if(!mmRaf)mmRaf=requestAnimationFrame(()=>{mmRaf=0;const p=S.pages.find(x=>x.id===S.mdraft?.pid);if(p)renderMarks(p);});});
 function askCalibration(p){
   const d=S.mdraft;const pts=d.pts;const lenPt=ptLen(p,pts);
@@ -2493,7 +2515,7 @@ function quantities(flt){
     let r=rows.get(c.id);if(!r){r={cat:c,count:0,mm:0,m2:0,uncal:0,rooms:new Map()};rows.set(c.id,r);}
     let rr=r.rooms.get(m.room||'');if(!rr){rr={count:0,mm:0,m2:0,uncal:0};r.rooms.set(m.room||'',rr);}
     if(m.kind==='pt'){r.count++;rr.count++;}
-    else{const v=m.kind==='len'?markMM(p,m):markM2(p,m);if(v==null){r.uncal++;rr.uncal++;uncal++;}else if(m.kind==='len'){r.mm+=v;rr.mm+=v;}else{r.m2+=v;rr.m2+=v;}items.push({p,pi,m,c,v});}
+    else{const v=m.kind==='len'?lenQty(c,markMM(p,m)):markM2(p,m);if(v==null){r.uncal++;rr.uncal++;uncal++;}else if(m.kind==='len'){r.mm+=v;rr.mm+=v;}else{r.m2+=v;rr.m2+=v;}items.push({p,pi,m,c,v});}
   });});
   return{rows:[...rows.values()].sort((a,b)=>S.mp.cats.indexOf(a.cat)-S.mp.cats.indexOf(b.cat)),items,zones,uncal};
 }
@@ -2501,17 +2523,17 @@ const qtyVal=(type,o)=>type==='point'?String(o.count):type==='length'?fmtMM(o.mm
 function csvText(){
   const q=quantities(),sep=';',dec=v=>v==null?'':String(Math.round(v*100)/100).replace('.',',');
   const cell=v=>{v=v==null?'':String(v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const lines=[['Type','Kategori','Lag','Navn','Rom','Fil','Side','Antall','Lengde (mm)','Areal (m2)','Kommentar'].join(sep)];
+  const lines=[['Type','Kategori','Lag','Navn','Rom','Fil','Side','Antall','Lengde (m)','Areal (m2)','Kommentar'].join(sep)];
   const docName=p=>S.docs[p.d]?dwgLabel(p.d)+' ('+S.docs[p.d].name+')':'';
   /* points per category, room and page */
   const agg=new Map();S.pages.forEach((p,pi)=>(p.marks||[]).forEach(m=>{if(m.kind!=='pt'||!countable(p))return;const k=[m.cat,m.room||'',pi].join('|');const a=agg.get(k)||{m,p,pi,n:0,notes:[]};a.n++;if(m.note)a.notes.push(m.note);agg.set(k,a);}));
   [...agg.values()].sort((a,b)=>S.mp.cats.findIndex(c=>c.id===a.m.cat)-S.mp.cats.findIndex(c=>c.id===b.m.cat)||a.pi-b.pi).forEach(a=>{const c=catOf(a.m.cat)||{};
     lines.push(['Punkt',c.name,(layerOf(c.layer)||{}).name,'',(roomOf(a.m.room)||{}).name||'',docName(a.p),a.p.i+1,a.n,'','',a.notes.join(' / ')].map(cell).join(sep));});
-  q.items.forEach(it=>{lines.push([it.m.kind==='len'?'Lengde':'Areal',it.c.name,(layerOf(it.c.layer)||{}).name,it.m.name||'',(roomOf(it.m.room)||{}).name||'',docName(it.p),it.p.i+1,'',it.m.kind==='len'?dec(it.v):'',it.m.kind==='area'?dec(it.v):'',(it.v==null?'Ingen målestokk. ':'')+(it.m.note||'')].map(cell).join(sep));});
+  q.items.forEach(it=>{lines.push([it.m.kind==='len'?'Lengde':'Areal',it.c.name,(layerOf(it.c.layer)||{}).name,it.m.name||'',(roomOf(it.m.room)||{}).name||'',docName(it.p),it.p.i+1,'',it.m.kind==='len'?dec(it.v==null?null:it.v/1000):'',it.m.kind==='area'?dec(it.v):'',(it.v==null?'Ingen målestokk. ':'')+(it.m.kind==='len'&&hasAdd(it.c)?addLbl(it.c)+'. ':'')+(it.m.note||'')].map(cell).join(sep));});
   q.zones.forEach(z=>{lines.push(['Romsone','',(''),'',(roomOf(z.m.room)||{}).name||'',docName(z.p),z.p.i+1,'','',dec(z.m2),z.m2==null?'Ingen målestokk':''].map(cell).join(sep));});
-  lines.push('');lines.push(['Sum','Kategori','Lag','','Rom','','','Antall','Lengde (mm)','Areal (m2)',''].join(sep));
-  q.rows.forEach(r=>{const t=r.cat.type;lines.push(['Sum',r.cat.name,(layerOf(r.cat.layer)||{}).name,'','Alle rom','','',t==='point'?r.count:'',t==='length'?dec(r.mm):'',t==='area'?dec(r.m2):'',r.uncal?r.uncal+' uten målestokk ikke med':''].map(cell).join(sep));
-    r.rooms.forEach((v,rid)=>{lines.push(['Delsum',r.cat.name,'','',(roomOf(rid)||{}).name||'Uten rom','','',t==='point'?v.count:'',t==='length'?dec(v.mm):'',t==='area'?dec(v.m2):'',''].map(cell).join(sep));});});
+  lines.push('');lines.push(['Sum','Kategori','Lag','','Rom','','','Antall','Lengde (m)','Areal (m2)',''].join(sep));
+  q.rows.forEach(r=>{const t=r.cat.type;lines.push(['Sum',r.cat.name,(layerOf(r.cat.layer)||{}).name,'','Alle rom','','',t==='point'?r.count:'',t==='length'?dec(r.mm/1000):'',t==='area'?dec(r.m2):'',[r.uncal?r.uncal+' uten målestokk ikke med':'',t==='length'?addLbl(r.cat):''].filter(Boolean).join('. ')].map(cell).join(sep));
+    r.rooms.forEach((v,rid)=>{lines.push(['Delsum',r.cat.name,'','',(roomOf(rid)||{}).name||'Uten rom','','',t==='point'?v.count:'',t==='length'?dec(v.mm/1000):'',t==='area'?dec(v.m2):'',''].map(cell).join(sep));});});
   return'﻿'+lines.join('\r\n');
 }
 
@@ -2539,10 +2561,10 @@ function panelTell(){
     <div class="inline">${scaleSel}<input class="inp" id="mCustom" inputmode="numeric" placeholder="1:___" style="width:90px" ${c&&c.kind==='scale'&&!SCALES.includes(c.n)?`value="${c.n}"`:'hidden'} aria-label="Egendefinert målestokk"></div>
     <div class="inline"><button class="btn sm" type="button" data-m="cal" ${S.mtool==='cal'?'aria-pressed="true"':''}>Kalibrer med to punkter</button><button class="btn sm" type="button" data-m="calall" ${c?'':'disabled'}>Bruk på alle sider</button>${c?'<button class="btn sm ghost danger" type="button" data-m="calclear">Fjern</button>':''}</div>
     ${(()=>{if(c)return'';const hn=S.scaleHint[calKey(p)];if(hn===undefined){detectScale(p).then(()=>setTimeout(renderPanel,0));return'';}if(!hn)return'';
-      return`<div class="hintbox"><span>Fant <b>1:${hn.n}</b> ${hn.strong?'i tittelfeltet':'på tegningen'}.</span><button class="btn sm primary" type="button" data-m="usehint" data-n="${hn.n}">Bruk 1:${hn.n}</button>${hn.warn?`<p class="mnote" style="margin:4px 0 0;color:var(--warn)">${esc(hn.warn)}</p>`:''}</div>`;})()}
+      return`<div class="hintbox"><span>Fant <b>1:${hn.n}</b>${hn.paper?' for '+hn.paper:''} ${hn.strong?'i tittelfeltet':'på tegningen'}.</span><button class="btn sm primary" type="button" data-m="usehint" data-n="${hn.n}">Bruk 1:${hn.n}</button>${hn.warn?`<p class="mnote" style="margin:4px 0 0;color:var(--warn)">${esc(hn.warn)}</p>`:''}</div>`;})()}
     ${S.pages.length>1?`<p class="mnote">${S.pages.filter(q=>S.mp.cal[calKey(q)]).length} av ${S.pages.length} sider har målestokk. Hver side har sin egen.</p>`:''}</section>`;
   h+=cadPanel(p);
-  h+=`<section class="msec"><div class="seg" role="group" aria-label="Verktøy">${[['sel','Velg'],['count','Tell'],['len','Lengde'],['area','Areal']].map(([k,l])=>`<button type="button" data-mt="${k}" aria-pressed="${S.mtool===k}">${l}</button>`).join('')}</div>
+  h+=`<section class="msec${c?' mtools':''}"><div class="seg" role="group" aria-label="Verktøy">${[['sel','Velg'],['count','Tell'],['len','Lengde'],['area','Areal']].map(([k,l])=>`<button type="button" data-mt="${k}" aria-pressed="${S.mtool===k}">${l}</button>`).join('')}</div>
     <div class="field-row"><label for="mRoom" class="mlab">Rom for nye registreringer</label><select class="inp" id="mRoom"><option value="">Ingen rom</option>${S.mp.rooms.map(r=>`<option value="${esc(r.id)}" ${S.mp.activeRoom===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div></section>`;
   if(S.msel.size)h+=panelSel();
   const groups=[['point','Punkter'],['length','Lengder'],['area','Arealer']];
@@ -2555,8 +2577,10 @@ function panelTell(){
         <div class="inline">${c.type==='point'?`<select class="inp" id="ceShape" style="width:auto" aria-label="Markør">${MSHAPES.map(([k,l])=>`<option value="${k}" ${c.shape===k?'selected':''}>${l}</option>`).join('')}</select>`:''}
         <label class="mlab">Farge <input type="color" id="ceColor" value="${esc(c.color)}"></label>
         <select class="inp" id="ceLayer" style="width:auto" aria-label="Lag">${S.mp.layers.map(l=>`<option value="${esc(l.id)}" ${c.layer===l.id?'selected':''}>${esc(l.name)}</option>`).join('')}</select></div>
+        ${c.type==='length'?`<div class="inline"><label class="mlab">Tillegg % <input class="inp" id="ceAddPct" inputmode="decimal" style="width:70px" value="${esc(String(c.addPct||'').replace('.',','))}" placeholder="0"></label><label class="mlab">+ meter per strekning <input class="inp" id="ceAddM" inputmode="decimal" style="width:70px" value="${esc(String(c.addM||'').replace('.',','))}" placeholder="0"></label></div>
+        <p class="mnote" style="margin:0">For nedføringer, opp til tak og svinn. Tegningen viser målt lengde. Mengdene og sammenligningen med beskrivelsen tar med tillegget.</p>`:''}
         <div class="inline"><button class="btn sm" type="button" data-m="cedone">Ferdig</button><button class="btn sm ghost danger" type="button" data-m="cedel">Slett kategori</button></div></div>`;});}
-  h+=`<p class="mnote">Hurtigtaster: 1–9 velger punktkategori · C tell · V velg · L lengde · A areal · Z angre · Enter fullfør · Esc avbryt</p>`;
+  h+=`<p class="mnote">Hurtigtaster: 1–9 velger punktkategori · C tell · V velg · L lengde · A areal · Shift rett linje · Z angre · Enter fullfør · Esc avbryt</p>`;
   h+=`<div class="inline" style="margin-top:8px"><select class="inp" id="newCatType" style="width:auto" aria-label="Type ny kategori"><option value="point">Punkt</option><option value="length">Lengde</option><option value="area">Areal</option></select><button class="btn sm" type="button" data-m="catadd">+ Ny kategori</button></div></section>`;
   return h;
 }
@@ -2565,7 +2589,7 @@ function panelSel(){
   const kinds=new Set(sel.map(([,m])=>m.zone?'zone':m.kind));const one=sel.length===1?sel[0]:null;
   const typeOf={pt:'point',len:'length',area:'area'};const k=[...kinds][0];
   let h=`<section class="msec msel-box"><div class="mhead"><b>${one?(one[1].zone?'Romsone':one[1].kind==='pt'?'Punkt':one[1].kind==='len'?'Lengde':'Areal'):sel.length+' valgt'}</b><span class="mstate">${one?'Side '+(S.pages.indexOf(one[0])+1):''}</span></div>`;
-  if(one){const[p,m]=one;h+=`<dl class="kv">${m.kind==='len'?`<dt>Lengde</dt><dd>${fmtMM(markMM(p,m))}</dd>`:''}${m.kind==='area'?`<dt>Areal</dt><dd>${fmtM2(markM2(p,m))}</dd>`:''}<dt>Fil</dt><dd>${esc(S.docs[p.d]?.name||'')}, side ${p.i+1} i originalen</dd><dt>Målestokk</dt><dd>${esc(calLabel(p))}</dd></dl>`;}
+  if(one){const[p,m]=one;const k=mmPerPt(p);h+=`<dl class="kv">${m.kind==='len'?`<dt>Lengde</dt><dd>${fmtMM(markMM(p,m))}${hasAdd(catOf(m.cat))&&k?` <small>(${fmtMM(lenQty(catOf(m.cat),markMM(p,m)))} ${esc(addLbl(catOf(m.cat)))})</small>`:''}</dd>${m.pts.length>2&&k?`<dt>Delstrekninger</dt><dd>${m.pts.slice(1).map((q,i)=>fmtMM(ptLen(p,[m.pts[i],q])*k)).join(' · ')}</dd>`:''}`:''}${m.kind==='area'?`<dt>Areal</dt><dd>${fmtM2(markM2(p,m))}</dd>`:''}<dt>Fil</dt><dd>${esc(S.docs[p.d]?.name||'')}, side ${p.i+1} i originalen</dd><dt>Målestokk</dt><dd>${esc(calLabel(p))}</dd></dl>`;}
   if(kinds.size===1&&k!=='zone'){const cur=sel.every(([,m])=>m.cat===sel[0][1].cat)?sel[0][1].cat:'';
     h+=`<div class="field-row"><label class="mlab" for="sCat">Kategori</label><select class="inp" id="sCat">${cur?'':'<option value="">Ulike</option>'}${S.mp.cats.filter(c=>c.type===typeOf[k]).map(c=>`<option value="${esc(c.id)}" ${c.id===cur?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`;}
   const curR=sel.every(([,m])=>(m.room||'')===(sel[0][1].room||''))?(sel[0][1].room||''):'*';
@@ -2600,7 +2624,7 @@ function panelRom(){
 }
 function panelMengder(){
   const q=quantities();const ad=activeDocs();let h=`<section class="msec"><div class="seg" role="group" aria-label="Visning"><button type="button" data-qv="cat" aria-pressed="${S.mqView==='cat'}">Per kategori</button><button type="button" data-qv="room" aria-pressed="${S.mqView==='room'}">Per rom</button>${ad.length>1?`<button type="button" data-qv="dwg" aria-pressed="${S.mqView==='dwg'}">Per tegning</button>`:''}</div>`;
-  const refs=ad.filter(d=>S.docs[d].ref);if(refs.length)h+=`<p class="mnote">Ikke med i mengdene (referanse): ${esc(refs.map(dwgLabel).join(', '))}</p>`;
+  const refs=ad.filter(d=>S.docs[d].ref);if(refs.length)h+=`<p class="mnote">Ikke med i mengdene (referanse): ${esc(refs.map(dwgLabel).join(', '))}</p>`;h+=dupDocNote();
   if(S.mqView==='dwg'&&ad.length>1){h+=`<div class="qtw"><table class="qt"><thead><tr><th>Tegning / kategori</th><th class="r">Mengde</th></tr></thead><tbody>`;
     for(const d of ad){if(S.docs[d].ref)continue;const qd=quantities(p=>p.d===d);h+=`<tr class="qcat"><td colspan="2">${esc(dwgLabel(d))}</td></tr>`;if(!qd.rows.length)h+=`<tr class="qsub"><td colspan="2">Ingen registreringer</td></tr>`;
       qd.rows.forEach(r=>{h+=`<tr class="qsub"><td>${swatchSVG(r.cat,12)} ${esc(r.cat.name)}</td><td class="r">${qtyVal(r.cat.type,r)}</td></tr>`;});}
@@ -2608,7 +2632,7 @@ function panelMengder(){
     h+=`<div class="inline" style="margin-top:10px"><button class="btn sm primary" type="button" data-m="csv">Lagre CSV</button><button class="btn sm" type="button" data-m="pdfexp">Lagre PDF med mål</button></div></section>`;return h;}
   if(!q.rows.length&&!q.zones.length)return h+`<div class="empty" style="padding:8px 0">Ingen registreringer ennå. Velg Tell, Lengde eller Areal under «Tell og mål».</div></section>`;
   if(S.mqView==='cat'){h+=`<div class="qtw"><table class="qt"><thead><tr><th>Kategori</th><th class="r">Mengde</th></tr></thead><tbody>`;
-    q.rows.forEach(r=>{h+=`<tr class="qcat"><td>${swatchSVG(r.cat,12)} ${esc(r.cat.name)}</td><td class="r">${qtyVal(r.cat.type,r)}</td></tr>`;
+    q.rows.forEach(r=>{h+=`<tr class="qcat"><td>${swatchSVG(r.cat,12)} ${esc(r.cat.name)}${hasAdd(r.cat)?`<small class="mnote" style="display:block">${esc(addLbl(r.cat))}</small>`:''}</td><td class="r">${qtyVal(r.cat.type,r)}</td></tr>`;
       if(r.rooms.size>1||(r.rooms.size===1&&!r.rooms.has('')))r.rooms.forEach((v,rid)=>{h+=`<tr class="qsub"><td>${esc((roomOf(rid)||{}).name||'Uten rom')}</td><td class="r">${qtyVal(r.cat.type,v)}</td></tr>`;});});
     h+=`</tbody></table></div>`;}
   else{const rids=['',...S.mp.rooms.map(r=>r.id)];h+=`<div class="qtw"><table class="qt"><thead><tr><th>Rom / kategori</th><th class="r">Mengde</th></tr></thead><tbody>`;
@@ -2671,6 +2695,7 @@ function panelMengder(){
     if(t.id==='mScale'){const p=curPage();const v=t.value;if(v==='custom'){$('#mCustom').hidden=false;$('#mCustom').focus();return;}if(v==='cal')return;snap();if(!v)delete S.mp.cal[calKey(p)];else S.mp.cal[calKey(p)]={kind:'scale',n:+v.slice(1)};renderMarksAll();renderPanel();return;}
     if(t.id==='mCustom'){const n=parseFloat(String(t.value).replace(/^1\s*:\s*/,'').replace(',','.'));if(!(n>0&&n<100000)){toast('Skriv målestokken som et tall, for eksempel 75 for 1:75');return;}snap();S.mp.cal[calKey(curPage())]={kind:'scale',n};renderMarksAll();renderPanel();return;}
     if(t.id==='mRoom'){S.mp.activeRoom=t.value||null;updMStatus();return;}
+    if(t.id==='ceAddPct'||t.id==='ceAddM'){const c=catOf(S.mcedit);if(!c)return;snap();const v=Math.max(0,parseFloat(String(t.value).replace(/\s/g,'').replace(',','.'))||0);if(t.id==='ceAddPct')c.addPct=v;else c.addM=v;saveTemplate();setTimeout(renderPanel,0);updMStatus();return;}
     if(t.id==='ceName'||t.id==='ceShape'||t.id==='ceColor'||t.id==='ceLayer'){const c=catOf(S.mcedit);if(!c)return;snap();
       if(t.id==='ceName')c.name=t.value.trim()||c.name;if(t.id==='ceShape')c.shape=t.value;if(t.id==='ceColor'&&/^#[0-9a-f]{6}$/i.test(t.value))c.color=t.value;if(t.id==='ceLayer')c.layer=t.value;
       saveTemplate();renderMarksAll();setTimeout(renderPanel,0);updMStatus();return;}
@@ -2713,7 +2738,7 @@ async function addSummaryPages(out){
   const scaled=new Map();S.pages.forEach((p,i)=>{const l=calLabel(p);if(!scaled.has(l))scaled.set(l,[]);scaled.get(l).push(i+1);});
   scaled.forEach((pages,l)=>{nl(14);T(`${l}: side ${pages.length>12?pages.slice(0,12).join(', ')+' ...':pages.join(', ')}`,M,y,{size:9});y-=13;});y-=8;
   nl(30);T('Kategori',M+20,y,{font:b});T('Lag',M+220,y,{font:b});T('Mengde',W-M-110,y,{font:b});y-=6;pg.drawLine({start:{x:M,y},end:{x:W-M,y},thickness:.6,color:rgb(.7,.73,.77)});y-=14;
-  for(const r of q.rows){nl(16+r.rooms.size*13);mark(r.cat,M+7,y+3);T(r.cat.name,M+20,y);T((layerOf(r.cat.layer)||{}).name||'',M+220,y,{size:9,color:rgb(.35,.4,.45)});T(qtyVal(r.cat.type,r).replace('−','-'),W-M-110,y,{font:b});y-=14;
+  for(const r of q.rows){nl(16+r.rooms.size*13);mark(r.cat,M+7,y+3);T(r.cat.name+(hasAdd(r.cat)?' ('+addLbl(r.cat)+')':''),M+20,y);T((layerOf(r.cat.layer)||{}).name||'',M+220,y,{size:9,color:rgb(.35,.4,.45)});T(qtyVal(r.cat.type,r).replace('−','-'),W-M-110,y,{font:b});y-=14;
     if(r.rooms.size>1||(r.rooms.size===1&&!r.rooms.has(''))){for(const[rid,v]of r.rooms){T((roomOf(rid)||{}).name||'Uten rom',M+34,y,{size:9,color:rgb(.3,.34,.4)});T(qtyVal(r.cat.type,v),W-M-110,y,{size:9});y-=12;}y-=3;}}
   nl(20);y-=4;T(`Totalt ${totalPoints()} punkter. Antall, lengder og arealer er summert hver for seg.`,M,y,{size:9,color:rgb(.35,.4,.45)});y-=14;
   if(q.uncal){T(`${q.uncal} måling(er) på sider uten målestokk er ikke med i summene.`,M,y,{size:9,color:rgb(.6,.35,0)});y-=14;}
@@ -2747,15 +2772,19 @@ async function checkEmbeddedProject(d){
     if(srcs.some(s=>!s))return null;return{st,srcs};}catch(e){return null;}
 }
 /* ---- autosave to this browser ---- */
-let asT=null;
+let asT=null;const PROJ_KEEP=30;
 function scheduleAutosave(){if(!recentOn()||S.sample||!S.docs.length)return;clearTimeout(asT);asT=setTimeout(autosave,1800);}
 async function autosave(){
-  try{if(!recentOn()||S.sample||!S.docs.length)return;const total=S.docs.reduce((s,d)=>s+d.size,0);if(total>80*1048576)return;
+  try{if(!recentOn()||S.sample||!S.docs.length)return;const total=S.docs.reduce((s,d)=>s+d.size,0);
+    if(total>80*1048576){if(!autosave.warned){autosave.warned=true;toast('Prosjektet er for stort til å lagres automatisk på enheten. Trykk Lagre og velg å legge ved prosjektet, så tar du vare på arbeidet.',7000);}return;}
     if(!S.projId)S.projId='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
     const src=[];for(const d of S.docs){const id=d.name+'|'+d.size;if(!d.stored){await IDB.put({id,blob:new Blob([d.bytes],{type:'application/pdf'})},'sources');d.stored=true;}src.push({id,name:d.name});}
     const mk=S.pages.reduce((s,p)=>s+(p.marks||[]).length,0),an=S.pages.reduce((s,p)=>s+(p.annots||[]).length,0);
     await IDB.put({id:S.projId,name:S.name,date:Date.now(),src,state:stateStrFull(),summary:{pages:S.pages.length,marks:mk,annots:an,points:totalPoints()}},'projects');
-    const all=(await IDB.all('projects')).sort((a,b)=>b.date-a.date);for(const r of all.slice(8))await IDB.del(r.id,'projects');
+    const all=(await IDB.all('projects')).sort((a,b)=>b.date-a.date);const gone=all.slice(PROJ_KEEP);for(const r of gone)await IDB.del(r.id,'projects');
+    if(gone.length){await pruneSources();toast(`Det eldste prosjektet «${gone[0].name}» er fjernet fra Nylig åpnet. Enheten husker de ${PROJ_KEEP} siste prosjektene.`,7000);}
+    S.localSaved=true;updTitle();
+    if(!autosave.asked&&navigator.storage&&navigator.storage.persist){autosave.asked=true;navigator.storage.persist().catch(()=>{});}
   }catch(e){}
 }
 function stateStrFull(){return JSON.stringify(projectState());}
@@ -2781,13 +2810,17 @@ function bsLines(items){
     return t.replace(/\s+$/,'');});
 }
 const BS_START=/^(\d{1,3}(?:\.\d+)+)\s{2,}(.*)$/;
-const BS_Q=/^(.*?)\s{2,}([A-Za-zæøåÆØÅ²]{1,6}\.?)\s+([-\d ,]*?\d,\d\d)\s+(\[?\s*-?\d[\d ]*,\d\d\s*\]?)$/;
+const BS_Q=/^(.*?)\s{2,}([A-Za-zæøåÆØÅ][A-Za-zæøåÆØÅ²³0-9]{0,5}\.?)\s+([-\d ,]*?\d,\d\d)\s+(\[?\s*-?\d[\d ]*,\d\d\s*\]?)$/;
 const BS_ZONE=/^(.{2,48}?)\s{2,}(-?\d[\d ]*(?:,\d+)?)$/;
 const BS_SKIP=/^(Prosjekt:|Postnr\.|Sum denne side|Side [A-Z0-9-]+$)/;
+/* a line that starts with a date (14.10.2026, or 14.10.26 followed by page/time) is not a post; 02.43.01 is a post number */
+function bsIsDate(t){const m=t.match(/^(\d\d)\.(\d\d)\.(\d{4}|\d\d)(?!\d)(.*)$/);if(!m)return false;const d=+m[1],mo=+m[2];if(d<1||d>31||mo<1||mo>12)return false;if(m[3].length===4)return true;const rest=m[4].trim();return !rest||/\bSide\b|\bkl\.?\s|\d\d:\d\d/i.test(rest);}
+/* pris med 2 desimaler: summen kan avvike med opptil en halv øre i mengden ganger prisen, ellers er det regnefeil */
+const bsRegnefeil=p=>Math.abs(p.mengde*p.pris-p.sum)>Math.max(1,Math.abs(p.pris)*0.005)+1e-6;
 function bsSplit(mid,sum){
   const toks=mid.trim().split(/\s+/);let best=null;
   for(let k=1;k<toks.length;k++){const m=toks.slice(0,k).join(''),p=toks.slice(k).join('');
-    if(!/^-?\d+(,\d+)?$/.test(m)||!/^\d+,\d\d$/.test(p))continue;
+    if(!/^-?\d+(,\d+)?$/.test(m)||!/^-?\d+,\d\d$/.test(p))continue;
     if(toks.slice(1,k).some(t=>t.length!==3)||toks.slice(k+1).some(t=>t.split(',')[0].length!==3))continue;
     const mv=bsNum(m),pv=bsNum(p),ok=Math.abs(mv*pv-sum)<=Math.max(1,Math.abs(sum)*0.001);
     const c=[ok?1:0,sum===0&&mv===0?1:0,mv,pv];if(!best||c[0]>best[0]||(c[0]===best[0]&&c[1]>best[1]))best=c;}
@@ -2802,39 +2835,47 @@ async function bsParse(bytes,name,progress){
   try{const md=await doc.getMetadata();project=(md.info&&md.info.Title)||'';}catch(e){}
   try{for(let i=1;i<=doc.numPages;i++){if(progress)progress(i,doc.numPages);const pg=await doc.getPage(i);const tc=await pg.getTextContent();bsLines(tc.items).forEach(t=>L.push({t:t.trim(),pg:i}));pg.cleanup();}}
   finally{doc.destroy();}
-  const posts=[],seen=new Set();let chapter='',inPosts=false,cur=null,lastAcc=null,qDone=false;
-  const finish=()=>{if(cur){cur.beskrivelse=cur.desc.join(' ').replace(/\s+/g,' ').trim().slice(0,2500);delete cur.desc;if(cur.enhet&&!seen.has(cur.nr)){seen.add(cur.nr);posts.push(cur);}}cur=null;};
+  const posts=[],seen=new Set(),pageSum={};let chapter='',inPosts=false,cur=null,lastAcc=null,qDone=false;
+  const finish=()=>{if(cur){cur.beskrivelse=cur.desc.join(' ').replace(/\s+/g,' ').trim().slice(0,2500);delete cur.desc;if(cur.enhet){if(seen.has(cur.nr)){let k=2;while(seen.has(cur.nr+' ('+k+')'))k++;cur.nrOrig=cur.nr;cur.nr=cur.nr+' ('+k+')';}seen.add(cur.nr);posts.push(cur);}}cur=null;};
   for(const{t,pg}of L){
     if(!t)continue;
     const pm=t.match(/^Prosjekt:\s+(.*?)\s{2,}Side\s/);if(pm&&!project)project=pm[1];
     const km=t.match(/^Kapittel:\s*(.*)$/);if(km){if(km[1].trim())chapter=km[1].trim();inPosts=false;continue;}
     if(/^Postnr\./.test(t)){inPosts=true;continue;}
     const am=t.match(/Akkumulert.*:\s*(-?\d[\d ]*,\d\d)$/);if(am){lastAcc=bsNum(am[1]);inPosts=false;continue;}
-    if(/^Sum denne side/.test(t)){inPosts=false;continue;}
+    if(/^Sum denne side/.test(t)){const sv=t.match(/(-?\d[\d ]*,\d\d)\s*$/);if(sv)pageSum[pg]=bsNum(sv[1]);inPosts=false;continue;}
     if(BS_SKIP.test(t)||/\.gab\b|\d\d\.\d\d\.\d{4}$/.test(t)&&!BS_START.test(t))continue;
     const sm=t.match(BS_START);
-    if(sm&&inPosts&&!/^\d\d\.\d\d\.\d\d\b/.test(t)){finish();cur={nr:sm[1],kapittel:chapter,side:pg,ns:'',tittel:'',enhet:'',mengde:0,pris:0,sum:0,ok:true,soner:[],desc:[]};qDone=false;
+    if(sm&&inPosts&&!bsIsDate(t)){finish();cur={nr:sm[1],kapittel:chapter,side:pg,qside:pg,ns:'',tittel:'',enhet:'',mengde:0,pris:0,sum:0,ok:true,soner:[],desc:[]};qDone=false;
       const rest=sm[2].trim();const q=rest.match(BS_Q);
-      if(q){const opt=q[4].includes('[');const sv=bsNum(q[4].replace(/[\[\]]/g,''));const r=bsSplit(q[3],sv);if(r){cur.tittel=q[1].trim();cur.enhet=q[2];cur.mengde=r.m;cur.pris=r.p;cur.sum=sv;cur.opsjon=opt;cur.ok=r.ok;qDone=true;}}
+      if(q){const opt=q[4].includes('[');const sv=bsNum(q[4].replace(/[\[\]]/g,''));const r=bsSplit(q[3],sv);if(r){cur.tittel=q[1].trim();cur.enhet=q[2];cur.mengde=r.m;cur.pris=r.p;cur.sum=sv;cur.opsjon=opt;cur.ok=r.ok;cur.qside=pg;qDone=true;}}
       else if(/^[A-Z]{1,3}\d[A-Z0-9.]*$/.test(rest))cur.ns=rest;else cur.tittel=rest;
       continue;}
     if(!cur||!inPosts)continue;
     if(!qDone){const q=t.match(BS_Q);if(q){const opt=q[4].includes('[');const sv=bsNum(q[4].replace(/[\[\]]/g,''));const r=bsSplit(q[3],sv);if(r){cur.opsjon=opt;if(!cur.tittel)cur.tittel=q[1].trim();else if(q[1].trim()&&!/^(antall|samlet|lengde|areal|mengde)/i.test(q[1].trim()))cur.desc.push(q[1].trim());
-        cur.enhet=q[2];cur.mengde=r.m;cur.pris=r.p;cur.sum=sv;cur.ok=r.ok;qDone=true;continue;}}
+        cur.enhet=q[2];cur.mengde=r.m;cur.pris=r.p;cur.sum=sv;cur.ok=r.ok;cur.qside=pg;qDone=true;continue;}}
       if(!cur.tittel)cur.tittel=t;else cur.desc.push(t);continue;}
-    const z=t.match(BS_ZONE);if(z&&!/[:]$/.test(z[1])&&z[1].length<40&&/[A-Za-zÆØÅæøå]/.test(z[1])){cur.soner.push({navn:z[1].trim(),mengde:bsNum(z[2])});continue;}
+    const z=t.match(BS_ZONE);if(z&&!/[:]$/.test(z[1])&&z[1].length<40&&/[A-Za-zÆØÅæøå]/.test(z[1])){cur.soner.push({navn:z[1].trim(),mengde:bsNum(z[2]),raw:t});continue;}
     cur.desc.push(t);
   }
   finish();
+  /* a line like «Antall kurser   12» looks like a zone. Keep zone lines that add up to the post, appear in several posts, or are named like a zone */
+  const zc=new Map();posts.forEach(p=>new Set(p.soner.map(z=>z.navn)).forEach(n=>zc.set(n,(zc.get(n)||0)+1)));
+  posts.forEach(p=>{if(!p.soner.length)return;const sum=p.soner.reduce((s,z)=>s+z.mengde,0);
+    if(Math.abs(sum-p.mengde)>0.01){const drop=p.soner.filter(z=>zc.get(z.navn)<2&&!/sone|bygg|etg|etasje|\brom\b|fase|\bdel\b|hus|blokk|elfys|felt|trinn|plan/i.test(z.navn));
+      if(drop.length){p.soner=p.soner.filter(z=>!drop.includes(z));p.beskrivelse=(p.beskrivelse+' '+drop.map(z=>z.raw).join(' ')).replace(/\s+/g,' ').trim();}}
+    p.soner.forEach(z=>delete z.raw);});
   const total=posts.reduce((s,p)=>s+(p.opsjon?0:p.sum),0);
-  return{name,project,imported:Date.now(),posts,total,pdfTotal:lastAcc,links:{}};
+  /* per page: compare «Sum denne side» with the posts read on that page, so a missing post can be found */
+  const sideAvvik=[];for(const k of Object.keys(pageSum)){const lest=posts.filter(p=>!p.opsjon&&p.qside===+k).reduce((s,p)=>s+p.sum,0);if(Math.abs(lest-pageSum[k])>1)sideAvvik.push({side:+k,pdf:pageSum[k],lest});}
+  return{name,project,imported:Date.now(),posts,total,pdfTotal:lastAcc,sideAvvik,links:{}};
 }
 function bsWarnings(bs){
   const w={prisUtenMengde:[],mengdeUtenPris:[],regnefeil:[],soner:[],opsjoner:bs.posts.filter(p=>p.opsjon),total:null};
   for(const p of bs.posts){
     if(p.pris>0&&p.mengde===0&&!p.opsjon)w.prisUtenMengde.push(p);
     if(p.mengde>0&&p.pris===0&&!p.opsjon)w.mengdeUtenPris.push(p);
-    if(Math.abs(p.mengde*p.pris-p.sum)>Math.max(1,Math.abs(p.sum)*0.001))w.regnefeil.push(p);
+    if(bsRegnefeil(p))w.regnefeil.push(p);
     if(p.soner.length){const zs=p.soner.reduce((s,z)=>s+z.mengde,0);if(Math.abs(zs-p.mengde)>0.01)w.soner.push({p,zs});}
   }
   if(bs.pdfTotal!=null&&Math.abs(bs.pdfTotal-bs.total)>1)w.total={pdf:bs.pdfTotal,lest:bs.total};
@@ -2847,7 +2888,7 @@ function bsDrawingQty(p){
   const cid=S.bs&&S.bs.links[p.nr];if(!cid||!S.pages.length)return null;const c=catOf(cid);if(!c)return null;const t=bsUnitType(p.enhet);
   const per=new Map();let tot=0,uncal=0;
   S.pages.filter(countable).forEach(pg=>(pg.marks||[]).forEach(m=>{if(m.cat!==cid)return;let v;
-    if(t==='point'&&m.kind==='pt')v=1;else if(t==='length'&&m.kind==='len'){const mm=markMM(pg,m);if(mm==null){uncal++;return;}v=mm/1000;}else if(t==='area'&&m.kind==='area'){const a=markM2(pg,m);if(a==null){uncal++;return;}v=a;}else return;
+    if(t==='point'&&m.kind==='pt')v=1;else if(t==='length'&&m.kind==='len'){const mm=markMM(pg,m);if(mm==null){uncal++;return;}v=lenQty(c,mm)/1000;}else if(t==='area'&&m.kind==='area'){const a=markM2(pg,m);if(a==null){uncal++;return;}v=a;}else return;
     tot+=v;const rn=(roomOf(m.room)||{}).name||'';per.set(rn,(per.get(rn)||0)+v);}));
   return{tot,per,uncal,cat:c};
 }
@@ -2910,17 +2951,17 @@ function bPoster(bs,w){
   const pointCats=t=>S.mp.cats.filter(c=>c.type===t);
   let h=bSummary(bs,w)+`<div class="bbar"><input class="inp" id="bSearch" type="search" placeholder="Søk i postnummer, NS-kode eller tekst" value="${esc(S.bq)}" aria-label="Søk i poster"><span class="mnote">${list.length} av ${bs.posts.length}</span>
     <button class="btn sm" type="button" data-b="suggest">Foreslå koblinger</button>${bsZoneNames().length?'<button class="btn sm" type="button" data-b="rzones">Rom fra soner</button>':''}<button class="btn sm" type="button" data-b="libsave">Lagre priser i biblioteket</button><button class="btn sm" type="button" data-b="csv">Lagre CSV</button></div>`;
-  h+=`<div class="btw"><table class="bt"><thead><tr><th>Post</th><th>Tekst</th><th>Enhet</th><th class="r">Mengde</th><th class="r">Enhetspris</th><th class="r">Sum</th><th>Koble til tegning</th></tr></thead><tbody>`;
+  h+=`<div class="btw"><table class="bt bpost"><thead><tr><th>Post</th><th>Tekst</th><th>Enhet</th><th class="r">Mengde</th><th class="r">Enhetspris</th><th class="r">Sum</th><th>Koble til tegning</th></tr></thead><tbody>`;
   let lastK='';
   for(const p of list){
     if(p.kapittel!==lastK){lastK=p.kapittel;h+=`<tr class="bk"><td colspan="7">${esc(p.kapittel)}</td></tr>`;}
-    const t=bsUnitType(p.enhet);const flag=!p.opsjon&&((p.pris>0&&p.mengde===0)||(p.mengde>0&&p.pris===0)||!p.ok);
+    const t=bsUnitType(p.enhet);const flag=!p.opsjon&&((p.pris>0&&p.mengde===0)||(p.mengde>0&&p.pris===0)||bsRegnefeil(p));
     const sel=t?`<select class="bsel" data-link="${esc(p.nr)}" aria-label="Koble post ${esc(p.nr)} til kategori"><option value="">Ikke koblet</option>${pointCats(t).map(c=>`<option value="${esc(c.id)}" ${S.bs.links[p.nr]===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>`:'<span class="mnote">–</span>';
     const open=S.bopen===p.nr;
-    h+=`<tr class="bp${flag?' flag':''}${open?' open':''}" data-post="${esc(p.nr)}" title="${p.opsjon?'Opsjon, ikke med i totalen':''}"><td class="nr"><button type="button" class="blink" data-b="open" data-nr="${esc(p.nr)}" aria-expanded="${open}">${esc(p.nr)}</button>${p.ns?`<small>${esc(p.ns)}</small>`:''}</td><td>${esc(p.tittel)}</td><td>${esc(p.enhet)}</td><td class="r">${fmtQ(p.mengde,p.enhet)}</td><td class="r">${krd(p.pris)}</td><td class="r">${p.opsjon?'['+krd(p.sum)+']':krd(p.sum)}</td><td>${sel}</td></tr>`;
+    h+=`<tr class="bp${flag?' flag':''}${open?' open':''}" data-post="${esc(p.nr)}" title="${p.opsjon?'Opsjon, ikke med i totalen':''}"><td class="nr"><button type="button" class="blink" data-b="open" data-nr="${esc(p.nr)}" aria-expanded="${open}">${esc(p.nr)}</button>${p.ns?`<small>${esc(p.ns)}</small>`:''}</td><td class="c-t">${esc(p.tittel)}</td><td class="c-u">${esc(p.enhet)}</td><td class="r" data-l="Mengde (${esc(p.enhet)})">${fmtQ(p.mengde,p.enhet)}</td><td class="r" data-l="Enhetspris">${krd(p.pris)}</td><td class="r" data-l="Sum">${p.opsjon?'['+krd(p.sum)+']':krd(p.sum)}</td><td class="c-l">${sel}</td></tr>`;
     if(open){const lm=libMatch(libCache,p);
       h+=`<tr class="bdet"><td colspan="7"><p>${esc(p.beskrivelse||'Ingen tekst.')}</p>${p.soner.length?`<p><b>Sonefordeling:</b> ${p.soner.map(z=>esc(z.navn)+' '+fmtQ(z.mengde,p.enhet)).join(' · ')}</p>`:''}
-        <p class="mnote">Kapittel ${esc(p.kapittel)} · side ${p.side} i beskrivelsen${p.ok?'':' · mengde × pris stemmer ikke med sum'}</p>
+        <p class="mnote">Kapittel ${esc(p.kapittel)} · side ${p.side} i beskrivelsen${bsRegnefeil(p)?' · mengde × pris stemmer ikke med sum':''}${p.nrOrig?' · postnummeret '+esc(p.nrOrig)+' finnes også i et annet kapittel':''}</p>
         <div class="inline">${t?`<button class="btn sm primary" type="button" data-b="tell" data-nr="${esc(p.nr)}">${t==='point'?'Tell':'Mål'} på tegning</button>`:''}<button class="btn sm" type="button" data-b="showpost" data-nr="${esc(p.nr)}">Vis hele posten${S.bsBytes?' og siden':''}</button></div>
         ${lm?`<p class="bpris"><b>Prisbibliotek (${esc(lm.how)}):</b> siste ${krd(lm.siste.pris)} kr i ${esc(lm.siste.prosjekt)} (${new Date(lm.siste.date).toLocaleDateString('nb-NO')})${lm.n>1?` · ${lm.n} tidligere priser, ${krd(lm.min)}–${krd(lm.max)} kr`:''}${p.pris>0?` · denne beskrivelsen: ${krd(p.pris)} kr`:''}</p>`:'<p class="mnote">Ingen tidligere pris for denne posten i prisbiblioteket.</p>'}</td></tr>`;}
   }
@@ -2929,13 +2970,15 @@ function bPoster(bs,w){
 function bVarsler(bs,w){
   let h=bSummary(bs,w);
   const grp=(title,why,rows,amount)=>rows.length?`<section class="bw"><h3>${title} <span class="bcount">${rows.length}</span></h3><p class="mnote">${why}</p>${amount?`<p class="bamt">${amount}</p>`:''}<div class="btw"><table class="bt"><thead><tr><th>Post</th><th>Tekst</th><th>Enhet</th><th class="r">Mengde</th><th class="r">Enhetspris</th><th class="r">Sum</th></tr></thead><tbody>${rows.map(p=>`<tr><td class="nr"><button type="button" class="blink" data-b="goto" data-nr="${esc(p.nr)}">${esc(p.nr)}</button></td><td>${esc(p.tittel)}</td><td>${esc(p.enhet)}</td><td class="r">${fmtQ(p.mengde,p.enhet)}</td><td class="r">${krd(p.pris)}</td><td class="r">${krd(p.sum)}</td></tr>`).join('')}</tbody></table></div></section>`:'';
-  if(w.total)h+=`<section class="bw"><h3>Totalen stemmer ikke</h3><p class="mnote">Summen av postene som ble lest (${kr(w.total.lest)}) er ikke lik totalen i PDF-en (${kr(w.total.pdf)}). Noen poster kan ha et oppsett tolkeren ikke kjente igjen. Kontroller mot PDF-en før du stoler på tallene.</p></section>`;
+  if(w.total)h+=`<section class="bw"><h3>Totalen stemmer ikke</h3><p class="mnote">Summen av postene som ble lest (${kr(w.total.lest)}) er ikke lik totalen i PDF-en (${kr(w.total.pdf)}). Noen poster kan ha et oppsett tolkeren ikke kjente igjen. Kontroller mot PDF-en før du stoler på tallene.</p>${(bs.sideAvvik||[]).length?`<p class="mnote"><b>Avviket ligger på ${bs.sideAvvik.length===1?'side':'sidene'}:</b> ${bs.sideAvvik.map(a=>`side ${a.side} (PDF ${kr(a.pdf)}, lest ${kr(a.lest)})`).join(' · ')}</p>`:''}</section>`;
   h+=grp('Pris uten mengde','Posten har enhetspris, men mengde 0, så summen blir 0 og posten er ikke med i totalen. Det kan være bevisst, for eksempel en opsjon, eller en glemt mengde.',w.prisUtenMengde,`Enhetsprisene i disse postene utgjør ${kr(w.prisUtenMengde.reduce((s,p)=>s+p.pris,0))} som ikke er med i totalen.`);
   h+=grp('Mengde uten pris','Posten har mengde, men ingen enhetspris.',w.mengdeUtenPris);
   h+=grp('Opsjoner','Summen står i klammer i beskrivelsen. Slike poster regnes vanligvis ikke med i totalen, og appen holder dem utenfor summen. Dette er til informasjon, ikke en feil.',w.opsjoner,`Opsjonene utgjør til sammen ${kr(w.opsjoner.reduce((s,p)=>s+p.sum,0))}.`);
   h+=grp('Regnefeil','Mengde × enhetspris er ikke lik summen som står i beskrivelsen.',w.regnefeil);
   if(w.soner.length)h+=`<section class="bw"><h3>Sonefordeling stemmer ikke <span class="bcount">${w.soner.length}</span></h3><p class="mnote">Summen av sonene er ikke lik postens mengde.</p><div class="btw"><table class="bt"><thead><tr><th>Post</th><th>Tekst</th><th class="r">Mengde</th><th class="r">Sum soner</th></tr></thead><tbody>${w.soner.map(({p,zs})=>`<tr><td class="nr">${esc(p.nr)}</td><td>${esc(p.tittel)}</td><td class="r">${fmtQ(p.mengde,p.enhet)}</td><td class="r">${fmtQ(zs,p.enhet)}</td></tr>`).join('')}</tbody></table></div></section>`;
-  if(!w.antall)h+=`<div class="bempty"><p>Ingen varsler. Alle poster har mengde og pris som stemmer med summen, og totalen stemmer med PDF-en.</p></div>`;
+  const dev=(libCache||[]).length?bs.posts.filter(p=>p.pris>0&&!p.opsjon).map(p=>({p,lm:libMatch(libCache,p)})).filter(x=>x.lm&&x.lm.siste.pris>0&&Math.abs(x.p.pris-x.lm.siste.pris)/x.lm.siste.pris>0.3):[];
+  if(dev.length)h+=`<section class="bw"><h3>Pris avviker fra prisbiblioteket <span class="bcount">${dev.length}</span></h3><p class="mnote">Enhetsprisen er mer enn 30 % høyere eller lavere enn siste pris for samme post i prisbiblioteket. Det kan være riktig, men er verdt en kontroll.</p><div class="btw"><table class="bt"><thead><tr><th>Post</th><th>Tekst</th><th>Enhet</th><th class="r">Denne</th><th class="r">Tidligere</th><th class="r">Avvik</th><th>Tidligere kilde</th></tr></thead><tbody>${dev.map(({p,lm})=>`<tr><td class="nr"><button type="button" class="blink" data-b="goto" data-nr="${esc(p.nr)}">${esc(p.nr)}</button></td><td>${esc(p.tittel)}</td><td>${esc(p.enhet)}</td><td class="r">${krd(p.pris)}</td><td class="r">${krd(lm.siste.pris)}</td><td class="r ${p.pris>lm.siste.pris?'up':'down'}">${(p.pris>lm.siste.pris?'+':'')+Math.round((p.pris-lm.siste.pris)/lm.siste.pris*100)} %</td><td>${esc(lm.siste.prosjekt)}</td></tr>`).join('')}</tbody></table></div></section>`;
+  if(!w.antall&&!dev.length)h+=`<div class="bempty"><p>Ingen varsler. Alle poster har mengde og pris som stemmer med summen, og totalen stemmer med PDF-en.</p></div>`;
   return h;
 }
 function bTegning(bs){
@@ -3000,10 +3043,9 @@ $('#fileBs').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!
   const bytesBs=new Uint8Array(await f.arrayBuffer());
   try{const bs=await bsParse(bytesBs,f.name,(i,n)=>busy(true,`Leser side ${i} av ${n} …`));
     if(!bs.posts.length){toast('Fant ingen poster med enhet, mengde og pris i filen. Er det en skannet PDF, eller et annet oppsett enn ISY-utskrift?',7000);return;}
-    const old=S.bs;if(old&&old.name===bs.name)bs.links=old.links||{};
-    if(old&&old.links&&Object.keys(old.links).length&&old.name!==bs.name)bs.links={};
+    const old=S.bs;let kept=0;if(old&&old.links){const nrs=new Set(bs.posts.map(p=>p.nr));for(const[k,v]of Object.entries(old.links))if(v&&nrs.has(k)&&catOf(v)){bs.links[k]=v;kept++;}}
     S.bs=bs;S.bsBytes=bytesBs;bsDocP=null;S.btab=bsWarnings(bs).antall?'varsler':'poster';S.bq='';S.bopen=null;bsPersist();if(S.docs.length)markDirty();
-    const w=bsWarnings(bs);toast(`${bs.posts.length} poster lest. ${bs.pdfTotal!=null?(w.total?'Summen avviker fra totalen i PDF-en.':'Summen stemmer med totalen i PDF-en.'):'Fant ingen total i PDF-en å kontrollere mot.'}`,5000);
+    const w=bsWarnings(bs);toast(`${bs.posts.length} poster lest. ${bs.pdfTotal!=null?(w.total?'Summen avviker fra totalen i PDF-en.':'Summen stemmer med totalen i PDF-en.'):'Fant ingen total i PDF-en å kontrollere mot.'}${kept?` ${kept} ${kept===1?'kobling':'koblinger'} til tegningen er beholdt.`:''}`,5000);
   }catch(err){console.error(err&&err.message);toast('Klarte ikke å lese beskrivelsen: '+(err.message||'ukjent feil'),5000);}
   finally{busy(false);renderBView();}
 };
@@ -4014,12 +4056,16 @@ async function replaceRevision(oldD,newD,newPages){
   const mk=S.pages.filter(p=>p.d===newD).reduce((s,p)=>s+(p.marks||[]).length,0);
   toast(`${dwgLabel(newD)} erstatter ${dwgLabel(oldD)}. ${mk} registreringer er beholdt. Slå på «Sammenlign» for å se hva som er endret.${warn.length?' Merk: '+warn.join('; ')+'.':''}`,8000);
 }
+function dupDocNote(){const seen=new Set(),dup=[];activeDocs().forEach(d=>{const D=S.docs[d];if(D.ref||!D.dwg||!D.dwg.nr)return;const k=normNr(D.dwg.nr);if(seen.has(k))dup.push(dwgLabel(d));else seen.add(k);});
+  return dup.length?`<p class="note warn" style="margin:0">Samme tegningsnummer er åpnet flere ganger (${esc(dup.join(', '))}), og tellingene summeres for alle. Er det samme tegning, kryss av for referanse under «Tegninger», eller lukk den ene.</p>`:'';}
 async function offerRevisions(newDocs,addedPages){
   for(const nd of newDocs){const N=S.docs[nd];if(!N||!N.dwg||!N.dwg.nr)continue;
-    const old=activeDocs().find(d=>d!==nd&&S.docs[d].dwg&&normNr(S.docs[d].dwg.nr)===normNr(N.dwg.nr)&&(S.docs[d].dwg.rev||'')!==(N.dwg.rev||''));
-    if(old==null)continue;
-    if(await confirmBox(`${dwgLabel(nd)} ser ut som en ny revisjon av ${dwgLabel(old)}. Vil du erstatte den gamle revisjonen og beholde tellinger, målinger og kommentarer? Velg Avbryt for å åpne den som en egen fane.`,'Erstatt revisjon'))
-      await replaceRevision(old,nd,addedPages.filter(p=>p.d===nd));}
+    const same=d=>d!==nd&&S.docs[d].dwg&&normNr(S.docs[d].dwg.nr)===normNr(N.dwg.nr);
+    const old=activeDocs().find(d=>same(d)&&(S.docs[d].dwg.rev||'')!==(N.dwg.rev||''));
+    const warnDup=()=>{if(activeDocs().some(same))toast(`${dwgLabel(nd)} har samme tegningsnummer som en annen åpen tegning, og tellingene summeres for begge. Er det samme tegning, merk den ene som referanse under Mål › Tegninger.`,8000);};
+    if(old==null){warnDup();continue;}
+    if(!(await confirmBox(`${dwgLabel(nd)} ser ut som en ny revisjon av ${dwgLabel(old)}. Vil du erstatte den gamle revisjonen og beholde tellinger, målinger og kommentarer? Velg Avbryt for å åpne den som en egen fane.`,'Erstatt revisjon'))){warnDup();continue;}
+    await replaceRevision(old,nd,addedPages.filter(p=>p.d===nd));}
 }
 $('#fileRev').onchange=async e=>{const f=e.target.files[0];e.target.value='';const old=S.revTarget;S.revTarget=null;if(!f||old==null)return;if(!isPdf(f)&&!isCad(f)){toast('Velg revisjonen som PDF eller DWG');return;}
   busy(true,'Leser ny revisjon …');try{const bytes=new Uint8Array(await f.arrayBuffer());const pages=isCad(f)?await cadLoad(bytes,f.name):await loadDoc(bytes,f.name);const nd=S.docs.length-1;await detectDwg(nd);rememberFile(f.name,bytes);busy(false);await replaceRevision(old,nd,pages);markDirty();}
@@ -4041,7 +4087,7 @@ function toggleCompare(){S.compare=!S.compare;$$('.page').forEach(el=>{const p=p
 /* drawing list tab in the measuring panel */
 function panelTeg(){
   const docs=activeDocs();
-  let h=`<section class="msec"><p class="mnote">Hver tegning åpnes i sin egen fane øverst. Mengder summeres over alle tegninger, unntatt referansetegninger.</p>`;
+  let h=`<section class="msec"><p class="mnote">Hver tegning åpnes i sin egen fane øverst. Mengder summeres over alle tegninger, unntatt referansetegninger.</p>${dupDocNote()}`;
   docs.forEach(d=>{const D=S.docs[d];const ps=S.pages.filter(p=>p.d===d);const mk=ps.reduce((s,p)=>s+(p.marks||[]).length,0);const sc=ps.filter(p=>S.mp.cal[calKey(p)]).length;
     const hist=[];let k=D.prev;while(k!=null&&S.docs[k]){hist.push(dwgLabel(k));k=S.docs[k].prev;}
     h+=`<div class="mdwg${S.view===d?' on':''}"><div class="mhead"><b>${esc(dwgLabel(d))}</b><span class="mstate ${sc===ps.length?'ok':'warn'}">${sc===ps.length?'målestokk satt':sc?sc+' av '+ps.length+' med målestokk':'ingen målestokk'}</span></div>
@@ -4058,7 +4104,7 @@ S.scaleHint={};S.bsBytes=null;S.exported=false;
 const titleCase=s=>{s=String(s||'').trim().toLowerCase();return s.charAt(0).toUpperCase()+s.slice(1);};
 function postsForCat(cid){return S.bs?S.bs.posts.filter(p=>S.bs.links[p.nr]===cid):[];}
 function catTarget(cid){const ps=postsForCat(cid);if(!ps.length)return null;return{posts:ps,mengde:ps.reduce((s,p)=>s+p.mengde,0),enhet:ps[0].enhet};}
-function layerGuess(p){const k=String(p.nr).slice(0,2);return k==='41'||k==='51'?'foring':k==='44'?'lys':k==='52'?'data':k==='54'?'brann':k==='43'?'stikk':'komm';}
+function layerGuess(p){const k=String(p.nr).slice(0,2);return k==='41'||k==='51'?'foring':k==='44'?'lys':k==='52'||k==='53'||k==='55'||k==='56'?'data':k==='54'?'brann':k==='43'||k==='45'?'stikk':'komm';}
 /* 1: start counting/measuring for a post straight from the description */
 function tellForPost(nr){
   if(!S.bs)return;const p=S.bs.posts.find(x=>x.nr===nr);if(!p)return;const t=bsUnitType(p.enhet);
@@ -4109,6 +4155,9 @@ async function detectScale(p){
   try{const tc=await getText(p);const txt=tc.items.map(i=>i.str).join(' ');
     let n=null,strong=false;const m=txt.match(/(?:\bM(?:ÅLESTOKK|ålestokk|alestokk|ÅL)?|\bSKALA|\bSkala|\bScale|\bSCALE)\s*[:.=]?\s*1\s*:\s*(\d{1,4})(?!\d)/);
     if(m){n=+m[1];strong=true;}else{const all=[...txt.matchAll(/(?:^|[^\d.,])1\s*:\s*(\d{1,4})(?![\d,.])/g)].map(x=>+x[1]).filter(v=>[5,10,20,25,50,75,100,200,250,500].includes(v));const u=[...new Set(all)];if(u.length===1)n=u[0];}
+    const paper=(()=>{const mm=[p.w*25.4/72,p.h*25.4/72].sort((a,b)=>a-b);for(const k in A_SIZES){const w=A_SIZES[k];if(Math.abs(mm[0]-w[0])<=w[0]*0.05&&Math.abs(mm[1]-w[1])<=w[1]*0.05)return k;}return null;})();
+    const pairs=[...txt.matchAll(/1\s*:\s*(\d{1,4})\s*[(\[]?\s*(?:@|på|i|for)?\s*A([0-4])\b/gi)].map(x=>({n:+x[1],a:x[2]}));
+    if(paper!=null){const hit=pairs.find(x=>x.a===paper);if(hit){S.scaleHint[key]={n:hit.n,strong:true,warn:'',paper:'A'+paper};return S.scaleHint[key];}}
     if(!n){S.scaleHint[key]=null;return null;}
     let warn='';const af=txt.match(/\bA([0-4])\b/);if(af){const want=A_SIZES[af[1]];const mm=[p.w*25.4/72,p.h*25.4/72].sort((a,b)=>a-b);if(want&&(Math.abs(mm[0]-want[0])>want[0]*0.05||Math.abs(mm[1]-want[1])>want[1]*0.05))warn=`Tegningen er merket A${af[1]}, men PDF-siden er ${Math.round(mm[0])}×${Math.round(mm[1])} mm. Den er trolig skalert, så kalibrer med en kjent lengde.`;}
     S.scaleHint[key]={n,strong,warn};return S.scaleHint[key];
@@ -4178,7 +4227,7 @@ async function openDemoProject(){
   try{resetDoc();const dr=new Uint8Array(await makeDemoDrawing());S.pages=await loadDoc(dr,'eksempel-elektrotegning.pdf');await detectDwg(0);S.name='eksempel-elektrotegning';S.sample=true;
     const ds=new Uint8Array(await makeDemoDescription());S.bs=await bsParse(ds,'eksempel-beskrivelse.pdf');S.bsBytes=ds;bsDocP=null;S.bs.demo=true;
     S.meta={title:'',author:'',subject:'',keywords:'',strip:false};showDoc();renderAll();openMPanel();
-    toast('Eksempelprosjekt åpnet. Følg stegene øverst: målestokken er funnet i tittelfeltet, og beskrivelsen er lastet inn.',6500);}
+    toast('Eksempelprosjekt åpnet. Start med «Bruk 1:50» i panelet, som er målestokken fra tittelfeltet. Beskrivelsen er allerede lastet inn.',6500);}
   catch(e){console.error(e&&e.message);toast('Klarte ikke å lage eksempelprosjektet');}finally{busy(false);}
 }
 
