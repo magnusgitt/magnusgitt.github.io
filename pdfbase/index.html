@@ -515,7 +515,9 @@ canvas.cmp{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multi
 .cadrow .cadn small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cadrow .cadsel{min-height:34px;padding:5px 8px;font-size:13px}
 .cadrow.done{grid-template-columns:minmax(0,1fr) auto}
+.cadrow.done{grid-template-columns:minmax(0,1fr) auto auto}
 .cadrow.done .cadn{grid-column:auto}
+.cadrow.done .btn{min-height:30px;padding:4px 8px}
 .cadok{font-size:12px;font-weight:600;color:var(--ok);justify-self:end}
 .cadmore{border-top:1px solid var(--line);padding-top:8px}
 .cadmore summary{cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);padding:4px 0}
@@ -573,6 +575,8 @@ canvas.cmp{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multi
 .hfeat ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:13.5px;color:var(--muted);line-height:1.4}
 .privacy{flex-wrap:wrap}
 @media (max-width:720px){.app[data-view="doc"] #helpBtn{display:none}}
+.cadd{font-weight:400;color:var(--muted);font-size:12.5px}
+.cadrow .cadn b{white-space:normal;overflow-wrap:anywhere}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation-duration:2s!important}}
 </style>
 
@@ -702,6 +706,309 @@ canvas.cmp{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multi
 <input type="file" id="fileBs" class="vh" accept="application/pdf,.pdf" tabindex="-1">
 <input type="file" id="fileRev" class="vh" accept="application/pdf,.pdf,.dwg,.dxf" tabindex="-1">
 <div class="toast" id="toast" hidden role="status"></div>
+<script type="text/plain" id="cadWorkerSrc">/* ================= DWG/DXF til vektor-PDF (ett ark per layout) ================= */
+const CADK=72/25.4;
+const CAD_LW=[0,5,9,13,15,18,20,25,30,35,40,50,53,60,70,80,90,100,106,120,140,158,200,211];
+function cadLwMm(i,dflt){if(i==null||i<0)return null;if(i<CAD_LW.length)return CAD_LW[i]/100;if(i===29||i===30||i===31)return null;return i>=100?i/100:null;}
+function cadAci(i){
+  const base=[[0,0,0],[255,0,0],[255,255,0],[0,255,0],[0,255,255],[0,0,255],[255,0,255],[255,255,255],[128,128,128],[192,192,192]];
+  if(i>=0&&i<=9)return base[i];
+  if(i>=250&&i<=255){const g=[51,91,132,173,214,255][i-250];return[g,g,g];}
+  if(i>=10&&i<=249){const k=Math.floor(i/10)-1,j=i%10,h=k*15,v=[255,204,153,127,76][j>>1]/255,s=j%2?0.5:1;
+    const f=n=>{const kk=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(kk,4-kk,1));};return[f(5),f(3),f(1)].map(x=>Math.round(x*255));}
+  return[0,0,0];
+}
+function cadRgbOf(e){if(e&&typeof e.color==='number'&&e.color>=0&&e.color<=0xffffff&&(e.colorIndex==null||e.colorIndex>256))return[(e.color>>16)&255,(e.color>>8)&255,e.color&255];return null;}
+/* MTEXT formatting codes to plain text lines */
+function cadMText(s){
+  s=String(s||'');
+  s=s.replace(/\\U\+([0-9A-Fa-f]{4})/g,(m,h)=>String.fromCharCode(parseInt(h,16)));
+  s=s.replace(/\\S([^;]*?)[#^\/]([^;]*?);/g,'$1/$2');
+  s=s.replace(/\\[fFcCHhWwAaQqTtpX][^;\\]*;/g,'').replace(/\\[LlOoKkNn]/g,'').replace(/\\~/g,' ');
+  s=s.replace(/\\P/g,'\n').replace(/\\\\/g,'\\').replace(/\\\{/g,'\u0001').replace(/\\\}/g,'\u0002').replace(/[{}]/g,'').replace(/\u0001/g,'{').replace(/\u0002/g,'}');
+  return cadSpecial(s);
+}
+function cadMTextLines(src,h){ /* brace-scoped MTEXT parse: lines with their height factor */
+  src=String(src||'');const lines=[];let cur='',fmax=0,f=1;const st=[];
+  const push=()=>{lines.push({t:cadSpecial(cur),f:fmax||f});cur='';fmax=0;};
+  for(let i=0;i<src.length;i++){const ch=src[i];
+    if(ch==='{'){st.push(f);continue;}if(ch==='}'){if(st.length)f=st.pop();continue;}
+    if(ch==='\\'){const c=src[i+1];if(c==null)break;
+      if(c==='P'||c==='n'&&false){push();i++;continue;}
+      if(c==='\\'||c==='{'||c==='}'){cur+=c;if(!fmax||f>fmax)fmax=Math.max(fmax,f);i++;continue;}
+      if(c==='~'){cur+=' ';i++;continue;}
+      if(c==='U'&&src[i+2]==='+'){const hx=src.substr(i+3,4);cur+=String.fromCharCode(parseInt(hx,16)||63);i+=6;continue;}
+      if(c==='S'){const j=src.indexOf(';',i);const body=j>0?src.slice(i+2,j):'';cur+=body.replace(/[#^\/]/,'/');i=j>0?j:i+1;continue;}
+      if('LlOoKk'.includes(c)){i++;continue;}
+      if(c==='H'){const j=src.indexOf(';',i);const v=j>0?src.slice(i+2,j):'';const m=v.match(/^([\d.]+)(x?)$/);if(m){const val=+m[1];if(val>0)f=m[2]?f*val:val/(h||1);}i=j>0?j:i+1;continue;}
+      if('fFcCWwAaQqTtpX'.includes(c)){const j=src.indexOf(';',i);i=j>0?j:i+1;continue;}
+      i++;continue;}
+    cur+=ch;if(ch.trim())fmax=Math.max(fmax,f);}
+  push();return lines.map(l=>({t:l.t,f:l.f>0.05&&l.f<20?l.f:1}));
+}
+const cadSpecial=s=>String(s||'').replace(/%%[cC]/g,'Ø').replace(/%%[dD]/g,'°').replace(/%%[pP]/g,'±').replace(/%%%/g,'%').replace(/%%[uUoOkK]/g,'');
+const mmul=(A,B)=>[A[0]*B[0]+A[2]*B[1],A[1]*B[0]+A[3]*B[1],A[0]*B[2]+A[2]*B[3],A[1]*B[2]+A[3]*B[3],A[0]*B[4]+A[2]*B[5]+A[4],A[1]*B[4]+A[3]*B[5]+A[5]];
+const mT=(x,y)=>[1,0,0,1,x,y],mS=(x,y)=>[x,0,0,y==null?x:y,0,0],mR=a=>{const c=Math.cos(a),s=Math.sin(a);return[c,s,-s,c,0,0];};
+const mApply=(M,x,y)=>[M[0]*x+M[2]*y+M[4],M[1]*x+M[3]*y+M[5]];
+const mScale=M=>Math.sqrt(Math.abs(M[0]*M[3]-M[1]*M[2]));
+const rad=a=>Math.abs(a)>6.2832+1e-6?a*Math.PI/180:a;
+function cadBulge(p0,p1,b,out){ /* append points of an arc segment (excluding p0) */
+  if(!b||Math.abs(b)<1e-9){out.push([p1.x,p1.y]);return;}
+  const th=4*Math.atan(b),dx=p1.x-p0.x,dy=p1.y-p0.y,c=Math.hypot(dx,dy);if(c<1e-12){out.push([p1.x,p1.y]);return;}
+  const d=(c/2)/Math.tan(th/2),cx=(p0.x+p1.x)/2-d*dy/c,cy=(p0.y+p1.y)/2+d*dx/c,r=Math.hypot(p0.x-cx,p0.y-cy),a0=Math.atan2(p0.y-cy,p0.x-cx);
+  const n=Math.max(2,Math.min(64,Math.ceil(Math.abs(th)/(Math.PI/24))));
+  for(let k=1;k<n;k++){const a=a0+th*k/n;out.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}
+  out.push([p1.x,p1.y]);
+}
+function cadArcPts(cx,cy,r,a0,a1,ccw){a0=rad(a0);a1=rad(a1);if(ccw===false){const t=a0;a0=-a1;a1=-t;}let sw=a1-a0;while(sw<=0)sw+=2*Math.PI;if(sw>2*Math.PI)sw=2*Math.PI;
+  const n=Math.max(8,Math.min(180,Math.ceil(sw/(Math.PI/36))));const o=[];for(let k=0;k<=n;k++){const a=a0+sw*k/n;o.push([cx+r*Math.cos(a),cy+(ccw===false?-1:1)*r*Math.sin(a)]);}return o;}
+function cadEllPts(c,maj,ratio,t0,t1){const mx=maj.x,my=maj.y,nx=-my*ratio,ny=mx*ratio;let sw=t1-t0;while(sw<=0)sw+=2*Math.PI;if(sw>2*Math.PI+1e-9)sw=2*Math.PI;
+  const n=Math.max(12,Math.min(200,Math.ceil(sw/(Math.PI/40))));const o=[];for(let k=0;k<=n;k++){const t=t0+sw*k/n;o.push([c.x+mx*Math.cos(t)+nx*Math.sin(t),c.y+my*Math.cos(t)+ny*Math.sin(t)]);}return o;}
+function cadSpline(e){
+  const cp=e.controlPoints||[],kn=e.knots||[],p=e.degree||3,w=e.weights&&e.weights.length===cp.length?e.weights:null;
+  if(cp.length>p&&kn.length===cp.length+p+1){
+    const lo=kn[p],hi=kn[cp.length],n=Math.min(400,cp.length*10),o=[];
+    for(let s=0;s<=n;s++){const u=Math.min(hi-1e-10,lo+(hi-lo)*s/n);let k=p;while(k<cp.length-1&&kn[k+1]<=u)k++;
+      const d=[];for(let j=0;j<=p;j++){const P=cp[k-p+j],ww=w?w[k-p+j]:1;d.push([P.x*ww,P.y*ww,ww]);}
+      for(let r=1;r<=p;r++)for(let j=p;j>=r;j--){const i=k-p+j,den=kn[i+p-r+1]-kn[i],a=den?(u-kn[i])/den:0;d[j]=[(1-a)*d[j-1][0]+a*d[j][0],(1-a)*d[j-1][1]+a*d[j][1],(1-a)*d[j-1][2]+a*d[j][2]];}
+      o.push([d[p][0]/d[p][2],d[p][1]/d[p][2]]);}
+    return o;}
+  const fp=e.fitPoints&&e.fitPoints.length?e.fitPoints:cp;return fp.map(q=>[q.x,q.y]);
+}
+function cadBuildPdf(db,PDFLib,opt){
+  opt=opt||{};const mono=!!opt.mono;const hidden=new Set(opt.hiddenLayers||[]);
+  const H=db.header||{};let unitMm={1:25.4,2:304.8,4:1,5:10,6:1000,14:100}[H.INSUNITS]||1;
+  const LT=new Map((db.tables.LTYPE?.entries||[]).map(l=>[String(l.name).toUpperCase(),l]));
+  const LY=new Map();(db.tables.LAYER?.entries||[]).forEach(l=>LY.set(l.name,l));
+  const BR=new Map();const BH=new Map();(db.tables.BLOCK_RECORD?.entries||[]).forEach(b=>{BR.set(b.name,b);BH.set(b.handle,b);});
+  const ltscale=H.LTSCALE||1,psl=H.PSLTSCALE==null?1:H.PSLTSCALE;
+  const stats={drawn:0,skipped:{},xrefs:[],texts:0};const layerUse=new Map();
+  const skip=t=>{stats.skipped[t]=(stats.skipped[t]||0)+1;};
+  BR.forEach(b=>{if(b.flags&4)stats.xrefs.push({name:b.name,path:((b.entities||[]).find(e=>e.type==='TEXT')||{}).text||''});});
+  const layerVisible=n=>{const l=LY.get(n);if(hidden.has(n))return false;if(!l)return true;if(l.off||l.frozen)return false;if(l.plotFlag===0)return false;if(/^defpoints$/i.test(n))return false;return true;};
+  function dispColor(rgb){if(!rgb)rgb=[0,0,0];let[r,g,b]=rgb;const L=(0.299*r+0.587*g+0.114*b)/255;
+    if(mono)return[0,0,0];if(L>0.93)return[0,0,0];if(L>0.62){const f=0.62/L;r*=f;g*=f;b*=f;}return[r/255,g/255,b/255];}
+  function fillColor(rgb){if(!rgb)rgb=[0,0,0];let[r,g,b]=rgb;const L=(0.299*r+0.587*g+0.114*b)/255;
+    if(mono){const v=L>0.93?0:Math.min(0.85,L);return[v,v,v];}if(L>0.93)return[0,0,0];return[r/255,g/255,b/255];}
+  let ops=[];let cur={};
+  const f2=n=>(Math.round(n*100)/100).toString();
+  const setStroke=(c,w,dash)=>{const k=c.map(v=>v.toFixed(3)).join(' ');if(cur.sc!==k){ops.push(k+' RG');cur.sc=k;}const ww=f2(w);if(cur.w!==ww){ops.push(ww+' w');cur.w=ww;}const dk=dash||'[] 0';if(cur.d!==dk){ops.push(dk+' d');cur.d=dk;}};
+  const setFill=c=>{const k=c.map(v=>v.toFixed(3)).join(' ');if(cur.fc!==k){ops.push(k+' rg');cur.fc=k;}};
+  function props(e,ctx){
+    let layer=e.layer||'0';if(layer==='0'&&ctx.blkLayer)layer=ctx.blkLayer;
+    const L=LY.get(layer);
+    let rgb;const ci=e.colorIndex;
+    if(ci===0)rgb=ctx.blkColor||[0,0,0];else if(ci==null||ci===256){rgb=L?(cadRgbOf(L)||cadAci(Math.abs(L.colorIndex||7))):[0,0,0];if(ctx.blkLayer&&e.layer==='0'&&ctx.blkColorByLayer===false&&ctx.blkColor)rgb=ctx.blkColor;}
+    else rgb=cadRgbOf(e)||cadAci(ci);
+    let lw=cadLwMm(e.lineweight);if(e.lineweight===30)lw=ctx.blkLw;if(lw==null)lw=cadLwMm(L&&L.lineweight);if(lw==null)lw=0.25;
+    let lt=(e.lineType||'').toUpperCase();if(!lt||lt==='BYLAYER')lt=String(L&&L.lineType||'CONTINUOUS').toUpperCase();if(lt==='BYBLOCK')lt=ctx.blkLt||'CONTINUOUS';
+    return{layer,rgb,lw,lt,lts:(e.lineTypeScale||1)};
+  }
+  function dashFor(pr,ctx){const l=LT.get(pr.lt);if(!l||!l.pattern||!l.pattern.length||!(l.totalPatternLength>0))return null;
+    const k=pr.lts*ltscale*(ctx.paperLt?CADK:ctx.ltK);const arr=l.pattern.map(p=>Math.max(0.3,Math.abs(p.elementLength)*k));if(arr.every(v=>v<0.31))return null;
+    if(arr.length%2)arr.push(arr[arr.length-1]);return'['+arr.map(f2).join(' ')+'] 0';}
+  function strokePts(pts,M,pr,ctx,closed,widthDU){
+    if(pts.length<2)return;const c=dispColor(pr.rgb);let w=Math.max(0.24,pr.lw*CADK);if(widthDU>0)w=Math.max(w,widthDU*mScale(M));
+    setStroke(c,w,dashFor(pr,ctx));const o=[];pts.forEach((p,i)=>{const[x,y]=mApply(M,p[0],p[1]);o.push(f2(x)+' '+f2(y)+(i?' l':' m'));});
+    ops.push(o.join(' ')+(closed?' h S':' S'));stats.drawn++;
+  }
+  function pathOps(loops,M){return loops.map(pts=>pts.map((p,i)=>{const[x,y]=mApply(M,p[0],p[1]);return f2(x)+' '+f2(y)+(i?' l':' m');}).join(' ')+' h').join(' ');}
+  function fillLoops(loops,M,pr){if(!loops.length)return;setFill(fillColor(pr.rgb));ops.push(pathOps(loops,M)+' f*');stats.drawn++;}
+  let font=null,fontKey=null,curPage=null;
+  function encode(s){s=String(s).replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,'-').replace(/ /g,' ').replace(/\t/g,' ');
+    let o='';for(const ch of s){const cc=ch.charCodeAt(0);o+=(cc>=32&&cc<=126)||(cc>=160&&cc<=255)||'€Œœ…•‰'.includes(ch)?ch:'?';}return o;}
+  function textW(s,size){try{return font.widthOfTextAtSize(s,size);}catch(e){return s.length*size*0.55;}}
+  function drawText(str,M,x,y,h,rot,xs,hal,val,pr){
+    str=encode(str);if(!str.trim()||!(h>0))return;const size=h/0.716;const w=textW(str,size)*(xs||1);
+    let dx=0,dy=0;if(hal===1||hal===4)dx=-w/2;else if(hal===2)dx=-w;if(val===1)dy=h*0.22;else if(val===2||hal===4)dy=-h/2;else if(val===3)dy=-h;
+    const T=mmul(M,mmul(mT(x,y),mmul(mR(rot||0),mmul(mT(dx,dy),mS((xs||1)*size,size)))));
+    if(Math.hypot(T[0],T[1])<0.6)return; /* under ~0.6 pt high: unreadable, skip */
+    setFill(dispColor(pr.rgb));ops.push(`BT ${fontKey} 1 Tf ${T.map(f2).join(' ')} Tm ${font.encodeText(str).toString()} Tj ET`);stats.texts++;
+  }
+  function ocs(e,M){const z=e.extrusionDirection&&e.extrusionDirection.z;return z<0?mmul(M,mS(-1,1)):M;}
+  function drawEnt(e,M,ctx,depth){
+    if(e.isVisible===false)return;const pr=props(e,ctx);if(!layerVisible(pr.layer))return;layerUse.set(pr.layer,(layerUse.get(pr.layer)||0)+1);
+    switch(e.type){
+      case'LINE':strokePts([[e.startPoint.x,e.startPoint.y],[e.endPoint.x,e.endPoint.y]],M,pr,ctx);break;
+      case'LWPOLYLINE':{const v=e.vertices||[];if(v.length<2)break;const o=[[v[0].x,v[0].y]];const cl=!!(e.flag&1)||!!(e.flag&512);
+        for(let i=1;i<v.length;i++)cadBulge(v[i-1],v[i],v[i-1].bulge,o);if(cl&&v.length>2&&v[v.length-1].bulge)cadBulge(v[v.length-1],v[0],v[v.length-1].bulge,o);
+        strokePts(o,ocs(e,M),pr,ctx,cl,e.constantWidth||0);break;}
+      case'POLYLINE2D':case'POLYLINE3D':{const v=(e.vertices||[]).map(q=>q.point||q).filter(q=>q&&q.x!=null);if(v.length<2)break;const o=[[v[0].x,v[0].y]];const cl=!!(e.flag&1);
+        for(let i=1;i<v.length;i++)cadBulge(v[i-1],v[i],(e.vertices[i-1]||{}).bulge||0,o);strokePts(o,e.type==='POLYLINE2D'?ocs(e,M):M,pr,ctx,cl,e.startWidth||0);break;}
+      case'CIRCLE':strokePts(cadArcPts(e.center.x,e.center.y,e.radius,0,2*Math.PI),ocs(e,M),pr,ctx,true);break;
+      case'ARC':strokePts(cadArcPts(e.center.x,e.center.y,e.radius,e.startAngle,e.endAngle),ocs(e,M),pr,ctx);break;
+      case'ELLIPSE':strokePts(cadEllPts(e.center,e.majorAxisEndPoint,e.axisRatio||1,e.startAngle||0,e.endAngle==null?2*Math.PI:e.endAngle),M,pr,ctx);break;
+      case'SPLINE':strokePts(cadSpline(e),M,pr,ctx,!!(e.flag&1));break;
+      case'SOLID':case'TRACE':{const c=[e.corner1,e.corner2,e.corner4||e.corner3,e.corner3].filter(Boolean);fillLoops([c.map(q=>[q.x,q.y])],ocs(e,M),pr);break;}
+      case'3DFACE':{const c=[e.corner1,e.corner2,e.corner3,e.corner4].filter(Boolean);strokePts(c.map(q=>[q.x,q.y]),M,pr,ctx,true);break;}
+      case'LEADER':{const v=(e.vertices||[]).map(q=>[q.x,q.y]);strokePts(v,M,pr,ctx);break;}
+      case'TEXT':{const sp=(e.halign||e.valign)&&e.endPoint&&(e.endPoint.x||e.endPoint.y)?e.endPoint:e.startPoint;
+        drawText(cadSpecial(e.text),ocs(e,M),sp.x,sp.y,e.textHeight,rad(e.rotation||0),e.xScale||1,e.halign===3||e.halign===5?0:e.halign,e.valign,pr);break;}
+      case'ATTRIB':{if(e.flags&1)break;const t=e.text||{};const sp=(t.halign||t.valign)&&e.alignmentPoint&&(e.alignmentPoint.x||e.alignmentPoint.y)?e.alignmentPoint:(t.startPoint||{x:0,y:0});
+        drawText(cadSpecial(t.text),M,sp.x,sp.y,t.textHeight,rad(t.rotation||0),t.xScale||1,t.halign===3||t.halign===5?0:t.halign,t.valign,pr);break;}
+      case'MTEXT':{const h=e.textHeight||2.5;let rot=e.direction&&(e.direction.x||e.direction.y)?Math.atan2(e.direction.y,e.direction.x):rad(e.rotation||0);
+        const raw=cadMTextLines(e.text,h);
+        const lines=[];const maxW=e.rectWidth>0?e.rectWidth*1.02:0;
+        raw.forEach(({t,f})=>t.split('\n').forEach(l=>{const sz=h*f/0.716;if(!maxW||textW(encode(l),sz)<=maxW){lines.push({l,f});return;}let cur='';l.split(' ').forEach(wd=>{const tt=cur?cur+' '+wd:wd;if(cur&&textW(encode(tt),sz)>maxW){lines.push({l:cur,f});cur=wd;}else cur=tt;});lines.push({l:cur,f});}));
+        const ap=e.attachmentPoint||1,col=(ap-1)%3,row=Math.floor((ap-1)/3),ls=1.667*(e.lineSpacing||1);
+        const tot=lines.reduce((s,x,i)=>s+(i?x.f*h*ls:0),0)+lines[lines.length-1].f*h*0+h*lines[0].f;
+        const MM=mmul(M,mmul(mT(e.insertionPoint.x,e.insertionPoint.y),mR(rot)));
+        let y=row===0?-h*lines[0].f:row===1?tot/2-h*lines[0].f:tot-h*lines[0].f;
+        lines.forEach((x,i)=>{if(i)y-=x.f*h*ls;const hh=h*x.f,lw=textW(encode(x.l),hh/0.716);const xx=col===0?0:col===1?-lw/2:-lw;drawText(x.l,MM,xx,y,hh,0,1,0,0,pr);});
+        break;}
+      case'INSERT':{if(depth>14)break;const b=BR.get(e.name);if(!b)break;if(b.flags&4){skip('XREF');break;}
+        const nc=Math.max(1,e.columnCount||1),nr=Math.max(1,e.rowCount||1);const bp=b.basePoint||{x:0,y:0};
+        const M0=ocs(e,M);
+        const sub={blkLayer:pr.layer,blkColor:pr.rgb,blkLw:pr.lw,blkLt:pr.lt,paperLt:ctx.paperLt,ltK:ctx.ltK};
+        for(let r=0;r<nr;r++)for(let c=0;c<nc;c++){
+          const Mi=mmul(M0,mmul(mT(e.insertionPoint.x,e.insertionPoint.y),mmul(mR(rad(e.rotation||0)),mmul(mT(c*(e.columnSpacing||0),r*(e.rowSpacing||0)),mmul(mS(e.xScale||1,e.yScale||1),mT(-bp.x,-bp.y))))));
+          (b.entities||[]).forEach(x=>drawEnt(x,Mi,sub,depth+1));}
+        (e.attribs||[]).forEach(a=>drawEnt(a,M,ctx,depth+1));break;}
+      case'DIMENSION':{const b=BR.get(e.name);if(b&&depth<14)(b.entities||[]).forEach(x=>drawEnt(x,M,{...ctx,blkLayer:pr.layer,blkColor:pr.rgb,blkLw:pr.lw,blkLt:pr.lt},depth+1));else skip('DIMENSION');break;}
+      case'HATCH':drawHatch(e,M,pr,ctx);break;
+      case'ACAD_TABLE':{let b=e.blockRecordHandle&&BH.get(e.blockRecordHandle);if(!b){b=tableBlocks[tableUse.n++];}if(!b||depth>14)break;const sp=tableShift.get(e.handle)||e.startPoint||e.insertionPoint||{x:0,y:0};
+        const Mi=mmul(M,mT(sp.x,sp.y));(b.entities||[]).forEach(x=>drawEnt(x,Mi,{...ctx,blkLayer:pr.layer,blkColor:pr.rgb,blkLw:pr.lw,blkLt:pr.lt},depth+1));break;}
+      case'VIEWPORT':case'POINT':case'ATTDEF':case'XLINE':case'RAY':break;
+      default:skip(e.type);
+    }
+  }
+  function hatchLoops(e){
+    const loops=[];(e.boundaryPaths||[]).forEach(bp=>{
+      if(bp.vertices){const v=bp.vertices;if(v.length<2)return;const o=[[v[0].x,v[0].y]];for(let i=1;i<v.length;i++)cadBulge(v[i-1],v[i],v[i-1].bulge||0,o);if(v[v.length-1].bulge)cadBulge(v[v.length-1],v[0],v[v.length-1].bulge,o);loops.push(o);return;}
+      const o=[];(bp.edges||[]).forEach(ed=>{let seg=[];
+        if(ed.type===1)seg=[[ed.start.x,ed.start.y],[ed.end.x,ed.end.y]];
+        else if(ed.type===2)seg=cadArcPts(ed.center.x,ed.center.y,ed.radius,ed.startAngle,ed.endAngle,ed.isCCW!==false);
+        else if(ed.type===3){const r=Math.hypot(ed.end.x,ed.end.y),ratio=ed.lengthOfMinorAxis>1.0001&&r?ed.lengthOfMinorAxis/r:(ed.lengthOfMinorAxis||1);let t0=rad(ed.startAngle),t1=rad(ed.endAngle);if(ed.isCCW===false){const t=t0;t0=-t1;t1=-t;}seg=cadEllPts(ed.center,ed.end,ratio,t0,t1);}
+        else if(ed.type===4)seg=cadSpline({controlPoints:ed.controlPoints,knots:ed.knots,degree:ed.degree,weights:ed.controlPoints&&ed.controlPoints[0]&&ed.controlPoints[0].weight!=null?ed.controlPoints.map(q=>q.weight||1):null,fitPoints:ed.fitDatum});
+        if(o.length&&seg.length){const L=o[o.length-1],a=seg[0],z=seg[seg.length-1];if(Math.hypot(L[0]-z[0],L[1]-z[1])<Math.hypot(L[0]-a[0],L[1]-a[1]))seg.reverse();}
+        o.push(...seg);});if(o.length>2)loops.push(o);});
+    return loops;
+  }
+  function drawHatch(e,M,pr,ctx){
+    const loops=hatchLoops(e);if(!loops.length)return;M=ocs(e,M);
+    if(e.solidFill===1||/^SOLID$/i.test(e.patternName||'')||!(e.definitionLines&&e.definitionLines.length)){
+      if(e.solidFill===1||/^SOLID$/i.test(e.patternName||''))fillLoops(loops,M,pr);else{strokePts(loops[0],M,{...pr,lw:0.13},ctx,true);}return;}
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;loops.forEach(l=>l.forEach(([x,y])=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}));
+    const sc=mScale(M);const segs=[];let budget=6000;
+    for(const dl of e.definitionLines){const a=rad(dl.angle||0),ux=Math.cos(a),uy=Math.sin(a),nx=-uy,ny=ux;const sp=(dl.offset.x*nx+dl.offset.y*ny);if(Math.abs(sp)*sc<0.35)continue;
+      const shift=dl.offset.x*ux+dl.offset.y*uy;const cs=[[x0,y0],[x1,y0],[x0,y1],[x1,y1]];
+      const nn=cs.map(([x,y])=>(x-dl.base.x)*nx+(y-dl.base.y)*ny),uu=cs.map(([x,y])=>(x-dl.base.x)*ux+(y-dl.base.y)*uy);
+      const k0=Math.ceil(Math.min(...nn)/sp-1e-9),k1=Math.floor(Math.max(...nn)/sp+1e-9),kk0=Math.min(k0,k1),kk1=Math.max(k0,k1);
+      if(kk1-kk0>budget){segs.length=0;budget=-1;break;}budget-=(kk1-kk0);
+      const dash=(dl.dashLengths||[]).length?(()=>{const d=dl.dashLengths.map(v=>Math.max(0.3,Math.abs(v)*sc));if(d.length%2)d.push(d[d.length-1]);return d;})():null;
+      const plen=dl.dashLengths?dl.dashLengths.reduce((s,v)=>s+Math.abs(v),0):0;
+      for(let k=kk0;k<=kk1;k++){const bx=dl.base.x+dl.offset.x*k,by=dl.base.y+dl.offset.y*k;const um=Math.min(...uu)-Math.abs(shift*k)-1,uM=Math.max(...uu)+Math.abs(shift*k)+1;
+        const tStart=Math.floor((um-(shift*k))/(plen||1))*(plen||1)+shift*k;const sx=bx+ux*(tStart-((bx-dl.base.x)*ux+(by-dl.base.y)*uy)),sy=by+uy*(tStart-((bx-dl.base.x)*ux+(by-dl.base.y)*uy));
+        const len=uM-tStart;segs.push({p:[sx,sy],q:[sx+ux*len,sy+uy*len],dash});}}
+    if(budget<0){setFill(fillColor(pr.rgb).map(v=>1-(1-v)*0.18));ops.push(pathOps(loops,M)+' f*');return;}
+    if(!segs.length)return;ops.push('q '+pathOps(loops,M)+' W* n');const c=dispColor(pr.rgb);const save={...cur};
+    segs.forEach(s=>{setStroke(c,Math.max(0.2,0.13*CADK),s.dash?'['+s.dash.map(f2).join(' ')+'] 0':null);const[a,b]=mApply(M,s.p[0],s.p[1]),[cc,d]=mApply(M,s.q[0],s.q[1]);ops.push(`${f2(a)} ${f2(b)} m ${f2(cc)} ${f2(d)} l S`);});
+    ops.push('Q');cur=save;cur={};stats.drawn++;
+  }
+  const tableBlocks=[...BR.values()].filter(b=>/^\*T/i.test(b.name)&&(b.entities||[]).length);const tableUse={n:0};
+  /* parse table blocks (e.g. DIALux «Armaturliste») into index -> description */
+  const legend={};
+  tableBlocks.forEach(b=>{const cells=(b.entities||[]).filter(x=>x.type==='MTEXT'||x.type==='TEXT').map(x=>{const p=x.insertionPoint||x.startPoint||{x:0,y:0};const t=x.type==='MTEXT'?cadMTextLines(x.text,x.textHeight||1).map(l=>l.t).join(' '):cadSpecial(x.text);return{x:p.x,y:p.y,t:String(t).trim(),h:x.textHeight||1};}).filter(c=>c.t);
+    if(!cells.length)return;const rows=[];cells.sort((a,b)=>b.y-a.y).forEach(c=>{const r=rows.find(r=>Math.abs(r.y-c.y)<c.h*0.6);if(r)r.c.push(c);else rows.push({y:c.y,c:[c]});});rows.forEach(r=>r.c.sort((a,b)=>a.x-b.x));
+    const hi=rows.findIndex(r=>r.c.some(c=>/^(indeks|index|nr\.?|pos\.?|id|merke|symbol)$/i.test(c.t)));if(hi<0)return;const hdr=rows[hi].c;
+    const col=re=>{const h=hdr.find(c=>re.test(c.t));return h?h.x:null;};const kx=col(/^(indeks|index|nr\.?|pos\.?|id|merke|symbol)$/i);
+    const descCols=[col(/produsent|fabrikat|manufactur|leverand/i),col(/artikkel\s*nav|artikkelnamn|article\s*name|navn|name|beskrivelse|type/i)].filter(v=>v!=null);const ax=col(/^(antall|qty|quantity|stk|ant\.?)$/i);
+    const near=(r,x)=>{let best=null,d=1e18;r.c.forEach(c=>{const dd=Math.abs(c.x-x);if(dd<d){d=dd;best=c;}});return best;};
+    rows.slice(hi+1).forEach(r=>{const k=near(r,kx);if(!k||!/^[A-Za-z0-9.\-]{1,6}$/.test(k.t))return;const desc=descCols.map(x=>(near(r,x)||{}).t).filter(Boolean);const uniq=[...new Set(desc)].join(' ');
+      const n=ax!=null?parseFloat(String((near(r,ax)||{}).t||'').replace(',','.')):NaN;legend[k.t]={d:uniq,n:isFinite(n)?n:null};});});
+  /* collect pages: one per layout with model viewports, else the model */
+  const layouts=((db.objects&&db.objects.LAYOUT)||[]).filter(l=>!/^model$/i.test(l.layoutName||'')).sort((a,b)=>(a.tabOrder||0)-(b.tabOrder||0));
+  const modelBlk=BR.get('*Model_Space')||BH.get((((db.objects||{}).LAYOUT||[]).find(l=>/^model$/i.test(l.layoutName))||{}).paperSpaceTableId);
+  const modelEnts=modelBlk&&modelBlk.entities&&modelBlk.entities.length?modelBlk.entities:(db.entities||[]).filter(e=>e.ownerBlockRecordSoftId===(modelBlk&&modelBlk.handle));
+  if([0,1,2].includes(H.INSUNITS||0)&&H.MEASUREMENT!==undefined){const[a0,b0]=(()=>{let a=H.EXTMIN,b=H.EXTMAX;const ok=v=>v&&isFinite(v.x)&&Math.abs(v.x)<1e15;return ok(a)&&ok(b)?[a,b]:[{x:0,y:0},{x:0,y:0}];})();
+    const span=Math.max(b0.x-a0.x,b0.y-a0.y);if(span>20000&&unitMm!==1){unitMm=1;stats.unitGuess='mm';}else if(!H.INSUNITS){unitMm=1;}}
+  const sheets=[];
+  layouts.forEach(L=>{const blk=BH.get(L.paperSpaceTableId);if(!blk)return;const ents=blk.entities&&blk.entities.length?blk.entities:(db.entities||[]).filter(e=>e.ownerBlockRecordSoftId===blk.handle);
+    const vps=ents.filter(e=>e.type==='VIEWPORT'&&e.viewportId!==1&&e.handle!==L.viewportId&&e.viewHeight>0&&e.height>0&&e.width>0);
+    const other=ents.filter(e=>e.type!=='VIEWPORT');if(!vps.length&&!other.length)return;
+    let mn=L.minLimit||{x:0,y:0},mx=L.maxLimit||{x:420,y:297};if(!(mx.x-mn.x>20&&mx.y-mn.y>20)){mn={x:0,y:0};mx={x:420,y:297};}
+    sheets.push({name:L.layoutName||'Layout',mn,mx,vps,ents:other});});
+  const pdf=opt.doc;const out=[];
+  font=opt.font;
+  const extOK=v=>v&&isFinite(v.x)&&isFinite(v.y)&&Math.abs(v.x)<1e15&&Math.abs(v.y)<1e15;
+  function bboxOf(ents){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;const add=p=>{if(p&&isFinite(p.x)&&isFinite(p.y)){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);}};
+    ents.forEach(e=>{if(e.type==='ACAD_TABLE'||e.type==='VIEWPORT')return;if(e.type==='LINE'){add(e.startPoint);add(e.endPoint);return;}
+      if(e.type==='CIRCLE'||e.type==='ARC'){if(e.center){add({x:e.center.x-e.radius,y:e.center.y-e.radius});add({x:e.center.x+e.radius,y:e.center.y+e.radius});}return;}
+      add(e.insertionPoint);if(e.type!=='TEXT')add(e.startPoint);add(e.center);(e.vertices||[]).forEach(add);});
+    return x1>x0?{x0,y0,x1,y1}:null;}
+  const tableShift=new Map();
+  function modelExtents(){
+    let bb=bboxOf(modelEnts);
+    if(!bb){const a=H.EXTMIN,b=H.EXTMAX;if(extOK(a)&&extOK(b)&&b.x>a.x&&b.y>a.y)bb={x0:a.x,y0:a.y,x1:b.x,y1:b.y};else bb={x0:0,y0:0,x1:1000,y1:1000};}
+    /* tables without a known position: place them to the right of the drawing instead of on top of it */
+    let ti=0;modelEnts.forEach(e=>{if(e.type!=='ACAD_TABLE')return;const blk=(e.blockRecordHandle&&BH.get(e.blockRecordHandle))||tableBlocks[ti++];if(!blk)return;const tb=bboxOf(blk.entities||[]);if(!tb)return;
+      const sp=e.startPoint||{x:0,y:0};const ov=!(tb.x1+sp.x<bb.x0||tb.x0+sp.x>bb.x1||tb.y1+sp.y<bb.y0||tb.y0+sp.y>bb.y1);
+      let dx=sp.x,dy=sp.y;if(ov){const gap=(bb.x1-bb.x0)*0.04;dx=bb.x1+gap-tb.x0;dy=bb.y1-tb.y1;}tableShift.set(e.handle,{x:dx,y:dy});
+      bb={x0:Math.min(bb.x0,tb.x0+dx),y0:Math.min(bb.y0,tb.y0+dy),x1:Math.max(bb.x1,tb.x1+dx),y1:Math.max(bb.y1,tb.y1+dy)};});
+    return[{x:bb.x0,y:bb.y0},{x:bb.x1,y:bb.y1}];}
+  const STD=[1,2,5,10,20,25,50,75,100,150,200,250,500,1000,2000,2500,5000,10000,20000,50000];
+  const niceScale=n=>{const s=STD.find(v=>Math.abs(v-n)/v<0.012);return s||Math.round(n*100)/100;};
+  if(!sheets.length){const[a,b]=modelExtents();const w=(b.x-a.x)*unitMm,h=(b.y-a.y)*unitMm;let N=STD.find(v=>w/v<=811&&h/v<=564)||Math.ceil(Math.max(w/811,h/564));
+    const pw=w/N+30,ph=h/N+30;sheets.push({name:'Modell',model:true,a,N,mn:{x:0,y:0},mx:{x:pw,y:ph},vps:[],ents:[]});}
+  for(const sh of sheets){
+    const W=(sh.mx.x-sh.mn.x)*CADK,Hh=(sh.mx.y-sh.mn.y)*CADK;const page=pdf.addPage([W,Hh]);curPage=page;fontKey=page.node.newFontDictionary(font.name,font.ref).toString();
+    tableUse.n=0;ops=[];cur={};ops.push('1 j 1 J');const P=mmul(mS(CADK),mT(-sh.mn.x,-sh.mn.y));const ins=[];const labs=[];let scaleN=null,bestA=0;
+    const addIns=(e,M,clip)=>{
+      if((e.type==='TEXT'||e.type==='MTEXT')&&layerVisible(e.layer||'0')){const raw=e.type==='MTEXT'?cadMTextLines(e.text,e.textHeight||1).map(l=>l.t).join(' '):cadSpecial(e.text);const t=String(raw||'').trim();
+        if(t&&t.length<=6&&/^[A-Za-z0-9.\-]+$/.test(t)){const p0=e.type==='MTEXT'?e.insertionPoint:((e.halign||e.valign)&&e.endPoint&&(e.endPoint.x||e.endPoint.y)?e.endPoint:e.startPoint);if(!p0)return;const[x,y]=mApply(M,p0.x,p0.y);
+          if(clip&&(x<clip[0]||x>clip[2]||y<clip[1]||y>clip[3]))return;if(x<0||y<0||x>W||y>Hh)return;const lg=legend[t];labs.push({b:'Merke '+t,l:e.layer||'0',x:x/W,y:1-y/Hh,h:e.handle,t,d:lg?lg.d:'',n:lg?lg.n:null});}return;}
+      if(e.type!=='INSERT')return;const b=BR.get(e.name);if(!b||b.flags&4||/^\*/.test(e.name))return;if(!layerVisible(e.layer||'0'))return;const[x,y]=mApply(M,e.insertionPoint.x,e.insertionPoint.y);
+      if(clip&&(x<clip[0]||x>clip[2]||y<clip[1]||y>clip[3]))return;if(x<0||y<0||x>W||y>Hh)return;ins.push({b:e.name,l:e.layer||'0',x:x/W,y:1-y/Hh,h:e.handle});};
+    if(sh.model){const M=mmul(P,mmul(mT(15,15),mmul(mS(unitMm/sh.N),mT(-sh.a.x,-sh.a.y))));const ctx={paperLt:false,ltK:CADK*unitMm/sh.N};modelEnts.forEach(e=>{drawEnt(e,M,ctx,0);addIns(e,M);});scaleN=sh.N;}
+    for(const vp of sh.vps){const s=vp.height/vp.viewHeight;const tw=rad(vp.viewTwistAngle||0);
+      const M=mmul(P,mmul(mT(vp.viewportCenter.x,vp.viewportCenter.y),mmul(mR(tw),mmul(mS(s),mT(-vp.displayCenter.x,-vp.displayCenter.y)))));
+      const[cx0,cy0]=mApply(P,vp.viewportCenter.x-vp.width/2,vp.viewportCenter.y-vp.height/2),[cx1,cy1]=mApply(P,vp.viewportCenter.x+vp.width/2,vp.viewportCenter.y+vp.height/2);
+      ops.push(`q ${f2(cx0)} ${f2(cy0)} ${f2(cx1-cx0)} ${f2(cy1-cy0)} re W n`);const save=cur;cur={};
+      const ctx={paperLt:psl!==0,ltK:CADK*s};modelEnts.forEach(e=>{drawEnt(e,M,ctx,0);addIns(e,M,[cx0,cy0,cx1,cy1]);});ops.push('Q');cur={};
+      const A=vp.width*vp.height;if(A>bestA){bestA=A;scaleN=niceScale(unitMm/s);}}
+    const pctx={paperLt:true,ltK:CADK};sh.ents.forEach(e=>{drawEnt(e,P,pctx,0);addIns(e,P);});
+    const cs=pdf.context.flateStream(ops.join('\n'));page.node.addContentStream(pdf.context.register(cs));
+    const lyr={};labs.forEach(l=>{const o=lyr[l.l]||(lyr[l.l]={n:0,set:new Set(),lg:0});o.n++;o.set.add(l.t);if(l.d)o.lg++;});
+    labs.filter(l=>{const o=lyr[l.l];return o.lg>=Math.max(2,o.n*0.5)||(o.n>=4&&o.set.size/o.n<=0.5);}).forEach(l=>ins.push(l));
+    out.push({name:sh.name,w:W,h:Hh,scale:scaleN,paper:[sh.mx.x-sh.mn.x,sh.mx.y-sh.mn.y],inserts:ins,viewports:sh.vps.length});
+  }
+  const layers=[...LY.values()].map(l=>({name:l.name,used:layerUse.get(l.name)||0,on:!(l.off||l.frozen),hidden:hidden.has(l.name),rgb:cadRgbOf(l)||cadAci(Math.abs(l.colorIndex||7))}));
+  return{pages:out,layers,stats,unitMm,legend};
+}
+/* shared by the page and the worker: DWG database -> PDF bytes and drawing info */
+async function cadMakePdfWith(PL,db,name,opts){
+  opts=opts||{};const doc=await PL.PDFDocument.create();const font=await doc.embedFont(PL.StandardFonts.Helvetica);
+  doc.setTitle(String(name).replace(/\.(dwg|dxf)$/i,''));doc.setProducer('pdfbase (fra DWG)');doc.setCreator('pdfbase');
+  const r=cadBuildPdf(db,PL,{doc,font,mono:!!opts.mono,hiddenLayers:opts.hidden||[]});
+  if(!r.pages.length)throw new Error('Fant ingen ark eller modell å vise i tegningen');
+  const bytes=new Uint8Array(await doc.save());
+  const info={src:/\.dxf$/i.test(name)?'dxf':'dwg',file:name,unitMm:r.unitMm,unitGuess:r.stats.unitGuess||null,legend:r.legend||{},pages:r.pages.map(p=>({name:p.name,scale:p.scale,paper:p.paper.map(v=>Math.round(v)),inserts:p.inserts,viewports:p.viewports})),
+    layers:r.layers.filter(l=>l.used||l.hidden).map(l=>({name:l.name,used:l.used,hidden:l.hidden,rgb:l.rgb})).sort((a,b)=>a.name.localeCompare(b.name,'nb')),
+    xrefs:r.stats.xrefs,skipped:r.stats.skipped,entities:(db.entities||[]).length,opts:{mono:!!opts.mono,hidden:opts.hidden||[]}};
+  return{bytes,info};
+}
+function cadParseWith(lib,T,bytes,name){
+  const dxf=/\.dxf$/i.test(name)||(bytes[0]!==0x41&&/SECTION/.test(new TextDecoder().decode(bytes.slice(0,2000))));
+  let dwg;try{dwg=lib.dwg_read_data(dxf?new TextDecoder().decode(bytes):bytes,dxf?T.DXF:T.DWG);}catch(e){throw new Error((dxf?'DXF':'DWG')+'-filen kunne ikke leses. '+(e&&e.message||''));}
+  if(!dwg)throw new Error((dxf?'DXF':'DWG')+'-filen kunne ikke leses. Den kan være skadet, eller lagret i et format leseren ikke støtter.');
+  let db;try{db=lib.convert(dwg);}finally{try{lib.dwg_free(dwg);}catch(e){}}
+  if(!db||!db.tables)throw new Error('Fant ingen tegning i filen');return db;
+}
+if(typeof module!=='undefined')module.exports={cadBuildPdf,cadMText,cadAci,cadMakePdfWith};
+
+/* ---- worker entry ---- */
+self.onmessage=async e=>{const m=e.data;
+  try{
+    if(!self.PDFLib)importScripts(m.pdfLibUrl);
+    postMessage({phase:'read'});
+    const mod=await import(m.base+'dist/libredwg-web.js');const lib=await mod.LibreDwg.create(m.base+'wasm');
+    const db=cadParseWith(lib,mod.Dwg_File_Type,new Uint8Array(m.bytes),m.name);
+    postMessage({phase:'draw'});
+    const r=await cadMakePdfWith(self.PDFLib,db,m.name,m.opts||{});
+    postMessage({ok:true,bytes:r.bytes,info:r.info},[r.bytes.buffer]);
+  }catch(err){postMessage({ok:false,error:String(err&&err.message||err)});}
+};
+</script>
 <div class="busy" id="busy" hidden><div><span class="spin"></span><span id="busyMsg">Arbeider …</span></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -3224,7 +3531,7 @@ function cadSpline(e){
 }
 function cadBuildPdf(db,PDFLib,opt){
   opt=opt||{};const mono=!!opt.mono;const hidden=new Set(opt.hiddenLayers||[]);
-  const H=db.header||{};const unitMm={1:25.4,2:304.8,4:1,5:10,6:1000,14:100}[H.INSUNITS]||1;
+  const H=db.header||{};let unitMm={1:25.4,2:304.8,4:1,5:10,6:1000,14:100}[H.INSUNITS]||1;
   const LT=new Map((db.tables.LTYPE?.entries||[]).map(l=>[String(l.name).toUpperCase(),l]));
   const LY=new Map();(db.tables.LAYER?.entries||[]).forEach(l=>LY.set(l.name,l));
   const BR=new Map();const BH=new Map();(db.tables.BLOCK_RECORD?.entries||[]).forEach(b=>{BR.set(b.name,b);BH.set(b.handle,b);});
@@ -3313,6 +3620,8 @@ function cadBuildPdf(db,PDFLib,opt){
         (e.attribs||[]).forEach(a=>drawEnt(a,M,ctx,depth+1));break;}
       case'DIMENSION':{const b=BR.get(e.name);if(b&&depth<14)(b.entities||[]).forEach(x=>drawEnt(x,M,{...ctx,blkLayer:pr.layer,blkColor:pr.rgb,blkLw:pr.lw,blkLt:pr.lt},depth+1));else skip('DIMENSION');break;}
       case'HATCH':drawHatch(e,M,pr,ctx);break;
+      case'ACAD_TABLE':{let b=e.blockRecordHandle&&BH.get(e.blockRecordHandle);if(!b){b=tableBlocks[tableUse.n++];}if(!b||depth>14)break;const sp=tableShift.get(e.handle)||e.startPoint||e.insertionPoint||{x:0,y:0};
+        const Mi=mmul(M,mT(sp.x,sp.y));(b.entities||[]).forEach(x=>drawEnt(x,Mi,{...ctx,blkLayer:pr.layer,blkColor:pr.rgb,blkLw:pr.lw,blkLt:pr.lt},depth+1));break;}
       case'VIEWPORT':case'POINT':case'ATTDEF':case'XLINE':case'RAY':break;
       default:skip(e.type);
     }
@@ -3350,10 +3659,23 @@ function cadBuildPdf(db,PDFLib,opt){
     segs.forEach(s=>{setStroke(c,Math.max(0.2,0.13*CADK),s.dash?'['+s.dash.map(f2).join(' ')+'] 0':null);const[a,b]=mApply(M,s.p[0],s.p[1]),[cc,d]=mApply(M,s.q[0],s.q[1]);ops.push(`${f2(a)} ${f2(b)} m ${f2(cc)} ${f2(d)} l S`);});
     ops.push('Q');cur=save;cur={};stats.drawn++;
   }
+  const tableBlocks=[...BR.values()].filter(b=>/^\*T/i.test(b.name)&&(b.entities||[]).length);const tableUse={n:0};
+  /* parse table blocks (e.g. DIALux «Armaturliste») into index -> description */
+  const legend={};
+  tableBlocks.forEach(b=>{const cells=(b.entities||[]).filter(x=>x.type==='MTEXT'||x.type==='TEXT').map(x=>{const p=x.insertionPoint||x.startPoint||{x:0,y:0};const t=x.type==='MTEXT'?cadMTextLines(x.text,x.textHeight||1).map(l=>l.t).join(' '):cadSpecial(x.text);return{x:p.x,y:p.y,t:String(t).trim(),h:x.textHeight||1};}).filter(c=>c.t);
+    if(!cells.length)return;const rows=[];cells.sort((a,b)=>b.y-a.y).forEach(c=>{const r=rows.find(r=>Math.abs(r.y-c.y)<c.h*0.6);if(r)r.c.push(c);else rows.push({y:c.y,c:[c]});});rows.forEach(r=>r.c.sort((a,b)=>a.x-b.x));
+    const hi=rows.findIndex(r=>r.c.some(c=>/^(indeks|index|nr\.?|pos\.?|id|merke|symbol)$/i.test(c.t)));if(hi<0)return;const hdr=rows[hi].c;
+    const col=re=>{const h=hdr.find(c=>re.test(c.t));return h?h.x:null;};const kx=col(/^(indeks|index|nr\.?|pos\.?|id|merke|symbol)$/i);
+    const descCols=[col(/produsent|fabrikat|manufactur|leverand/i),col(/artikkel\s*nav|artikkelnamn|article\s*name|navn|name|beskrivelse|type/i)].filter(v=>v!=null);const ax=col(/^(antall|qty|quantity|stk|ant\.?)$/i);
+    const near=(r,x)=>{let best=null,d=1e18;r.c.forEach(c=>{const dd=Math.abs(c.x-x);if(dd<d){d=dd;best=c;}});return best;};
+    rows.slice(hi+1).forEach(r=>{const k=near(r,kx);if(!k||!/^[A-Za-z0-9.\-]{1,6}$/.test(k.t))return;const desc=descCols.map(x=>(near(r,x)||{}).t).filter(Boolean);const uniq=[...new Set(desc)].join(' ');
+      const n=ax!=null?parseFloat(String((near(r,ax)||{}).t||'').replace(',','.')):NaN;legend[k.t]={d:uniq,n:isFinite(n)?n:null};});});
   /* collect pages: one per layout with model viewports, else the model */
   const layouts=((db.objects&&db.objects.LAYOUT)||[]).filter(l=>!/^model$/i.test(l.layoutName||'')).sort((a,b)=>(a.tabOrder||0)-(b.tabOrder||0));
   const modelBlk=BR.get('*Model_Space')||BH.get((((db.objects||{}).LAYOUT||[]).find(l=>/^model$/i.test(l.layoutName))||{}).paperSpaceTableId);
   const modelEnts=modelBlk&&modelBlk.entities&&modelBlk.entities.length?modelBlk.entities:(db.entities||[]).filter(e=>e.ownerBlockRecordSoftId===(modelBlk&&modelBlk.handle));
+  if([0,1,2].includes(H.INSUNITS||0)&&H.MEASUREMENT!==undefined){const[a0,b0]=(()=>{let a=H.EXTMIN,b=H.EXTMAX;const ok=v=>v&&isFinite(v.x)&&Math.abs(v.x)<1e15;return ok(a)&&ok(b)?[a,b]:[{x:0,y:0},{x:0,y:0}];})();
+    const span=Math.max(b0.x-a0.x,b0.y-a0.y);if(span>20000&&unitMm!==1){unitMm=1;stats.unitGuess='mm';}else if(!H.INSUNITS){unitMm=1;}}
   const sheets=[];
   layouts.forEach(L=>{const blk=BH.get(L.paperSpaceTableId);if(!blk)return;const ents=blk.entities&&blk.entities.length?blk.entities:(db.entities||[]).filter(e=>e.ownerBlockRecordSoftId===blk.handle);
     const vps=ents.filter(e=>e.type==='VIEWPORT'&&e.viewportId!==1&&e.handle!==L.viewportId&&e.viewHeight>0&&e.height>0&&e.width>0);
@@ -3363,17 +3685,33 @@ function cadBuildPdf(db,PDFLib,opt){
   const pdf=opt.doc;const out=[];
   font=opt.font;
   const extOK=v=>v&&isFinite(v.x)&&isFinite(v.y)&&Math.abs(v.x)<1e15&&Math.abs(v.y)<1e15;
-  function modelExtents(){let a=H.EXTMIN,b=H.EXTMAX;if(extOK(a)&&extOK(b)&&b.x>a.x&&b.y>a.y)return[a,b];
-    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;const add=p=>{if(p&&isFinite(p.x)){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);}};
-    modelEnts.forEach(e=>{add(e.startPoint);add(e.endPoint);add(e.center);add(e.insertionPoint);(e.vertices||[]).forEach(add);});return[{x:x0,y:y0},{x:x1,y:y1}];}
+  function bboxOf(ents){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;const add=p=>{if(p&&isFinite(p.x)&&isFinite(p.y)){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);}};
+    ents.forEach(e=>{if(e.type==='ACAD_TABLE'||e.type==='VIEWPORT')return;if(e.type==='LINE'){add(e.startPoint);add(e.endPoint);return;}
+      if(e.type==='CIRCLE'||e.type==='ARC'){if(e.center){add({x:e.center.x-e.radius,y:e.center.y-e.radius});add({x:e.center.x+e.radius,y:e.center.y+e.radius});}return;}
+      add(e.insertionPoint);if(e.type!=='TEXT')add(e.startPoint);add(e.center);(e.vertices||[]).forEach(add);});
+    return x1>x0?{x0,y0,x1,y1}:null;}
+  const tableShift=new Map();
+  function modelExtents(){
+    let bb=bboxOf(modelEnts);
+    if(!bb){const a=H.EXTMIN,b=H.EXTMAX;if(extOK(a)&&extOK(b)&&b.x>a.x&&b.y>a.y)bb={x0:a.x,y0:a.y,x1:b.x,y1:b.y};else bb={x0:0,y0:0,x1:1000,y1:1000};}
+    /* tables without a known position: place them to the right of the drawing instead of on top of it */
+    let ti=0;modelEnts.forEach(e=>{if(e.type!=='ACAD_TABLE')return;const blk=(e.blockRecordHandle&&BH.get(e.blockRecordHandle))||tableBlocks[ti++];if(!blk)return;const tb=bboxOf(blk.entities||[]);if(!tb)return;
+      const sp=e.startPoint||{x:0,y:0};const ov=!(tb.x1+sp.x<bb.x0||tb.x0+sp.x>bb.x1||tb.y1+sp.y<bb.y0||tb.y0+sp.y>bb.y1);
+      let dx=sp.x,dy=sp.y;if(ov){const gap=(bb.x1-bb.x0)*0.04;dx=bb.x1+gap-tb.x0;dy=bb.y1-tb.y1;}tableShift.set(e.handle,{x:dx,y:dy});
+      bb={x0:Math.min(bb.x0,tb.x0+dx),y0:Math.min(bb.y0,tb.y0+dy),x1:Math.max(bb.x1,tb.x1+dx),y1:Math.max(bb.y1,tb.y1+dy)};});
+    return[{x:bb.x0,y:bb.y0},{x:bb.x1,y:bb.y1}];}
   const STD=[1,2,5,10,20,25,50,75,100,150,200,250,500,1000,2000,2500,5000,10000,20000,50000];
   const niceScale=n=>{const s=STD.find(v=>Math.abs(v-n)/v<0.012);return s||Math.round(n*100)/100;};
   if(!sheets.length){const[a,b]=modelExtents();const w=(b.x-a.x)*unitMm,h=(b.y-a.y)*unitMm;let N=STD.find(v=>w/v<=811&&h/v<=564)||Math.ceil(Math.max(w/811,h/564));
     const pw=w/N+30,ph=h/N+30;sheets.push({name:'Modell',model:true,a,N,mn:{x:0,y:0},mx:{x:pw,y:ph},vps:[],ents:[]});}
   for(const sh of sheets){
     const W=(sh.mx.x-sh.mn.x)*CADK,Hh=(sh.mx.y-sh.mn.y)*CADK;const page=pdf.addPage([W,Hh]);curPage=page;fontKey=page.node.newFontDictionary(font.name,font.ref).toString();
-    ops=[];cur={};ops.push('1 j 1 J');const P=mmul(mS(CADK),mT(-sh.mn.x,-sh.mn.y));const ins=[];let scaleN=null,bestA=0;
-    const addIns=(e,M,clip)=>{if(e.type!=='INSERT')return;const b=BR.get(e.name);if(!b||b.flags&4||/^\*/.test(e.name))return;if(!layerVisible(e.layer||'0'))return;const[x,y]=mApply(M,e.insertionPoint.x,e.insertionPoint.y);
+    tableUse.n=0;ops=[];cur={};ops.push('1 j 1 J');const P=mmul(mS(CADK),mT(-sh.mn.x,-sh.mn.y));const ins=[];const labs=[];let scaleN=null,bestA=0;
+    const addIns=(e,M,clip)=>{
+      if((e.type==='TEXT'||e.type==='MTEXT')&&layerVisible(e.layer||'0')){const raw=e.type==='MTEXT'?cadMTextLines(e.text,e.textHeight||1).map(l=>l.t).join(' '):cadSpecial(e.text);const t=String(raw||'').trim();
+        if(t&&t.length<=6&&/^[A-Za-z0-9.\-]+$/.test(t)){const p0=e.type==='MTEXT'?e.insertionPoint:((e.halign||e.valign)&&e.endPoint&&(e.endPoint.x||e.endPoint.y)?e.endPoint:e.startPoint);if(!p0)return;const[x,y]=mApply(M,p0.x,p0.y);
+          if(clip&&(x<clip[0]||x>clip[2]||y<clip[1]||y>clip[3]))return;if(x<0||y<0||x>W||y>Hh)return;const lg=legend[t];labs.push({b:'Merke '+t,l:e.layer||'0',x:x/W,y:1-y/Hh,h:e.handle,t,d:lg?lg.d:'',n:lg?lg.n:null});}return;}
+      if(e.type!=='INSERT')return;const b=BR.get(e.name);if(!b||b.flags&4||/^\*/.test(e.name))return;if(!layerVisible(e.layer||'0'))return;const[x,y]=mApply(M,e.insertionPoint.x,e.insertionPoint.y);
       if(clip&&(x<clip[0]||x>clip[2]||y<clip[1]||y>clip[3]))return;if(x<0||y<0||x>W||y>Hh)return;ins.push({b:e.name,l:e.layer||'0',x:x/W,y:1-y/Hh,h:e.handle});};
     if(sh.model){const M=mmul(P,mmul(mT(15,15),mmul(mS(unitMm/sh.N),mT(-sh.a.x,-sh.a.y))));const ctx={paperLt:false,ltK:CADK*unitMm/sh.N};modelEnts.forEach(e=>{drawEnt(e,M,ctx,0);addIns(e,M);});scaleN=sh.N;}
     for(const vp of sh.vps){const s=vp.height/vp.viewHeight;const tw=rad(vp.viewTwistAngle||0);
@@ -3384,12 +3722,33 @@ function cadBuildPdf(db,PDFLib,opt){
       const A=vp.width*vp.height;if(A>bestA){bestA=A;scaleN=niceScale(unitMm/s);}}
     const pctx={paperLt:true,ltK:CADK};sh.ents.forEach(e=>{drawEnt(e,P,pctx,0);addIns(e,P);});
     const cs=pdf.context.flateStream(ops.join('\n'));page.node.addContentStream(pdf.context.register(cs));
+    const lyr={};labs.forEach(l=>{const o=lyr[l.l]||(lyr[l.l]={n:0,set:new Set(),lg:0});o.n++;o.set.add(l.t);if(l.d)o.lg++;});
+    labs.filter(l=>{const o=lyr[l.l];return o.lg>=Math.max(2,o.n*0.5)||(o.n>=4&&o.set.size/o.n<=0.5);}).forEach(l=>ins.push(l));
     out.push({name:sh.name,w:W,h:Hh,scale:scaleN,paper:[sh.mx.x-sh.mn.x,sh.mx.y-sh.mn.y],inserts:ins,viewports:sh.vps.length});
   }
   const layers=[...LY.values()].map(l=>({name:l.name,used:layerUse.get(l.name)||0,on:!(l.off||l.frozen),hidden:hidden.has(l.name),rgb:cadRgbOf(l)||cadAci(Math.abs(l.colorIndex||7))}));
-  return{pages:out,layers,stats,unitMm};
+  return{pages:out,layers,stats,unitMm,legend};
 }
-if(typeof module!=='undefined')module.exports={cadBuildPdf,cadMText,cadAci};
+/* shared by the page and the worker: DWG database -> PDF bytes and drawing info */
+async function cadMakePdfWith(PL,db,name,opts){
+  opts=opts||{};const doc=await PL.PDFDocument.create();const font=await doc.embedFont(PL.StandardFonts.Helvetica);
+  doc.setTitle(String(name).replace(/\.(dwg|dxf)$/i,''));doc.setProducer('pdfbase (fra DWG)');doc.setCreator('pdfbase');
+  const r=cadBuildPdf(db,PL,{doc,font,mono:!!opts.mono,hiddenLayers:opts.hidden||[]});
+  if(!r.pages.length)throw new Error('Fant ingen ark eller modell å vise i tegningen');
+  const bytes=new Uint8Array(await doc.save());
+  const info={src:/\.dxf$/i.test(name)?'dxf':'dwg',file:name,unitMm:r.unitMm,unitGuess:r.stats.unitGuess||null,legend:r.legend||{},pages:r.pages.map(p=>({name:p.name,scale:p.scale,paper:p.paper.map(v=>Math.round(v)),inserts:p.inserts,viewports:p.viewports})),
+    layers:r.layers.filter(l=>l.used||l.hidden).map(l=>({name:l.name,used:l.used,hidden:l.hidden,rgb:l.rgb})).sort((a,b)=>a.name.localeCompare(b.name,'nb')),
+    xrefs:r.stats.xrefs,skipped:r.stats.skipped,entities:(db.entities||[]).length,opts:{mono:!!opts.mono,hidden:opts.hidden||[]}};
+  return{bytes,info};
+}
+function cadParseWith(lib,T,bytes,name){
+  const dxf=/\.dxf$/i.test(name)||(bytes[0]!==0x41&&/SECTION/.test(new TextDecoder().decode(bytes.slice(0,2000))));
+  let dwg;try{dwg=lib.dwg_read_data(dxf?new TextDecoder().decode(bytes):bytes,dxf?T.DXF:T.DWG);}catch(e){throw new Error((dxf?'DXF':'DWG')+'-filen kunne ikke leses. '+(e&&e.message||''));}
+  if(!dwg)throw new Error((dxf?'DXF':'DWG')+'-filen kunne ikke leses. Den kan være skadet, eller lagret i et format leseren ikke støtter.');
+  let db;try{db=lib.convert(dwg);}finally{try{lib.dwg_free(dwg);}catch(e){}}
+  if(!db||!db.tables)throw new Error('Fant ingen tegning i filen');return db;
+}
+if(typeof module!=='undefined')module.exports={cadBuildPdf,cadMText,cadAci,cadMakePdfWith};
 
 /* ================= DWG/DXF i pdfbase: lesing, ark, målestokk, symboltelling, lag ================= */
 const isCad=f=>/\.(dwg|dxf)$/i.test((f&&f.name)||'');
@@ -3404,28 +3763,28 @@ function cadLib(){
   })();
   cadLibP.catch(()=>{cadLibP=null;});return cadLibP;
 }
-async function cadParse(bytes,name){
-  const{lib,T}=await cadLib();const dxf=/\.dxf$/i.test(name)||(bytes[0]!==0x41&&/SECTION/.test(new TextDecoder().decode(bytes.slice(0,2000))));
-  let dwg;try{dwg=lib.dwg_read_data(dxf?new TextDecoder().decode(bytes):bytes,dxf?T.DXF:T.DWG);}catch(e){throw new Error((dxf?'DXF':'DWG')+'-filen kunne ikke leses. '+(e&&e.message||''));}
-  if(!dwg)throw new Error((dxf?'DXF':'DWG')+'-filen kunne ikke leses. Den kan være skadet, eller lagret i et format leseren ikke støtter.');
-  let db;try{db=lib.convert(dwg);}finally{try{lib.dwg_free(dwg);}catch(e){}}
-  if(!db||!db.tables)throw new Error('Fant ingen tegning i filen');return db;
+async function cadParse(bytes,name){const{lib,T}=await cadLib();return cadParseWith(lib,T,bytes,name);}
+async function cadMakePdf(db,name,opts){return cadMakePdfWith(PDFLib,db,name,opts);}
+/* read and draw in a background worker: the page stays responsive, and the memory is released when it is done */
+function cadViaWorker(bytes,name,opts){
+  return new Promise((res,rej)=>{
+    let w;try{const url=URL.createObjectURL(new Blob([$('#cadWorkerSrc').textContent],{type:'text/javascript'}));w=new Worker(url);setTimeout(()=>URL.revokeObjectURL(url),10000);}catch(e){rej(Object.assign(new Error('worker'),{noWorker:true}));return;}
+    const pl=document.querySelector('script[src*="pdf-lib"]');const t0=Date.now();let phase='read',started=false;
+    const label=()=>{const s=Math.round((Date.now()-t0)/1000);busy(true,(phase==='read'?`Leser ${name}`:'Tegner arkene')+` … ${s} s`+(s>=8?' · store tegninger kan ta et par minutter':''));};
+    label();const tick=setInterval(label,1000);
+    const done=()=>{clearInterval(tick);try{w.terminate();}catch(e){}};
+    w.onmessage=e=>{const m=e.data;started=true;if(m.phase){phase=m.phase;label();return;}done();if(m.ok)res({bytes:new Uint8Array(m.bytes),info:m.info});else rej(new Error(m.error||'DWG-filen kunne ikke leses'));};
+    w.onerror=e=>{done();rej(Object.assign(new Error(e.message||'DWG-leseren stoppet. Tegningen kan være for stor for minnet i nettleseren.'),{noWorker:!started}));};
+    const copy=bytes.slice();w.postMessage({cmd:'build',bytes:copy.buffer,name,opts:opts||{},pdfLibUrl:pl?pl.src:'',base:new URL('cad/',document.baseURI).href},[copy.buffer]);
+  });
 }
-async function cadMakePdf(db,name,opts){
-  opts=opts||{};const doc=await PDFLib.PDFDocument.create();const font=await doc.embedFont(PDFLib.StandardFonts.Helvetica);
-  doc.setTitle(name.replace(/\.(dwg|dxf)$/i,''));doc.setProducer('pdfbase (fra DWG)');doc.setCreator('pdfbase');
-  const r=cadBuildPdf(db,PDFLib,{doc,font,mono:!!opts.mono,hiddenLayers:opts.hidden||[]});
-  if(!r.pages.length)throw new Error('Fant ingen ark eller modell å vise i tegningen');
-  const bytes=new Uint8Array(await doc.save());
-  const info={src:/\.dxf$/i.test(name)?'dxf':'dwg',file:name,unitMm:r.unitMm,pages:r.pages.map(p=>({name:p.name,scale:p.scale,paper:p.paper.map(v=>Math.round(v)),inserts:p.inserts,viewports:p.viewports})),
-    layers:r.layers.filter(l=>l.used||l.hidden).map(l=>({name:l.name,used:l.used,hidden:l.hidden,rgb:l.rgb})).sort((a,b)=>a.name.localeCompare(b.name,'nb')),
-    xrefs:r.stats.xrefs,skipped:r.stats.skipped,opts:{mono:!!opts.mono,hidden:opts.hidden||[]}};
-  return{bytes,info};
+async function cadBuild(bytes,name,opts){
+  if(location.protocol!=='file:'&&typeof Worker!=='undefined'){try{return await cadViaWorker(bytes,name,opts);}catch(e){if(!e.noWorker)throw e;}}
+  busy(true,'Leser '+name+' …');await new Promise(r=>setTimeout(r,30));const db=await cadParse(bytes,name);busy(true,'Tegner arkene …');await new Promise(r=>setTimeout(r,30));
+  const r=await cadMakePdf(db,name,opts);r.db=db;return r;
 }
 async function cadLoad(bytes,name){
-  busy(true,'Leser '+name+' …');await new Promise(r=>setTimeout(r,30));
-  const db=await cadParse(bytes,name);busy(true,'Tegner arkene …');await new Promise(r=>setTimeout(r,30));
-  const r=await cadMakePdf(db,name,{});const pgs=await loadDoc(r.bytes,name);const D=S.docs[S.docs.length-1];D.cad=r.info;D.cadDb=db;
+  const r=await cadBuild(bytes,name,{});busy(true,'Åpner tegningen …');const pgs=await loadDoc(r.bytes,name);const D=S.docs[S.docs.length-1];D.cad=r.info;D.cadSrc=bytes;if(r.db&&(r.info.entities||0)<60000)D.cadDb=r.db;
   return pgs;
 }
 function cadPaperName(w,h){const a=[Math.max(w,h),Math.min(w,h)];const A=[['A0',1189,841],['A1',841,594],['A2',594,420],['A3',420,297],['A4',297,210]].find(([n,x,y])=>Math.abs(a[0]-x)<6&&Math.abs(a[1]-y)<6);return A?A[0]:Math.round(w)+'×'+Math.round(h)+' mm';}
@@ -3438,7 +3797,9 @@ function cadOpenedToast(d){
   const sc=[...new Set(c.pages.map(p=>p.scale).filter(v=>v>1))];const prim=c.pages[0]?c.pages[0].inserts.filter(i=>!cadSecondary(i.b,i.l)):[];const sym=prim.length;const symNames=[...new Set(prim.map(i=>i.b))];
   let t=`${D.name} er åpnet som ${n} ${n===1?'ark':'ark'} (${c.pages.map(p=>p.name).join(', ')}).`;
   if(sc.length)t+=` Målestokk ${sc.map(v=>'1:'+v).join(' og ')} er satt fra tegningen.`;
-  if(sym)t+=` ${sym} symboler (${symNames.slice(0,4).join(', ')}${symNames.length>4?' …':''}) kan telles automatisk under Mål.`;
+  const withLg=prim.filter(i=>i.d);if(withLg.length)t+=` ${withLg.length} armaturer/symboler i ${new Set(withLg.map(i=>i.b)).size} typer fra listen i tegningen kan telles automatisk under Mål.`;
+  else if(sym)t+=` ${sym} symboler (${symNames.slice(0,4).join(', ')}${symNames.length>4?' …':''}) kan telles automatisk under Mål.`;
+  if(c.unitGuess==='mm')t+=' Filen oppga enheten som tommer, men målene ser ut som millimeter, så pdfbase regner i millimeter.';
   if(c.xrefs.length)t+=` Merk: ${c.xrefs.length===1?'en ekstern referanse':c.xrefs.length+' eksterne referanser'} (${c.xrefs.map(x=>x.name).join(', ')}) følger ikke med filen og vises ikke.`;
   return t;
 }
@@ -3452,27 +3813,29 @@ const cadSecondary=(b,l)=>/^(A\d|A-|Dør|Dor|Vindu|Rom|Arkitekt|Inventar|Møbl)/
 function cadGroups(p){
   const D=S.docs[p.d];const pi=D&&D.cad&&D.cad.pages[p.i];if(!pi)return[];
   const done=new Set(marksOf(p).filter(m=>m.cadh).map(m=>m.cadh));const g=new Map();
-  pi.inserts.forEach(i=>{let o=g.get(i.b);if(!o){o={b:i.b,layers:new Set(),n:0,done:0};g.set(i.b,o);}o.layers.add(i.l);o.n++;if(done.has(i.h))o.done++;});
-  return[...g.values()].map(o=>({...o,layers:[...o.layers],sec:[...o.layers].every(l=>cadSecondary(o.b,l))})).sort((a,b)=>a.sec-b.sec||b.n-a.n||a.b.localeCompare(b.b));
+  pi.inserts.forEach(i=>{let o=g.get(i.b);if(!o){o={b:i.b,layers:new Set(),n:0,done:0,d:i.d||'',ln:i.n??null,t:i.t||null};g.set(i.b,o);}o.layers.add(i.l);o.n++;if(done.has(i.h))o.done++;});
+  return[...g.values()].map(o=>({...o,layers:[...o.layers],sec:!o.d&&[...o.layers].every(l=>cadSecondary(o.b,l))})).sort((a,b)=>a.sec-b.sec||(a.t&&b.t?(parseFloat(a.t)||0)-(parseFloat(b.t)||0)||String(a.t).localeCompare(String(b.t)):0)||b.n-a.n||a.b.localeCompare(b.b));
 }
 function cadPanel(p){
   const D=S.docs[p.d];if(!D||!D.cad)return'';const pi=D.cad.pages[p.i];if(!pi)return'';
   const cats=S.mp.cats.filter(c=>c.type==='point');const gs=cadGroups(p);
-  const row=o=>{const cid=cadGuessCat(o.b,o.sec);const all=o.done>=o.n;
-    return`<div class="cadrow${all?' done':''}"><div class="cadn"><b title="${esc(o.b)}">${esc(o.b)}</b><small>${esc(o.layers.join(', '))} · ${o.n} stk${o.done&&!all?` · ${o.done} telt`:''}</small></div>
+  const row=o=>{const cid=cadGuessCat(o.b+(o.d?' '+o.d:''),o.sec);const all=o.done>=o.n;
+    return`<div class="cadrow${all?' done':''}"><div class="cadn"><b title="${esc(o.b+(o.d?': '+o.d:''))}">${esc(o.b)}${o.d?` <span class="cadd">${esc(o.d)}</span>`:''}</b><small>${esc(o.layers.join(', '))} · ${o.n} stk på arket${o.ln!=null?(o.ln===o.n?' · stemmer med listen':` · listen sier ${o.ln}`):''}${o.done&&!all?` · ${o.done} telt`:''}</small></div>
       ${all?`<span class="cadok">Telt</span><button class="btn sm ghost" type="button" data-cad="uncount" data-b="${esc(o.b)}" title="Fjern punktene som ble telt fra denne blokken">Angre</button>`:
       `<select class="inp cadsel" data-cadcat="${esc(o.b)}" aria-label="Kategori for ${esc(o.b)}"><option value="">Velg hva det er …</option>${cats.map(c=>`<option value="${esc(c.id)}" ${c.id===cid?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
       <button class="btn sm primary" type="button" data-cad="count" data-b="${esc(o.b)}" ${cid?'':'disabled'}>Tell ${o.n-o.done}</button>`}</div>`;};
   const main=gs.filter(o=>!o.sec),sec=gs.filter(o=>o.sec);
   let h=`<section class="msec cadsec"><div class="mhead"><b>Fra ${D.cad.src.toUpperCase()}</b><span class="mstate ok">${esc(pi.name)} · ${cadPaperName(...pi.paper)}${pi.scale>1?' · 1:'+pi.scale:''}</span></div>`;
-  if(gs.length){h+=`<p class="mnote">Symbolene er blokker i tegningen. Velg hva hver blokk er, så telles alle på arket med ett klikk. Valget huskes for neste ark.</p>`;
+  const typed=gs.filter(o=>o.d&&o.done<o.n);
+  if(gs.length){h+=gs.some(o=>o.d)?`<p class="mnote">Tegningen har en liste over typer (for eksempel en armaturliste), og merkene på tegningen er koblet til den. Tell én og én type, eller alle som egne kategorier.</p>${typed.length>1?`<button class="btn sm primary" type="button" data-cad="counttypes" style="align-self:flex-start">Tell alle ${typed.length} typer som egne kategorier</button>`:''}`
+    :`<p class="mnote">Symbolene er blokker i tegningen. Velg hva hver blokk er, så telles alle på arket med ett klikk. Valget huskes for neste ark.</p>`;
     h+=main.map(row).join('');
     if(sec.length)h+=`<details class="cadmore"${main.length?'':' open'}><summary>Arkitektur og andre blokker (${sec.length})</summary>${sec.map(row).join('')}</details>`;}
   else h+=`<p class="mnote">Fant ingen symboler (blokker) på dette arket. Tell og mål som på en vanlig tegning; målestokken er allerede riktig.</p>`;
   if(D.cad.xrefs.length)h+=`<p class="mnote" style="color:var(--warn)">Ekstern referanse mangler: ${esc(D.cad.xrefs.map(x=>x.name+'.dwg').join(', '))}. Innholdet i den vises ikke og kan ikke telles.</p>`;
   const lay=D.cad.layers;
   h+=`<details class="cadmore"><summary>Lag i tegningen (${lay.filter(l=>!l.hidden).length} av ${lay.length} vises)</summary>
-    ${D.cadDb?`<div class="cadlays">${lay.map(l=>`<label class="check"><input type="checkbox" data-cadlayer="${esc(l.name)}" ${l.hidden?'':'checked'}><i class="cadsw" style="background:rgb(${l.rgb.join(',')})"></i><span>${esc(l.name)}</span></label>`).join('')}</div>
+    ${(D.cadDb||D.cadSrc)?`<div class="cadlays">${lay.map(l=>`<label class="check"><input type="checkbox" data-cadlayer="${esc(l.name)}" ${l.hidden?'':'checked'}><i class="cadsw" style="background:rgb(${l.rgb.join(',')})"></i><span>${esc(l.name)}</span></label>`).join('')}</div>
     <label class="check"><input type="checkbox" id="cadMono" ${D.cad.opts.mono?'checked':''}> Svart-hvitt, som en vanlig utskrift</label>
     <div class="inline"><button class="btn sm" type="button" data-cad="layers">Oppdater tegningen</button><button class="btn sm ghost" type="button" data-cad="laysall">Vis alle lag</button></div>`
     :`<p class="mnote">Åpne DWG-filen på nytt for å slå lag av og på. Tellinger og målinger blir beholdt.</p>`}</details>`;
@@ -3494,9 +3857,16 @@ $('#mbody').addEventListener('click',async e=>{
   if(act==='uncount'){const name=b.dataset.b;const pi=D.cad.pages[p.i];const hs=new Set(pi.inserts.filter(i=>i.b===name).map(i=>i.h));snap();const before=marksOf(p).length;p.marks=marksOf(p).filter(m=>!(m.cadh&&hs.has(m.cadh)));
     renderMarksAll();renderPanel();updMStatus();markDirty();toast(`Fjernet ${before-p.marks.length} punkter fra ${name}`);return;}
   if(act==='laysall'){$$('[data-cadlayer]',$('#mbody')).forEach(c=>c.checked=true);return;}
-  if(act==='layers'){if(!D.cadDb){toast('Åpne DWG-filen på nytt for å endre lag');return;}
+  if(act==='counttypes'){const pi=D.cad.pages[p.i];const gs=cadGroups(p).filter(o=>o.d&&o.done<o.n);if(!gs.length)return;
+    snap();const SH=['circle','square','diamond','triangle','star','cross'],CO=['#e8730c','#1d4fd8','#0e8a5f','#b5179e','#c81e1e','#7a45c2','#0b7c84','#a86a08','#5a6775'];let k=S.mp.cats.length,tot=0;
+    const lid=(S.mp.layers.find(l=>l.id==='lys')||S.mp.layers[0]||{}).id;
+    gs.forEach((o,i)=>{const nm=(o.t?o.t+': ':'')+o.d.replace(/\s+/g,' ').slice(0,48);let c=S.mp.cats.find(x=>x.type==='point'&&x.name===nm);
+      if(!c){c={id:'c'+(k++)+'_'+Date.now().toString(36).slice(-3),name:nm,type:'point',layer:lid,shape:SH[i%SH.length],color:CO[Math.floor(i/SH.length+i)%CO.length]};S.mp.cats.push(c);}
+      if(!S.mp.cadMap)S.mp.cadMap={};S.mp.cadMap[o.b]=c.id;tot+=cadCount(p,o.b,c.id);});
+    renderMarksAll();renderPanel();updMStatus();markDirty();toast(`Telte ${tot} punkter i ${gs.length} kategorier, én per type. Se Mengder for listen.`,6000);return;}
+  if(act==='layers'){if(!D.cadDb&&!D.cadSrc){toast('Åpne DWG-filen på nytt for å endre lag');return;}
     const hidden=[...$$('[data-cadlayer]',$('#mbody'))].filter(c=>!c.checked).map(c=>c.dataset.cadlayer);const mono=!!($('#cadMono')&&$('#cadMono').checked);
-    busy(true,'Tegner arkene på nytt …');try{await new Promise(r=>setTimeout(r,30));const r=await cadMakePdf(D.cadDb,D.name,{hidden,mono});await cadSwap(p.d,r);toast(`Tegningen er oppdatert. ${hidden.length?hidden.length+' lag er skjult.':'Alle lag vises.'} Tellinger og målinger er beholdt.`,4500);}
+    busy(true,'Tegner arkene på nytt …');try{await new Promise(r=>setTimeout(r,30));const r=D.cadDb?await cadMakePdf(D.cadDb,D.name,{hidden,mono}):await cadBuild(D.cadSrc,D.name,{hidden,mono});await cadSwap(p.d,r);toast(`Tegningen er oppdatert. ${hidden.length?hidden.length+' lag er skjult.':'Alle lag vises.'} Tellinger og målinger er beholdt.`,4500);}
     catch(err){toast('Klarte ikke å tegne på nytt: '+(err.message||'ukjent feil'),5000);}finally{busy(false);}return;}
 });
 async function cadSwap(d,r){
