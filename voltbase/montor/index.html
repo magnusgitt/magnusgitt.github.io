@@ -78,14 +78,14 @@
     <canvas id="c" width="960" height="520" aria-label="Montørløpet"></canvas>
     <div id="hud">
       <span class="pill" id="hudLiv">❤❤❤</span>
-      <span class="pill" id="hudKobber">0 Cu</span>
+      <span class="pill" id="hudKobber">0 g Cu</span>
       <span class="pill" id="hudNiva">Nivå 1</span>
       <span class="pill hoyre" id="pauseKnapp">❚❚</span>
     </div>
 
     <div class="lag vis" id="lagStart"><div class="boks">
       <h1>⚡ Montørløpet</h1>
-      <p>Løp gjennom bygget, hopp over spenningssatte kabler, gnister og vann, og kom deg frem til sikringsskapet. Samle kobber og kjøp bedre utstyr mellom nivåene.</p>
+      <p>Løp gjennom bygget, hopp over spenningssatte kabler, spiker, gnister og fallende verktøy, og kom deg frem til sikringsskapet. Hvert 5. nivå venter en boss. Samle kobber og kjøp bedre utstyr mellom nivåene.</p>
       <p class="smaa" id="startInfo"></p>
       <button class="knapp" id="startKnapp">Start</button>
       <button class="knapp sek" id="butikkKnapp">Utstyr</button>
@@ -102,7 +102,7 @@
     </div></div>
 
     <div class="lag" id="lagDod"><div class="boks">
-      <h2>Du fikk støt!</h2>
+      <h2 id="dodTittel">Du fikk støt!</h2>
       <p id="dodTekst">Kobberet du har samlet, beholder du.</p>
       <div class="tips" id="dodTips"></div>
       <button class="knapp" id="igjenKnapp">Prøv nivået igjen</button>
@@ -111,7 +111,7 @@
 
     <div class="lag" id="lagButikk"><div class="boks">
       <h2>Utstyr</h2>
-      <p>Du har <span class="kobber" id="butikkKobber">0</span> Cu. Utstyret beholder du.</p>
+      <p>Du har <span class="kobber" id="butikkKobber">0 g</span> kobber. Utstyret beholder du.</p>
       <div class="butikk" id="butikk2"></div>
       <button class="knapp" id="butikkTilbake">Tilbake</button>
     </div></div>
@@ -123,13 +123,6 @@
       <a class="knapp sek" style="text-align:center;text-decoration:none" href="/voltbase/app/spill">‹ Tilbake til Voltbase</a>
     </div></div>
 
-    <div class="lag" id="lagFag"><div class="boks">
-      <h2>❓ Fagboks</h2>
-      <p id="fagSporsmal"></p>
-      <div id="fagSvar"></div>
-      <p id="fagResultat" class="smaa"></p>
-      <button class="knapp" id="fagVidere" style="display:none">Fortsett</button>
-    </div></div>
   </div>
 
   <div id="kontroller">
@@ -142,6 +135,7 @@
 </div>
 
 <script>
+'use strict';
 'use strict';
 // ── Oppsett ─────────────────────────────────────────────────────────
 const LAGRE = 'voltbase_montorlopet_v1';
@@ -168,20 +162,48 @@ function tilpass() {
 addEventListener('resize', tilpass);
 tilpass();
 
-// ── Utstyr / oppgraderinger ─────────────────────────────────────────
+// ── Kobber i gram, kg og tonn ───────────────────────────────────────
+function fmt(gr) {
+  gr = Math.round(gr);
+  const f = (v, enh) => {
+    let s = v.toFixed(v < 10 ? 2 : v < 100 ? 1 : 0);
+    if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return s.replace('.', ',') + ' ' + enh;
+  };
+  if (gr < 1000) return gr + ' g';
+  if (gr < 1e6) return f(gr / 1000, 'kg');
+  return f(gr / 1e6, 't');
+}
+
+// ── Utstyr / oppgraderinger (priser i gram) ─────────────────────────
 const UTSTYR = [
-  { id: 'liv',    ikon: '🧤', navn: 'Isolerte hansker', info: '+1 liv', pris: [30, 60, 100] },
-  { id: 'hopp',   ikon: '🥾', navn: 'Vernesko med fjæring', info: 'Hopper høyere', pris: [25, 55, 90] },
-  { id: 'fart',   ikon: '🦺', navn: 'Lette arbeidsklær', info: 'Løper fortere', pris: [25, 55, 90] },
-  { id: 'dobbel', ikon: '🪜', navn: 'Stigesko', info: 'Dobbelhopp i lufta', pris: [80] },
-  { id: 'jfb',    ikon: '🛡️', navn: 'Jordfeilbryter', info: 'Tåler ett støt gratis per nivå (to på nivå 2)', pris: [70, 130] },
-  { id: 'magnet', ikon: '🧲', navn: 'Kobbermagnet', info: 'Trekker til seg kobber i nærheten', pris: [45] },
+  { id: 'liv',      ikon: '🧤', navn: 'Isolerte hansker', info: '+1 liv', pris: [600, 1500, 4000, 15000] },
+  { id: 'hopp',     ikon: '🥾', navn: 'Vernesko med fjæring', info: 'Hopper høyere', pris: [500, 1300, 3500] },
+  { id: 'fart',     ikon: '🦺', navn: 'Lette arbeidsklær', info: 'Løper fortere', pris: [500, 1300, 3500] },
+  { id: 'hjelm',    ikon: '⛑️', navn: 'Hjelm med hakestropp', info: 'Fallende verktøy preller av', pris: [1500] },
+  { id: 'spiker',   ikon: '🔩', navn: 'Spikertrampsåle', info: 'Tåler å gå på spiker', pris: [2500] },
+  { id: 'dobbel',   ikon: '🪜', navn: 'Stigesko', info: 'Dobbelhopp i lufta (nivå 2: trippelhopp)', pris: [2000, 60000] },
+  { id: 'jfb',      ikon: '🛡️', navn: 'Jordfeilbryter', info: 'Tåler ett støt gratis per nivå per oppgradering', pris: [1500, 3500, 40000] },
+  { id: 'magnet',   ikon: '🧲', navn: 'Kobbermagnet', info: 'Trekker til seg kobber (nivå 2: lengre rekkevidde)', pris: [1000, 20000] },
+  { id: 'iso',      ikon: '⚡', navn: 'Isolerte støvler', info: 'Hopp på gnister og slukk dem', pris: [6000] },
+  { id: 'grossist', ikon: '🏪', navn: 'Grossistavtale', info: '+25 % kobber per oppgradering', pris: [8000, 50000, 300000, 1500000] },
+  { id: 'gull',     ikon: '👑', navn: 'Gullhjelm', info: 'Status på byggeplassen og +1 liv', pris: [5000000] },
 ];
 
-let lagret = { kobber: 0, niva: 1, beste: 1, upg: {} };
-try { const r = localStorage.getItem(LAGRE); if (r) lagret = Object.assign(lagret, JSON.parse(r)); } catch (e) {}
+let lagret = { kobber: 0, niva: 1, beste: 1, upg: {}, versjon: 2 };
+try {
+  const r = localStorage.getItem(LAGRE);
+  if (r) {
+    const gml = JSON.parse(r);
+    // Versjon 1 regnet kobber i «Cu». Gjør om til gram (1 Cu = 25 g).
+    if (!gml.versjon) { gml.kobber = Math.round((gml.kobber || 0) * 25); gml.versjon = 2; }
+    lagret = Object.assign(lagret, gml);
+  }
+} catch (e) {}
 const lagre = () => { try { localStorage.setItem(LAGRE, JSON.stringify(lagret)); } catch (e) {} };
+lagre();
 const nivaa = (id) => lagret.upg[id] || 0;
+const myntVerdi = () => Math.round(20 * Math.pow(1.22, lagret.niva - 1) * (1 + 0.25 * nivaa('grossist')));
 
 const TIPS = [
   'Fem sikkerhetsregler: frakoble, sikre mot innkobling, kontroller spenningsløshet, jord og kortslutt, beskytt mot nærliggende deler.',
@@ -196,24 +218,9 @@ const TIPS = [
   'Varmgang og misfarging i en klemme betyr løs forbindelse. Det er en vanlig brannårsak.',
   'Stikkontakter på bad skal stå utenfor sone 2.',
   'Elbillader trenger type B jordfeilvern, eller type A når laderen har 6 mA DC-deteksjon.',
-];
-
-const FAG = [
-  ['Hva er første av de fem sikkerhetsreglene?', 'Frakoble', 'Kontrollere spenningsløshet'],
-  ['Hvilken farge har PE-lederen?', 'Gul/grønn', 'Blå'],
-  ['Hva er kravet ved isolasjonsmåling 500 V DC?', 'Minst 1 MΩ', 'Minst 1 kΩ'],
-  ['Hva beskytter en 30 mA jordfeilbryter mest mot?', 'Farlig berøringsstrøm', 'Overlast'],
-  ['Når løser en B16 momentant?', 'Ved ca. 80 A', 'Ved ca. 20 A'],
-  ['Hva betyr IP44?', 'Tåler vannsprut', 'Tåler nedsenking'],
-  ['Hvor stor strøm trekker 2300 W på 230 V?', '10 A', '23 A'],
-  ['Motoren går feil vei. Hva gjør du?', 'Bytter to faser', 'Bytter N og PE'],
-  ['Hvilket instrument kontrollerer spenningsløshet?', 'To-polet spenningstester', 'Spenningspenn'],
-  ['Hva gir forsinket utløsning av automat?', 'Overlast', 'Kortslutning'],
-  ['Hvilken målekategori i sikringsskap i bolig?', 'CAT III', 'CAT I'],
-  ['Fase–N-spenning i 400 V TN?', '230 V', '400 V'],
-  ['Første jordfeil i IT-nett gir …', 'Varsel', 'Utkobling'],
-  ['Hvor er sone 0 på badet?', 'Inne i kar/dusjkar', 'Ved vasken'],
-  ['Hva oppdager lysbuevern?', 'Gnistring i løse forbindelser', 'Overspenning fra lyn'],
+  'Bruk hjelm med hakestropp når du jobber under andre eller i høyden.',
+  'Sakselift krever opplæring og dokumentert sikkerhetsopplæring for arbeidsutstyret.',
+  'Kabeltromler skal sikres mot rulling, og trommelen skal rulles ut, ikke trekkes av i spiral.',
 ];
 
 // ── Lyd (enkle pip, ingen filer) ────────────────────────────────────
@@ -233,102 +240,170 @@ function pip(f = 600, d = 0.08, type = 'square', vol = 0.04) {
 function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 const TEMA = [
-  { navn: 'Kjelleren', himmel: ['#1a1c2c', '#29366f'], bygg: '#252b45', bakke: '#566c86', topp: '#94b0c2' },
-  { navn: 'Byggeplassen', himmel: ['#29366f', '#3b5dc9'], bygg: '#25307a', bakke: '#7a4e2f', topp: '#c28552' },
-  { navn: 'Loftet', himmel: ['#2a1a2e', '#5d275d'], bygg: '#3a1f3f', bakke: '#6e4a3a', topp: '#b07a52' },
-  { navn: 'Industrihallen', himmel: ['#14232a', '#257179'], bygg: '#1b3a40', bakke: '#4a5a66', topp: '#8aa0ac' },
-  { navn: 'Taket', himmel: ['#1a1c2c', '#b13e53'], bygg: '#3a1f3f', bakke: '#333c57', topp: '#566c86' },
+  { navn: 'Kjelleren', himmel: ['#14151f', '#29366f'], bygg: '#1f2440', midt: '#2b3356', bakke: '#5a5f73', topp: '#94b0c2', monster: 'mur', prop: 'ror' },
+  { navn: 'Byggeplassen', himmel: ['#29366f', '#5d9cec'], bygg: '#25307a', midt: '#1d2560', bakke: '#7a4e2f', topp: '#c28552', monster: 'jord', prop: 'kran', sol: true },
+  { navn: 'Loftet', himmel: ['#2a1a2e', '#5d275d'], bygg: '#3a1f3f', midt: '#4a2a3a', bakke: '#6e4a3a', topp: '#b07a52', monster: 'tre', prop: 'takstol' },
+  { navn: 'Industrihallen', himmel: ['#10191e', '#257179'], bygg: '#1b3a40', midt: '#16303a', bakke: '#4a5a66', topp: '#8aa0ac', monster: 'betong', prop: 'fagverk' },
+  { navn: 'Taket', himmel: ['#0d0e1a', '#b13e53'], bygg: '#2a1830', midt: '#1a1424', bakke: '#333c57', topp: '#566c86', monster: 'tak', prop: 'antenne', stjerner: true },
 ];
+
+const ARENA = 22;  // bredde på bossarenaen i ruter
 
 function lagBane(n) {
   const r = rng(n * 7919 + 13);
   const ri = (a, b) => a + Math.floor(r() * (b - a + 1));
-  const B = 70 + n * 12;
-  const fast = Array.from({ length: B }, () => new Array(RADER).fill(0));
-  const mynter = [], farer = [], fiender = [], bokser = [];
+  const erBoss = n % 5 === 0;
+  const Bn = erBoss ? 40 + Math.min(n, 20) * 5 : 70 + Math.min(n, 18) * 12;
+  const fast = Array.from({ length: Bn + ARENA + 60 }, () => new Array(RADER).fill(0));
+  const mynter = [], farer = [], fiender = [], lifter = [];
   const bakke = (x) => { for (let y = BAKKE; y < RADER; y++) fast[x][y] = 1; };
-  const blokk = (x, y) => { if (x >= 0 && x < B && y >= 0 && y < RADER) fast[x][y] = 1; };
+  const blokk = (x, y) => { if (x >= 0 && y >= 0 && y < RADER) fast[x][y] = 1; };
   const mynt = (x, y) => mynter.push({ x: x * T + T / 2, y: y * T + T / 2, tatt: false });
 
   let x = 0;
   for (; x < 7; x++) bakke(x);
-  let fagPlassert = false;
   const maksGap = Math.min(4, 2 + Math.floor(n / 4));
+  const vist = {};
+  const ny = (type, intro) => { if (n === intro && !vist[type]) { vist[type] = true; return true; } return false; };
 
-  while (x < B - 14) {
-    const valg = r();
-    if (valg < 0.16) {                                   // flatt med mynter
+  const typer = [
+    ['flat', 3], ['hull', 3], ['trapp', 2], ['plattform', n >= 2 ? 2 : 0], ['kabel', 2.5], ['gnist', 2],
+    ['vann', n >= 2 ? 1.5 : 0], ['boks', n >= 3 ? 1.5 : 0], ['spiker', n >= 2 ? 2 : 0], ['trommel', n >= 3 ? 2 : 0],
+    ['verktoy', n >= 4 ? 2 : 0], ['lift', n >= 3 ? 1.5 : 0],
+  ];
+  const sum = typer.reduce((s, t) => s + t[1], 0);
+  const velg = () => { let v = r() * sum; for (const [t, w] of typer) { if ((v -= w) < 0) return t; } return 'flat'; };
+
+  const slutt = erBoss ? Bn : Bn - 14;
+  while (x < slutt) {
+    const valg = velg();
+    if (valg === 'flat') {
       const l = ri(4, 7);
       for (let i = 0; i < l; i++) { bakke(x + i); if (i % 2 === 0) mynt(x + i, BAKKE - 1); }
       x += l;
-    } else if (valg < 0.32) {                            // hull
+    } else if (valg === 'hull') {
       const l = ri(2, maksGap);
       for (let i = 0; i < l; i++) mynt(x + i, BAKKE - 2 - (i === 0 || i === l - 1 ? 0 : 1));
       x += l; bakke(x); bakke(x + 1); x += 2;
-    } else if (valg < 0.44) {                            // trapp
+    } else if (valg === 'trapp') {
       const h = ri(1, 3);
       for (let i = 0; i < h; i++) { bakke(x + i); for (let k = 1; k <= i + 1; k++) blokk(x + i, BAKKE - k); }
       for (let i = h; i < h + 3; i++) { bakke(x + i); for (let k = 1; k <= h; k++) blokk(x + i, BAKKE - k); }
       mynt(x + h + 1, BAKKE - h - 1);
       x += h + 3;
       bakke(x); bakke(x + 1); x += 2;
-    } else if (valg < 0.56 && n >= 2) {                  // plattformer over sjakt
+    } else if (valg === 'plattform') {
       const l = ri(5, 7);
       const p = Math.floor(l / 2) - 1, py = BAKKE - ri(2, 3);
       for (let i = 0; i < 3; i++) { blokk(x + p + i, py); mynt(x + p + i, py - 1); }
       x += l; bakke(x); bakke(x + 1); x += 2;
-    } else if (valg < 0.70) {                            // spenningssatt kabel på gulvet
+    } else if (valg === 'kabel') {
       const l = 6, bredde = n >= 4 ? 2 : 1;
       for (let i = 0; i < l; i++) bakke(x + i);
       farer.push({ type: 'kabel', x: (x + 2) * T, y: BAKKE * T - 12, w: bredde * T, h: 12 });
       mynt(x + 2, BAKKE - 3);
       x += l;
-    } else if (valg < 0.82) {                            // gnist som patruljerer
+    } else if (valg === 'gnist') {
       const l = 8;
       for (let i = 0; i < l; i++) bakke(x + i);
-      fiender.push({ x: (x + 4) * T, y: BAKKE * T - 30, w: 26, h: 26, min: (x + 1) * T, max: (x + l - 1) * T - 26,
+      fiender.push({ type: 'gnist', x: (x + 4) * T, y: BAKKE * T - 30, w: 26, h: 26, min: (x + 1) * T, max: (x + l - 1) * T - 26,
         vx: (55 + n * 9) * (r() < 0.5 ? -1 : 1), fase: r() * 6 });
       mynt(x + 1, BAKKE - 1); mynt(x + l - 2, BAKKE - 1);
       x += l;
-    } else if (valg < 0.91 && n >= 2) {                  // vann med kabel i
+    } else if (valg === 'vann') {
       const l = 7;
       for (let i = 0; i < l; i++) bakke(x + i);
       farer.push({ type: 'vann', x: (x + 2) * T, y: BAKKE * T - 10, w: 3 * T, h: 10 });
       mynt(x + 3, BAKKE - 3);
       x += l;
-    } else if (n >= 3) {                                 // koblingsboks som gnistrer av og på
+    } else if (valg === 'boks') {
       const l = 6;
       for (let i = 0; i < l; i++) bakke(x + i);
       farer.push({ type: 'boks', x: (x + 3) * T + 6, y: (BAKKE - 4) * T, w: T - 12, h: 4 * T, periode: 2.6 - Math.min(0.8, n * 0.08), fase: r() * 3 });
       x += l;
-    } else {
-      bakke(x); bakke(x + 1); x += 2;
-    }
-    if (!fagPlassert && x > B / 2) {                    // én fagboks per nivå
-      for (let i = 0; i < 4; i++) bakke(x + i);
-      bokser.push({ x: (x + 1) * T + 4, y: (BAKKE - 3) * T, w: T - 8, h: T - 8, brukt: false });
-      x += 4; fagPlassert = true;
+    } else if (valg === 'spiker') {
+      const l = 6, bredde = n >= 6 ? 3 : 2;
+      for (let i = 0; i < l; i++) bakke(x + i);
+      farer.push({ type: 'spiker', x: (x + 2) * T, y: BAKKE * T - 12, w: bredde * T, h: 12, ny: ny('spiker', 2) });
+      mynt(x + 2, BAKKE - 3); if (bredde > 2) mynt(x + 4, BAKKE - 3);
+      x += l;
+    } else if (valg === 'trommel') {
+      const l = 9;
+      for (let i = 0; i < l; i++) bakke(x + i);
+      fiender.push({ type: 'trommel', x: (x + 6) * T, y: BAKKE * T - 32, w: 32, h: 32, min: (x + 1) * T, max: (x + l) * T - 32,
+        vx: -(80 + n * 7), rot: 0, ny: ny('trommel', 3) });
+      mynt(x + 2, BAKKE - 1); mynt(x + 4, BAKKE - 1);
+      x += l;
+    } else if (valg === 'verktoy') {
+      const l = 6;
+      for (let i = 0; i < l; i++) bakke(x + i);
+      const top = (BAKKE - 7) * T + 8;
+      farer.push({ type: 'verktoy', x: (x + 3) * T + 8, y: top, w: 24, h: 24, top, bunn: BAKKE * T - 24,
+        periode: 2.6 - Math.min(0.6, n * 0.04), fase: r() * 3, verktoy: ri(0, 2), ny: ny('verktoy', 4) });
+      mynt(x + 1, BAKKE - 1); mynt(x + 5, BAKKE - 1);
+      x += l;
+    } else if (valg === 'lift') {
+      // Sjakt med sakselift i midten
+      const l = 6;
+      lifter.push({ x: (x + 2) * T, y: BAKKE * T, w: 2 * T, h: 12, y0: BAKKE * T, y1: (BAKKE - 3) * T,
+        periode: 3.2 - Math.min(1, n * 0.05), fase: r() * 3, dy: 0, ny: ny('lift', 3) });
+      mynt(x + 2, BAKKE - 5); mynt(x + 3, BAKKE - 5);
+      x += l; bakke(x); bakke(x + 1); x += 2;
     }
   }
-  for (; x < B; x++) bakke(x);
+
+  let boss = null, port = null, B;
+  if (erBoss) {
+    for (let i = 0; i < 3; i++) bakke(x++);
+    const a0 = x;
+    for (let i = 0; i < ARENA + 8; i++) bakke(x + i);
+    for (let i = 4; i < 7; i++) blokk(a0 + i, BAKKE - 3);
+    for (let i = ARENA - 7; i < ARENA - 4; i++) blokk(a0 + i, BAKKE - 3);
+    port = a0 + ARENA;
+    for (let y = 0; y < BAKKE; y++) fast[port][y] = 2;   // sperre som åpnes når bossen er slått
+    const typ = ['trommel', 'sky', 'herre'][(n / 5 - 1) % 3];
+    const hp = 3 + Math.floor((n - 5) / 15);
+    const ax0 = a0 * T, ax1 = (a0 + ARENA) * T;
+    boss = { type: typ, hp, maxHp: hp, ax0, ax1, aktiv: false, dod: false, t: 0, usarbar: 0, banner: 0,
+      x: ax1 - 140, y: 0, w: 72, h: 72, vx: 0, vy: 0, rot: 0, hoppT: 2, kastT: 1.5, lynT: 1.5, varsel: 0, slag: 0, maalX: 0, retning: -1 };
+    if (typ === 'trommel') { boss.y = BAKKE * T - 72; }
+    if (typ === 'herre') { boss.w = 32; boss.h = 52; boss.y = BAKKE * T - 52; }
+    if (typ === 'sky') {
+      boss.w = 96; boss.h = 48; boss.y = 3.2 * T;
+      boss.brytere = [
+        { x: (a0 + 2) * T + 8, y: BAKKE * T - 28 },
+        { x: (a0 + ARENA - 6) * T + 8, y: (BAKKE - 3) * T - 28 },
+        { x: (a0 + 11) * T + 8, y: BAKKE * T - 28 },
+        { x: (a0 + 5) * T + 8, y: (BAKKE - 3) * T - 28 },
+      ].map((b) => ({ ...b, w: 24, h: 28 }));
+    }
+    x += ARENA + 8;
+    B = x;
+  } else {
+    B = Math.max(x, Bn);
+    for (let i = x; i < B; i++) bakke(i);
+  }
+  fast.length = B;
   const maal = { x: (B - 5) * T, y: (BAKKE - 2) * T, w: 56, h: 2 * T };
-  return { B, fast, mynter, farer, fiender, bokser, maal, tema: TEMA[(n - 1) % TEMA.length] };
+  const tema = boss ? TEMA[{ trommel: 1, sky: 3, herre: 4 }[boss.type]] : TEMA[(n - 1) % TEMA.length];
+  return { B, fast, mynter, farer, fiender, lifter, maal, boss, port, kast: [], tema };
 }
 
 // ── Spilltilstand ───────────────────────────────────────────────────
-let bane, sp, kamX = 0, tilstand = 'meny', tid = 0, levelKobber = 0, skjold = 0;
+let bane, sp, kamX = 0, tilstand = 'meny', tid = 0, levelKobber = 0, skjold = 0, rist = 0;
+let partikler = [], tekster = [];
 const tast = { v: false, h: false, hopp: false };
 let hoppTrykket = false;
 
-function maksLiv() { return 3 + nivaa('liv'); }
+function maksLiv() { return 3 + nivaa('liv') + nivaa('gull'); }
 
 function startNiva(n) {
   lagret.niva = n; lagre();
   bane = lagBane(n);
   sp = { x: 2 * T, y: (BAKKE - 2) * T, w: 24, h: 44, vx: 0, vy: 0, paaBakke: false, liv: maksLiv(),
-    usarbar: 0, coyote: 0, buffer: 0, ekstraHopp: 0, retning: 1, steg: 0, sikkerX: 2 * T };
+    usarbar: 0, coyote: 0, buffer: 0, ekstraHopp: 0, retning: 1, steg: 0, sikkerX: 2 * T, lift: null, forrigeVy: 0 };
   skjold = nivaa('jfb');
-  levelKobber = 0; kamX = 0; tid = 0;
+  levelKobber = 0; kamX = 0; tid = 0; rist = 0; partikler = []; tekster = [];
   visLag(null);
   tilstand = 'spill';
   oppdaterHud();
@@ -337,16 +412,32 @@ function startNiva(n) {
 function oppdaterHud() {
   if (!sp) return;
   $('hudLiv').textContent = '❤'.repeat(Math.max(0, sp.liv)) + '♡'.repeat(Math.max(0, maksLiv() - sp.liv)) + (skjold > 0 ? ' 🛡️' + (skjold > 1 ? skjold : '') : '');
-  $('hudKobber').textContent = lagret.kobber + ' Cu';
-  $('hudNiva').textContent = 'Nivå ' + lagret.niva + ' · ' + bane.tema.navn;
+  $('hudKobber').textContent = fmt(lagret.kobber) + ' Cu';
+  $('hudNiva').textContent = 'Nivå ' + lagret.niva + ' · ' + (bane.boss ? 'Boss' : bane.tema.navn);
 }
 
 function visLag(id) {
   for (const l of document.querySelectorAll('.lag')) l.classList.toggle('vis', l.id === id);
 }
 
+// ── Effekter ────────────────────────────────────────────────────────
+function stov(x, y, n, farger, fart = 120, opp = 0.6, tyngde = 600) {
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 2 * opp;
+    const v = fart * (0.4 + Math.random() * 0.8);
+    partikler.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, liv: 0.35 + Math.random() * 0.4, tyngde,
+      farge: farger[Math.floor(Math.random() * farger.length)] });
+  }
+}
+function flyt(x, y, tekst, farge = '#ffcd3c') { tekster.push({ x, y, tekst, farge, liv: 1.2 }); }
+function gi(gr, x, y, visTekst) {
+  lagret.kobber += gr; levelKobber += gr;
+  if (visTekst) flyt(x, y, '+' + fmt(gr));
+  oppdaterHud();
+}
+
 // ── Fysikk ──────────────────────────────────────────────────────────
-const solid = (tx, ty) => tx >= 0 && tx < bane.B && ty >= 0 && ty < RADER && bane.fast[tx][ty] === 1;
+const solid = (tx, ty) => tx >= 0 && tx < bane.B && ty >= 0 && ty < RADER && bane.fast[tx][ty] > 0;
 
 function flytt(o, dx, dy) {
   o.x += dx;
@@ -372,9 +463,12 @@ function skade() {
   if (sp.usarbar > 0) return;
   if (skjold > 0) {
     skjold--; sp.usarbar = 1.2; pip(900, 0.15, 'triangle'); pip(1200, 0.15, 'triangle');
+    stov(sp.x + sp.w / 2, sp.y + sp.h / 2, 14, ['#73eff7', '#ffffff', '#41a6f6'], 220, 1, 0);
+    flyt(sp.x + sp.w / 2, sp.y - 10, 'JFB!', '#73eff7');
     oppdaterHud(); return;
   }
-  sp.liv--; sp.usarbar = 1.3; sp.vy = -420; pip(140, 0.25, 'sawtooth', 0.06);
+  sp.liv--; sp.usarbar = 1.3; sp.vy = -420; rist = Math.max(rist, 5); pip(140, 0.25, 'sawtooth', 0.06);
+  stov(sp.x + sp.w / 2, sp.y + sp.h / 2, 18, ['#ffffff', '#9fe8ff', '#ffcd3c'], 260, 1, 200);
   if (navigator.vibrate) navigator.vibrate(80);
   oppdaterHud();
   if (sp.liv <= 0) doed();
@@ -382,6 +476,7 @@ function skade() {
 
 function doed() {
   tilstand = 'dod';
+  $('dodTittel').textContent = bane.boss && bane.boss.aktiv && !bane.boss.dod ? navnBoss(bane.boss) + ' vant denne gangen' : 'Du fikk støt!';
   $('dodTips').textContent = '💡 ' + TIPS[Math.floor(Math.random() * TIPS.length)];
   $('dodTekst').textContent = 'Du kom deg ikke gjennom ' + bane.tema.navn.toLowerCase() + ' denne gangen. Kobberet du har samlet, beholder du.';
   visLag('lagDod');
@@ -390,17 +485,24 @@ function doed() {
 function ferdig() {
   tilstand = 'ferdig';
   pip(660, 0.1); setTimeout(() => pip(880, 0.1), 110); setTimeout(() => pip(1320, 0.18), 220);
-  const bonus = 10 + lagret.niva * 2;
+  const bonus = myntVerdi() * 10;
   lagret.kobber += bonus;
   lagret.beste = Math.max(lagret.beste, lagret.niva + 1);
   lagre();
   $('ferdigTittel').textContent = 'Nivå ' + lagret.niva + ' fullført!';
-  $('ferdigTekst').innerHTML = 'Sikringsskapet er nådd og kursen er frakoblet. Du samlet <span class="kobber">' + levelKobber +
-    ' Cu</span> og fikk <span class="kobber">' + bonus + ' Cu</span> i bonus.';
+  $('ferdigTekst').innerHTML = (bane.boss ? navnBoss(bane.boss) + ' er slått, og s' : 'S') + 'ikringsskapet er nådd. Du samlet <span class="kobber">' + fmt(levelKobber) +
+    '</span> kobber og fikk <span class="kobber">' + fmt(bonus) + '</span> i bonus.' +
+    ((lagret.niva + 1) % 5 === 0 ? ' <b>Neste nivå har en boss.</b>' : '');
   $('ferdigTips').textContent = '💡 ' + TIPS[(lagret.niva - 1) % TIPS.length];
   tegnButikk('butikk1');
   visLag('lagFerdig');
   oppdaterHud();
+}
+
+// Tramp: spilleren lander ovenpå noe mens hun faller
+const tramp = (e) => sp.vy > 0 && sp.forrigeBunn <= e.y + 8 && treff(sp, e);
+function sprett() {
+  sp.vy = tast.hopp ? -760 : -480; sp.ekstraHopp = nivaa('dobbel'); sp.paaBakke = false;
 }
 
 function oppdater(dt) {
@@ -408,6 +510,7 @@ function oppdater(dt) {
   const fart = 250 * (1 + 0.12 * nivaa('fart'));
   const hoppV = 720 * (1 + 0.07 * nivaa('hopp'));
   const G = 2000;
+  const varPaaBakke = sp.paaBakke;
 
   const retn = (tast.h ? 1 : 0) - (tast.v ? 1 : 0);
   const mål = retn * fart;
@@ -421,15 +524,36 @@ function oppdater(dt) {
   if (hoppTrykket) { sp.buffer = 0.13; hoppTrykket = false; }
   else sp.buffer -= dt;
   if (sp.buffer > 0) {
-    if (sp.coyote > 0) { sp.vy = -hoppV; sp.coyote = 0; sp.buffer = 0; pip(520, 0.06); }
-    else if (sp.ekstraHopp > 0) { sp.vy = -hoppV * 0.85; sp.ekstraHopp--; sp.buffer = 0; pip(700, 0.06); }
+    if (sp.coyote > 0) { sp.vy = -hoppV; sp.coyote = 0; sp.buffer = 0; sp.lift = null; pip(520, 0.06); stov(sp.x + sp.w / 2, sp.y + sp.h, 4, ['#c2c3c7', '#94b0c2'], 60); }
+    else if (sp.ekstraHopp > 0) { sp.vy = -hoppV * 0.85; sp.ekstraHopp--; sp.buffer = 0; pip(700, 0.06); stov(sp.x + sp.w / 2, sp.y + sp.h, 6, ['#ffffff', '#ffcd3c'], 90, 0.3); }
   }
   if (!tast.hopp && sp.vy < -250) sp.vy += G * dt * 1.2;  // kort trykk = lavt hopp
   sp.vy = Math.min(sp.vy + G * dt, 1100);
 
+  // Sakselifter beveger seg
+  for (const l of bane.lifter) {
+    const ny = l.y0 + (l.y1 - l.y0) * (0.5 - 0.5 * Math.cos((tid + l.fase) / l.periode * Math.PI * 2));
+    l.dy = ny - l.y; l.forrigeY = l.y; l.y = ny;
+  }
+  if (sp.lift) sp.y += sp.lift.dy;
+
+  sp.forrigeBunn = sp.y + sp.h;
+  sp.forrigeVy = sp.vy;
   flytt(sp, sp.vx * dt, sp.vy * dt);
-  if (sp.paaBakke && Math.abs(sp.vx) > 10) sp.steg += dt * Math.abs(sp.vx) / 30;
-  if (sp.paaBakke) {
+  // Stå på sakselift
+  sp.lift = null;
+  if (sp.vy >= 0) for (const l of bane.lifter) {
+    if (sp.x + sp.w > l.x + 2 && sp.x < l.x + l.w - 2 && sp.y + sp.h >= l.y && sp.forrigeBunn <= l.forrigeY + 6) {
+      sp.y = l.y - sp.h; sp.vy = 0; sp.paaBakke = true; sp.lift = l;
+    }
+  }
+  if (sp.paaBakke && !varPaaBakke && sp.forrigeVy > 500) stov(sp.x + sp.w / 2, sp.y + sp.h, 6, ['#c2c3c7', '#94b0c2', '#ffffff'], 90, 0.45);
+  if (sp.paaBakke && Math.abs(sp.vx) > 10) {
+    const før = Math.floor(sp.steg / 2);
+    sp.steg += dt * Math.abs(sp.vx) / 30;
+    if (Math.floor(sp.steg / 2) !== før && Math.abs(sp.vx) > 180) stov(sp.x + sp.w / 2 - sp.retning * 8, sp.y + sp.h, 1, ['#94b0c2', '#c2c3c7'], 50, 0.3);
+  }
+  if (sp.paaBakke && !sp.lift) {
     const tx = Math.floor((sp.x + sp.w / 2) / T);
     if (solid(tx, Math.floor((sp.y + sp.h + 2) / T))) sp.sikkerX = sp.x;
   }
@@ -439,16 +563,20 @@ function oppdater(dt) {
   if (sp.y > RADER * T + 60) {
     sp.usarbar = 0; skade();
     if (tilstand !== 'spill') return;
-    sp.x = Math.max(0, sp.sikkerX - T); sp.y = (BAKKE - 3) * T; sp.vx = 0; sp.vy = 0;
+    sp.x = Math.max(0, sp.sikkerX - T); sp.y = (BAKKE - 3) * T; sp.vx = 0; sp.vy = 0; sp.lift = null;
   }
 
   // Mynter
-  const magnet = nivaa('magnet') ? 150 : 0;
+  const magnet = [0, 150, 260][nivaa('magnet')];
+  const verdi = myntVerdi();
   for (const m of bane.mynter) {
     if (m.tatt) continue;
     const dx = sp.x + sp.w / 2 - m.x, dy = sp.y + sp.h / 2 - m.y, d = Math.hypot(dx, dy);
     if (magnet && d < magnet) { m.x += dx / d * 420 * dt; m.y += dy / d * 420 * dt; }
-    if (d < 30) { m.tatt = true; lagret.kobber++; levelKobber++; pip(1050, 0.05, 'triangle', 0.03); oppdaterHud(); }
+    if (d < 30) {
+      m.tatt = true; gi(verdi, m.x, m.y, false); pip(1050, 0.05, 'triangle', 0.03);
+      stov(m.x, m.y, 5, ['#ffd9a8', '#e08a4c', '#ffffff'], 80, 1, 0);
+    }
   }
 
   // Farer
@@ -457,80 +585,299 @@ function oppdater(dt) {
       const på = ((tid + f.fase) % f.periode) < f.periode * 0.5;
       f.paa = på;
       if (på && treff(sp, { x: f.x + 4, y: f.y + T, w: f.w - 8, h: f.h - T })) skade();
+    } else if (f.type === 'spiker') {
+      if (!nivaa('spiker') && treff(sp, { x: f.x + 4, y: f.y + 4, w: f.w - 8, h: f.h })) skade();
+    } else if (f.type === 'verktoy') {
+      const per = f.periode, t = (tid + f.fase) % per, fall = per - 0.8, syk = Math.floor((tid + f.fase) / per);
+      if (t < fall - 0.9) { f.fase2 = 'venter'; f.y = f.top; }
+      else if (t < fall) { f.fase2 = 'varsel'; f.y = f.top; }
+      else if (t < fall + 0.5) { f.fase2 = 'faller'; f.y = f.top + (f.bunn - f.top) * Math.pow((t - fall) / 0.5, 2); }
+      else {
+        f.fase2 = 'ligger'; f.y = f.bunn;
+        if (f.landet !== syk) {
+          f.landet = syk; rist = Math.max(rist, 1.5);
+          if (Math.abs(f.x - sp.x) < VW) pip(220, 0.06, 'square', 0.025);
+          stov(f.x + 12, f.bunn + 24, 5, ['#c2c3c7', '#94b0c2'], 80, 0.5);
+        }
+      }
+      if (f.fase2 === 'faller' && treff(sp, { x: f.x + 3, y: f.y + 3, w: f.w - 6, h: f.h - 6 })) {
+        if (nivaa('hjelm')) {
+          if (f.klonk !== syk) { f.klonk = syk; pip(1400, 0.08, 'square', 0.04); flyt(sp.x + sp.w / 2, sp.y - 6, 'KLONK!', '#c2c3c7'); stov(f.x + 12, f.y + 20, 6, ['#ffffff', '#ffcd3c'], 150, 1, 300); }
+        } else skade();
+      }
     } else if (treff(sp, { x: f.x + 4, y: f.y + 2, w: f.w - 8, h: f.h })) skade();
   }
   for (const e of bane.fiender) {
+    if (e.dod) continue;
     e.x += e.vx * dt;
     if (e.x < e.min) { e.x = e.min; e.vx *= -1; }
     if (e.x > e.max) { e.x = e.max; e.vx *= -1; }
-    if (treff({ x: sp.x + 3, y: sp.y + 3, w: sp.w - 6, h: sp.h - 6 }, e)) skade();
+    if (e.type === 'trommel') e.rot += e.vx * dt / 16;
+    const kanTrampes = e.type === 'trommel' || nivaa('iso');
+    if (kanTrampes && tramp(e)) {
+      e.dod = true; sprett(); rist = Math.max(rist, 2.5);
+      pip(330, 0.08, 'square', 0.05); pip(660, 0.1, 'triangle', 0.04);
+      const farger = e.type === 'trommel' ? ['#8b5a2b', '#e08a4c', '#c2c3c7'] : ['#ffffff', '#9fe8ff', '#41a6f6'];
+      stov(e.x + e.w / 2, e.y + e.h / 2, 14, farger, 200, 1, 500);
+      gi(verdi * (e.type === 'trommel' ? 8 : 5), e.x + e.w / 2, e.y - 6, true);
+      continue;
+    }
+    if (treff({ x: sp.x + 3, y: sp.y + 3, w: sp.w - 6, h: sp.h - 6 }, { x: e.x + 3, y: e.y + 3, w: e.w - 6, h: e.h - 6 })) skade();
   }
   if (tilstand !== 'spill') return;
-
-  // Fagboks
-  for (const b of bane.bokser) if (!b.brukt && treff(sp, b)) { b.brukt = true; sp.vy = Math.max(sp.vy, 0); visFag(); return; }
+  if (bane.boss) oppdaterBoss(dt);
+  if (tilstand !== 'spill') return;
 
   // Mål
-  if (treff(sp, bane.maal)) { ferdig(); return; }
+  if (treff(sp, bane.maal) && (!bane.boss || bane.boss.dod)) { ferdig(); return; }
+
+  // Effekter
+  for (const p of partikler) { p.vy += p.tyngde * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.liv -= dt; }
+  if (partikler.length > 400) partikler.splice(0, partikler.length - 400);
+  partikler = partikler.filter((p) => p.liv > 0);
+  for (const t of tekster) { t.y -= 40 * dt; t.liv -= dt; }
+  tekster = tekster.filter((t) => t.liv > 0);
+  rist = Math.max(0, rist - dt * 14);
 
   kamX += ((sp.x - VW * 0.38) - kamX) * Math.min(1, dt * 8);
   kamX = Math.max(0, Math.min(kamX, bane.B * T - VW));
+}
+
+// ── Bosser ──────────────────────────────────────────────────────────
+const navnBoss = (b) => ({ trommel: 'Kabeltrommelkongen', sky: 'Overspenningen', herre: 'Byggherren' })[b.type];
+
+function treffBoss(b) {
+  b.hp--; b.usarbar = 1; rist = 7;
+  pip(200, 0.15, 'sawtooth', 0.06); pip(400, 0.2, 'square', 0.04);
+  stov(b.x + b.w / 2, b.y + b.h / 2, 24, ['#ffffff', '#ffcd3c', '#ff7a1a'], 260, 1, 400);
+  if (b.hp <= 0) {
+    b.dod = true; rist = 12;
+    bane.fiender = bane.fiender.filter((e) => !e.fraBoss); bane.kast = [];
+    for (let i = 0; i < 4; i++) setTimeout(() => pip(500 + i * 220, 0.18, 'triangle', 0.05), i * 120);
+    stov(b.x + b.w / 2, b.y + b.h / 2, 60, ['#ffffff', '#ffcd3c', '#ff7a1a', '#73eff7'], 420, 1, 300);
+    gi(myntVerdi() * 400, b.x + b.w / 2, b.y - 10, true);
+    flyt(b.x + b.w / 2, b.y - 34, navnBoss(b).toUpperCase() + ' ER SLÅTT!', '#ffffff');
+    for (let y = 0; y < BAKKE; y++) { bane.fast[bane.port][y] = 0; stov(bane.port * T + T / 2, y * T + T / 2, 3, ['#ffcd3c', '#1a1c2c'], 140, 1, 600); }
+    lagre();
+  }
+}
+
+function oppdaterBoss(dt) {
+  const b = bane.boss;
+  if (b.dod) return;
+  if (!b.aktiv) {
+    if (sp.x > b.ax0 + T) { b.aktiv = true; b.banner = 2.4; rist = 4; pip(110, 0.4, 'sawtooth', 0.06); pip(165, 0.4, 'sawtooth', 0.04); }
+    return;
+  }
+  b.t += dt; b.banner -= dt;
+  if (b.usarbar > 0) b.usarbar -= dt;
+  const raser = 1 + (b.maxHp - b.hp) * 0.25 + lagret.niva * 0.01;
+  const spX = sp.x + sp.w / 2;
+
+  if (b.type === 'trommel') {
+    if (!b.vx) b.vx = -150;
+    b.vx = Math.sign(b.vx) * 150 * raser;
+    b.vy += 2000 * dt; b.y += b.vy * dt;
+    if (b.y + b.h >= BAKKE * T) {
+      if (b.vy > 400) {
+        rist = 6; pip(90, 0.15, 'square', 0.06);
+        stov(b.x + b.w / 2, BAKKE * T, 12, ['#94b0c2', '#c2c3c7'], 160, 0.5);
+        if (bane.fiender.filter((e) => e.fraBoss && !e.dod).length < 2) {
+          const ret = spX < b.x ? -1 : 1;
+          bane.fiender.push({ type: 'trommel', fraBoss: true, x: b.x + b.w / 2 - 16, y: BAKKE * T - 32, w: 32, h: 32, min: b.ax0, max: b.ax1 - 32, vx: ret * 130, rot: 0 });
+        }
+      }
+      b.y = BAKKE * T - b.h; b.vy = 0;
+      b.hoppT -= dt;
+      if (b.hoppT <= 0) { b.vy = -820; b.hoppT = 2.6 / raser; }
+    }
+    b.x += b.vx * dt;
+    if (b.x < b.ax0) { b.x = b.ax0; b.vx = Math.abs(b.vx); }
+    if (b.x + b.w > b.ax1) { b.x = b.ax1 - b.w; b.vx = -Math.abs(b.vx); }
+    b.rot += b.vx * dt / 36;
+    if (b.usarbar <= 0 && tramp({ x: b.x + 6, y: b.y, w: b.w - 12, h: b.h })) { sprett(); sp.vy = -820; treffBoss(b); return; }
+    if (treff({ x: sp.x + 3, y: sp.y + 3, w: sp.w - 6, h: sp.h - 6 }, { x: b.x + 8, y: b.y + 8, w: b.w - 16, h: b.h - 8 })) skade();
+  } else if (b.type === 'herre') {
+    b.vy += 2000 * dt; b.y += b.vy * dt;
+    const paaBakke = b.y + b.h >= BAKKE * T;
+    if (paaBakke) { b.y = BAKKE * T - b.h; b.vy = 0; }
+    if (paaBakke) {
+      const mål = Math.sign(spX - (b.x + b.w / 2)) * 70 * raser;
+      b.vx += (mål - b.vx) * Math.min(1, dt * 3);
+    }
+    b.x += b.vx * dt;
+    if (b.x < b.ax0) { b.x = b.ax0; b.vx = Math.abs(b.vx); }
+    if (b.x + b.w > b.ax1) { b.x = b.ax1 - b.w; b.vx = -Math.abs(b.vx); }
+    b.retning = spX < b.x + b.w / 2 ? -1 : 1;
+    b.kastT -= dt;
+    if (b.kastT <= 0) {
+      b.kastT = Math.max(0.7, 1.7 / raser);
+      const sx = b.x + b.w / 2, sy = b.y + 10, tt = 0.9;
+      const tx = spX + sp.vx * 0.4 + (Math.random() - 0.5) * 60, ty = sp.y + sp.h / 2;
+      b.kastAnim = 0.3;
+      bane.kast.push({ x: sx - 8, y: sy, w: 16, h: 14, vx: (tx - sx) / tt, vy: (ty - sy - 0.5 * 900 * tt * tt) / tt, liv: 4 });
+      if (Math.random() < 0.35) flyt(sx, b.y - 12, ['Liten endring!', 'Kan du bare …', 'Kunden ombestemte seg', 'Ny tegning!'][Math.floor(Math.random() * 4)], '#ffffff');
+      pip(800, 0.05, 'triangle', 0.03);
+    }
+    if (b.kastAnim > 0) b.kastAnim -= dt;
+    if (b.usarbar <= 0 && tramp({ x: b.x, y: b.y, w: b.w, h: b.h })) {
+      sprett(); treffBoss(b);
+      if (!b.dod) { const motsatt = b.x + b.w / 2 < (b.ax0 + b.ax1) / 2 ? 1 : -1; b.vy = -760; b.vx = motsatt * 380; }
+      return;
+    }
+    if (treff({ x: sp.x + 3, y: sp.y + 3, w: sp.w - 6, h: sp.h - 6 }, { x: b.x + 4, y: b.y + 10, w: b.w - 8, h: b.h - 10 })) skade();
+  } else if (b.type === 'sky') {
+    // Skyen driver etter spilleren, med litt sleng fra side til side
+    const mål = spX - b.w / 2 + Math.sin(b.t * 0.9) * 160;
+    b.x += (mål - b.x) * Math.min(1, dt * 0.7 * raser);
+    b.y = 3.2 * T + Math.sin(b.t * 1.7) * 10;
+    if (b.slag > 0) {
+      b.slag -= dt;
+      if (Math.abs(spX - b.maalX) < 22 && sp.y < BAKKE * T) skade();
+    } else if (b.varsel > 0) {
+      b.varsel -= dt;
+      if (b.varsel <= 0) { b.slag = 0.28; rist = 4; pip(80, 0.25, 'sawtooth', 0.07); stov(b.maalX, bakkeUnder(b.maalX), 12, ['#ffffff', '#9fe8ff', '#ffcd3c'], 220, 0.6); }
+    } else {
+      b.lynT -= dt;
+      if (b.lynT <= 0) { b.maalX = spX + sp.vx * 0.25; b.varsel = Math.max(0.5, 0.9 - (b.maxHp - b.hp) * 0.1); b.lynT = Math.max(0.6, 1.5 / raser); pip(1200, 0.05, 'square', 0.02); }
+    }
+    const br = b.brytere[(b.maxHp - b.hp) % b.brytere.length];
+    if (b.usarbar <= 0 && treff(sp, br)) { treffBoss(b); flyt(br.x + 12, br.y - 6, 'FASE UT!', '#38b764'); }
+  }
+
+  // Endringsmeldinger som flyr
+  for (const k of bane.kast) {
+    k.vy += 900 * dt; k.x += k.vx * dt; k.y += k.vy * dt; k.liv -= dt;
+    if (k.y > BAKKE * T - k.h) { k.liv = 0; stov(k.x + 8, BAKKE * T, 3, ['#ffffff', '#c2c3c7'], 60, 0.5); }
+    if (k.liv > 0 && treff({ x: sp.x + 3, y: sp.y + 3, w: sp.w - 6, h: sp.h - 6 }, k)) { k.liv = 0; skade(); }
+  }
+  bane.kast = bane.kast.filter((k) => k.liv > 0);
+  b.x = Math.max(b.ax0, Math.min(b.ax1 - b.w, b.x));
+}
+
+function bakkeUnder(x) {
+  const tx = Math.floor(x / T);
+  for (let y = 0; y < RADER; y++) if (solid(tx, y)) return y * T;
+  return RADER * T;
 }
 
 // ── Tegning (pixel-stil) ────────────────────────────────────────────
 // Verden regnes i «store» koordinater (rute = 40). Alt tegnes på et lite lerret
 // (rute = 16 piksler) som skaleres opp uten utjevning.
 const PAL = {
-  '.': null, Y: '#ffcd3c', y: '#c98a1c', S: '#f4c39a', s: '#c98b62', K: '#1a1c2c', O: '#ff7a1a', o: '#c2520c',
-  W: '#f4f4f4', B: '#3b5dc9', b: '#29366f', D: '#333c57', T: '#8b5a2b', C: '#e08a4c', c: '#a35a2a', L: '#ffd9a8',
+  '.': null, Y: '#ffcd3c', y: '#c98a1c', h: '#fff1a8', S: '#f4c39a', s: '#c98b62', K: '#1a1c2c', O: '#ff7a1a', o: '#c2520c',
+  W: '#f4f4f4', R: '#e8f0f0', B: '#3b5dc9', b: '#29366f', D: '#333c57', G: '#566c86', T: '#8b5a2b', C: '#e08a4c', c: '#a35a2a',
+  L: '#ffd9a8', E: '#5d3a1a', N: '#1a1c2c', P: '#b13e53', p: '#7a2a3a', A: '#c2c3c7', a: '#8b9bb4',
 };
+const PAL_GULL = Object.assign({}, PAL, { Y: '#ffe66d', y: '#d4a017', h: '#ffffff' });
 const MONTOR = {
   topp: [
-    '....YYYY....',
-    '...YYYYYY...',
+    '....hYYY....',
+    '...hYYYYYy..',
     '..yyyyyyyyy.',
     '...SSSSKS...',
-    '...SSSSSS...',
-    '....ssss....',
+    '...SSSSSSs..',
+    '....sSSs....',
     '...OOOOOO...',
-    '..OOOOOOOO..',
-    '..OWWWWWWO..',
+    '..OROOOORO..',
+    '..ORRRRRRO..',
     '..OOOOOOOOS.',
-    '..ooOOOOoo..',
+    '..GGGGTGGG..',
     '...BBBBBB...',
-    '...BBBBBB...',
+    '...BBbbBB...',
   ],
   sta: ['...BB..BB...', '...BB..BB...', '...bb..bb...', '..DDD..DDD..', '............'],
   lop1: ['..BB....BB..', '.BB......BB.', '.bb......bb.', 'DDD......DDD', '............'],
   lop2: ['....BBBB....', '....BBBB....', '....bbbb....', '...DDDDDD...', '............'],
   hopp: ['..BB...BB...', '.BB.....BB..', 'DDD.....DDD.', '............', '............'],
 };
+const HERRE = [
+  '....WWWWW.....',
+  '...WWWWWWW....',
+  '..AAAAAAAAA...',
+  '...SSSSKSS....',
+  '...SSSSSSS....',
+  '....SsssS.....',
+  '...DDDWPDDD...',
+  '..DDDDWPDDDD..',
+  '..DDDDWPDDDD..',
+  '..DDDDDPDDDWW.',
+  '..SDDDDDDDDWW.',
+  '...DDDDDDDD...',
+  '...DDDDDDDD...',
+  '...DDD..DDD...',
+  '...DDD..DDD...',
+  '...DDD..DDD...',
+  '..NNNN..NNNN..',
+];
 const SPRITE_CACHE = {};
-function sprite(navn, rader) {
+// Lager et lite lerret fra et tegnekart, med mørk kontur rundt figuren
+function sprite(navn, rader, pal = PAL, kontur = true) {
   if (SPRITE_CACHE[navn]) return SPRITE_CACHE[navn];
-  const cv = document.createElement('canvas'); cv.width = rader[0].length; cv.height = rader.length;
+  const w = rader[0].length, h = rader.length, k = kontur ? 1 : 0;
+  const cv = document.createElement('canvas'); cv.width = w + 2 * k; cv.height = h + 2 * k;
   const x = cv.getContext('2d');
-  rader.forEach((r, j) => [...r].forEach((ch, i) => { if (PAL[ch]) { x.fillStyle = PAL[ch]; x.fillRect(i, j, 1, 1); } }));
+  const fylt = (i, j) => j >= 0 && j < h && i >= 0 && i < w && !!pal[rader[j][i]];
+  if (kontur) {
+    x.fillStyle = '#10111c';
+    for (let j = -1; j <= h; j++) for (let i = -1; i <= w; i++)
+      if (!fylt(i, j) && (fylt(i - 1, j) || fylt(i + 1, j) || fylt(i, j - 1) || fylt(i, j + 1))) x.fillRect(i + 1, j + 1, 1, 1);
+  }
+  rader.forEach((r, j) => [...r].forEach((ch, i) => { if (pal[ch]) { x.fillStyle = pal[ch]; x.fillRect(i + k, j + k, 1, 1); } }));
   return (SPRITE_CACHE[navn] = cv);
 }
+const montorSprite = (del) => {
+  const gull = nivaa('gull') > 0;
+  return sprite(del + (gull ? 'G' : ''), [...MONTOR.topp, ...MONTOR[del]], gull ? PAL_GULL : PAL);
+};
 const SPR = {
-  sta: () => sprite('sta', [...MONTOR.topp, ...MONTOR.sta]),
-  lop1: () => sprite('lop1', [...MONTOR.topp, ...MONTOR.lop1]),
-  lop2: () => sprite('lop2', [...MONTOR.topp, ...MONTOR.lop2]),
-  hopp: () => sprite('hopp', [...MONTOR.topp, ...MONTOR.hopp]),
   mynt0: () => sprite('mynt0', ['.CCCC.', 'CLCCCC', 'CLCCcC', 'CCCCcC', 'CCCccC', '.cccc.']),
   mynt1: () => sprite('mynt1', ['.CC.', 'CLCC', 'CLcC', 'CCcC', 'CCcC', '.cc.']),
   mynt2: () => sprite('mynt2', ['CC', 'LC', 'Cc', 'Cc', 'Cc', 'cc']),
+  herre: () => sprite('herre', HERRE),
+  hammer: () => sprite('hammer', ['AAAAA.', 'AaaaA.', '..T...', '..T...', '..T...', '..E...', '..E...']),
+  nokkel: () => sprite('nokkel', ['A...A', 'AA.AA', '.AaA.', '..A..', '..A..', '..a..', '..a..']),
+  drill: () => sprite('drill', ['.AAPPPP', 'AAAPPPP', '...PPp.', '...PP..', '...PDD.', '...DDD.']),
 };
 
 const S = 2.5;                      // forhold mellom verden og piksler
 const PH = Math.round(VH / S);      // lerretshøyde i piksler (208)
-let kx = 0;                         // kamera i piksler
+let kx = 0, ky = 0;                 // kamera i piksler
 const px = (v) => Math.round(v / S);
-function rekt(x, y, w, h, farge) { g.fillStyle = farge; g.fillRect(x, y, w, h); }
+function rekt(x, y, w, h, farge) { g.fillStyle = farge; g.fillRect(x, y + ky, w, h); }
+function disk(cx, cy, r, farge) {
+  g.fillStyle = farge;
+  for (let dy = -r; dy <= r; dy++) { const w = Math.floor(Math.sqrt(r * r - dy * dy + r * 0.8)); g.fillRect(cx - w, cy + dy + ky, w * 2 + 1, 1); }
+}
+function linje(x0, y0, x1, y1, farge) {
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  g.fillStyle = farge;
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let e = dx + dy, n = 0;
+  while (n++ < 600) {
+    g.fillRect(x0, y0 + ky, 1, 1);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * e;
+    if (e2 >= dy) { e += dy; x0 += sx; }
+    if (e2 <= dx) { e += dx; y0 += sy; }
+  }
+}
+function tekst(t, x, y, farge = '#ffffff', midt = true) {
+  g.font = '8px "Press Start 2P", monospace'; g.textBaseline = 'top';
+  const w = midt ? g.measureText(t).width : 0;
+  g.fillStyle = '#10111c'; g.fillText(t, Math.round(x - w / 2) + 1, Math.round(y) + 1 + ky);
+  g.fillStyle = farge; g.fillText(t, Math.round(x - w / 2), Math.round(y) + ky);
+  // Pikselfonten mangler ringen over Å, så den tegnes for hånd
+  for (let i = t.indexOf('Å'); i >= 0; i = t.indexOf('Å', i + 1)) {
+    const ax = Math.round(x - w / 2 + g.measureText(t.slice(0, i)).width) + 3;
+    g.fillStyle = '#10111c'; g.fillRect(ax + 1, Math.round(y) - 1 + ky, 2, 1);
+    g.fillStyle = farge; g.fillRect(ax, Math.round(y) - 2 + ky, 2, 1);
+  }
+}
 
 // Hash for fast «tilfeldig» tekstur per rute
 const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) >>> 0; h = (h ^ (h >>> 13)) * 1274126177 >>> 0; return h; };
+const mod = (a, m) => ((a % m) + m) % m;
 
 function pixelLyn(x1, y1, x2, y2, farge) {
   g.fillStyle = farge;
@@ -540,64 +887,180 @@ function pixelLyn(x1, y1, x2, y2, farge) {
     if (i % 3 === 0) jx = Math.round((Math.random() - 0.5) * 3);
     const t = n ? i / n : 0;
     g.fillRect(Math.round(x1 + (x2 - x1) * t) + (Math.abs(y2 - y1) >= Math.abs(x2 - x1) ? jx : 0),
-      Math.round(y1 + (y2 - y1) * t) + (Math.abs(y2 - y1) < Math.abs(x2 - x1) ? jx : 0), 1, 1);
+      Math.round(y1 + (y2 - y1) * t) + (Math.abs(y2 - y1) < Math.abs(x2 - x1) ? jx : 0) + ky, 1, 1);
   }
 }
 
 function tegnMontor() {
   const blink = sp.usarbar > 0 && Math.floor(sp.usarbar * 12) % 2 === 0;
   if (blink) return;
-  let s = SPR.sta();
-  if (!sp.paaBakke) s = SPR.hopp();
-  else if (Math.abs(sp.vx) > 20) s = Math.floor(sp.steg / 2) % 2 ? SPR.lop1() : SPR.lop2();
-  const x = px(sp.x + sp.w / 2) - kx - 6, y = px(sp.y + sp.h) - 18;
+  let s = montorSprite('sta');
+  if (!sp.paaBakke) s = montorSprite('hopp');
+  else if (Math.abs(sp.vx) > 20) s = Math.floor(sp.steg / 2) % 2 ? montorSprite('lop1') : montorSprite('lop2');
+  const x = px(sp.x + sp.w / 2) - kx - 7, y = px(sp.y + sp.h) - 19;
+  // skygge
+  if (sp.paaBakke) rekt(x + 3, y + 19, 8, 1, '#00000055');
   g.save();
-  if (sp.retning < 0) { g.translate(x + 12, y); g.scale(-1, 1); g.drawImage(s, 0, 0); }
-  else g.drawImage(s, x, y);
+  if (sp.retning < 0) { g.translate(x + 14, y + ky); g.scale(-1, 1); g.drawImage(s, 0, 0); }
+  else g.drawImage(s, x, y + ky);
   g.restore();
+  if (nivaa('gull') && Math.random() < 0.08) stov(sp.x + sp.w / 2 + (Math.random() - 0.5) * 20, sp.y + 4, 1, ['#ffffff', '#ffe66d'], 30, 1, -50);
   if (skjold > 0 && Math.floor(tid * 4) % 2 === 0) {
     g.fillStyle = 'rgba(120,180,255,.55)';
-    for (let a = 0; a < 16; a++) { const v = a / 16 * Math.PI * 2; g.fillRect(x + 6 + Math.round(Math.cos(v) * 9), y + 9 + Math.round(Math.sin(v) * 11), 1, 1); }
+    for (let a = 0; a < 16; a++) { const v = a / 16 * Math.PI * 2; g.fillRect(x + 7 + Math.round(Math.cos(v) * 9), y + 10 + Math.round(Math.sin(v) * 11) + ky, 1, 1); }
+  }
+}
+
+function tegnBakgrunn(tm, W, H) {
+  // Himmel i bånd (retro uten gradient)
+  const band = 8;
+  for (let i = 0; i < band; i++) {
+    const t = i / (band - 1);
+    rekt(0, Math.floor(i * H / band) - 8, W, Math.ceil(H / band) + 1, blandFarge(tm.himmel[0], tm.himmel[1], t));
+  }
+  rekt(0, H - 8, W, 16, tm.himmel[1]);
+  if (tm.stjerner) {
+    for (let i = 0; i < 50; i++) {
+      const sx = mod(hash(i, 3) % 900 - Math.floor(kx * 0.05), W + 40) - 20, sy = hash(i, 5) % 110;
+      const lys = (Math.floor(tid * 2 + i) % 7) === 0;
+      rekt(sx, sy, 1, 1, lys ? '#ffffff' : '#9aa6c8');
+    }
+    const mx = W - 50 - Math.floor(kx * 0.02) % 40;
+    disk(mx, 54, 8, '#f4f4e0'); disk(mx - 3, 52, 2, '#d8d8c0'); disk(mx + 3, 57, 1, '#d8d8c0'); rekt(mx + 2, 50, 2, 1, '#d8d8c0');
+  }
+  if (tm.sol) {
+    const sx = W - 70 - Math.floor(kx * 0.02) % 40;
+    disk(sx, 34, 12, '#ffe9a8'); disk(sx, 34, 10, '#fff6d8');
+    for (let i = 0; i < 3; i++) { const cx = mod(i * 170 - Math.floor(kx * 0.08) + tid * 3, W + 120) - 60; disk(cx, 24 + i * 14, 6, '#ffffff55'); disk(cx + 8, 26 + i * 14, 5, '#ffffff55'); disk(cx - 7, 27 + i * 14, 4, '#ffffff55'); }
+  }
+  // Bygninger langt bak
+  const bx0 = Math.floor(kx * 0.2);
+  for (let i = -1; i < W / 40 + 2; i++) {
+    const id = i + Math.floor(bx0 / 40);
+    const bh = 30 + (hash(id, 7) % 5) * 12, bx = i * 40 - (bx0 % 40);
+    rekt(bx, H - 40 - bh, 32, bh + 40, tm.bygg);
+    rekt(bx, H - 40 - bh, 32, 1, blandFarge(tm.bygg, '#ffffff', 0.12));
+    for (let wy = H - 36 - bh; wy < H - 50; wy += 6) for (let wx = bx + 3; wx < bx + 29; wx += 5)
+      if (hash(id * 31 + wx, wy) % 5 === 0) rekt(wx, wy, 2, 2, '#f2c23c66');
+  }
+  // Mellomlag med temarekvisitter
+  const m0 = Math.floor(kx * 0.5), mc = tm.midt, mk = blandFarge(tm.midt, '#ffffff', 0.15);
+  if (tm.prop === 'ror') {
+    for (const [ry, tykk] of [[22, 5], [40, 3]]) {
+      rekt(0, ry, W, tykk, mc); rekt(0, ry, W, 1, mk);
+      for (let fx = -mod(m0, 48); fx < W; fx += 48) rekt(fx, ry - 1, 3, tykk + 2, blandFarge(mc, '#000000', 0.3));
+    }
+    for (let bx = -mod(m0, 96) + 30; bx < W; bx += 96) {
+      rekt(bx, 0, 1, 52, '#1a1c2c'); rekt(bx - 1, 52, 3, 3, '#ffcd3c');
+      g.fillStyle = 'rgba(255,205,60,.08)'; g.beginPath(); g.moveTo(bx, 54 + ky); g.lineTo(bx - 24, 120 + ky); g.lineTo(bx + 24, 120 + ky); g.fill();
+    }
+  } else if (tm.prop === 'kran') {
+    for (let bx = -mod(m0, 260) + 120; bx < W + 80; bx += 260) {
+      for (let y = 28; y < H - 40; y += 6) { linje(bx, y, bx + 5, y + 6, mc); linje(bx + 5, y, bx, y + 6, mc); }
+      rekt(bx, 28, 1, H - 68, mc); rekt(bx + 5, 28, 1, H - 68, mc);
+      rekt(bx - 70, 24, 120, 1, mc); rekt(bx - 70, 30, 120, 1, mc);
+      for (let x = bx - 70; x < bx + 50; x += 6) linje(x, 24, x + 6, 30, mc);
+      rekt(bx + 30, 30, 14, 8, mc); linje(bx + 2, 12, bx - 70, 24, mc); linje(bx + 2, 12, bx + 50, 24, mc);
+      const kx2 = bx - 40 + Math.round(Math.sin(tid * 0.4 + bx) * 10);
+      rekt(kx2, 31, 1, 34, mc); rekt(kx2 - 2, 65, 5, 2, '#ffcd3c88');
+    }
+  } else if (tm.prop === 'takstol') {
+    for (let bx = -mod(m0, 80); bx < W + 80; bx += 80) {
+      linje(bx, 60, bx + 40, 8, mc); linje(bx + 40, 8, bx + 80, 60, mc); rekt(bx, 60, 80, 2, mc);
+      linje(bx + 40, 8, bx + 40, 60, mc); linje(bx + 20, 34, bx + 40, 60, mc); linje(bx + 60, 34, bx + 40, 60, mc);
+    }
+  } else if (tm.prop === 'fagverk') {
+    rekt(0, 10, W, 2, mc); rekt(0, 22, W, 2, mc);
+    for (let x = -mod(m0, 12); x < W; x += 12) { linje(x, 12, x + 6, 22, mc); linje(x + 6, 22, x + 12, 12, mc); }
+    for (let bx = -mod(m0, 120) + 50; bx < W; bx += 120) {
+      rekt(bx, 24, 1, 22, '#1a1c2c'); rekt(bx - 4, 46, 9, 2, '#566c86'); rekt(bx - 3, 48, 7, 1, '#fff1a8');
+      g.fillStyle = 'rgba(255,241,168,.07)'; g.beginPath(); g.moveTo(bx - 3, 49 + ky); g.lineTo(bx - 34, H - 40 + ky); g.lineTo(bx + 34, H - 40 + ky); g.lineTo(bx + 3, 49 + ky); g.fill();
+    }
+  } else if (tm.prop === 'antenne') {
+    for (let bx = -mod(m0, 150) + 40; bx < W + 40; bx += 150) {
+      rekt(bx, H - 110, 2, 70, mc);
+      for (let y = H - 104; y < H - 50; y += 12) rekt(bx - 6, y, 14, 1, mc);
+      if (Math.floor(tid * 1.5 + bx) % 2) rekt(bx, H - 112, 2, 2, '#ff3b3b');
+      rekt(bx + 40, H - 70, 14, 30, mc); rekt(bx + 38, H - 72, 18, 3, mk);
+      disk(bx + 90, H - 60, 6, mc); rekt(bx + 89, H - 54, 2, 14, mc);
+    }
+  }
+}
+
+function tegnRute(X, Y, x, y, tm) {
+  const toppFri = y === 0 || !bane.fast[x][y - 1];
+  const mørk = blandFarge(tm.bakke, '#000000', 0.28), lys = blandFarge(tm.bakke, '#ffffff', 0.12);
+  rekt(X, Y, 16, 16, tm.bakke);
+  const h = hash(x, y);
+  if (tm.monster === 'mur') {
+    const fors = y % 2 ? 0 : 8;
+    rekt(X, Y + 7, 16, 1, mørk); rekt(X, Y + 15, 16, 1, mørk);
+    rekt(X + mod(4 + fors, 16), Y, 1, 7, mørk); rekt(X + mod(12 + fors, 16), Y + 8, 1, 7, mørk);
+    rekt(X + 1, Y + 1, 2, 1, lys);
+  } else if (tm.monster === 'tre') {
+    for (let i = 0; i < 4; i++) rekt(X, Y + i * 4 + 3, 16, 1, mørk);
+    rekt(X + (h % 13) + 1, Y + 1 + ((h >> 3) % 3) * 4, 1, 1, '#1a1c2c');
+    rekt(X + ((h >> 6) % 12) + 2, Y + 2 + ((h >> 9) % 3) * 4, 3, 1, lys);
+  } else if (tm.monster === 'betong') {
+    rekt(X, Y, 16, 1, lys); rekt(X, Y, 1, 16, lys); rekt(X + 15, Y, 1, 16, mørk); rekt(X, Y + 15, 16, 1, mørk);
+    rekt(X + 2, Y + 2, 1, 1, mørk); rekt(X + 13, Y + 2, 1, 1, mørk); rekt(X + 2, Y + 13, 1, 1, mørk); rekt(X + 13, Y + 13, 1, 1, mørk);
+    rekt(X + (h % 10) + 3, Y + ((h >> 4) % 8) + 4, 2, 1, mørk);
+  } else if (tm.monster === 'tak') {
+    for (let r = 0; r < 4; r++) for (let i = 0; i < 4; i++) rekt(X + i * 4 + (r % 2 ? 2 : 0), Y + r * 4 + 3, 3, 1, mørk);
+    rekt(X + (h % 12) + 2, Y + ((h >> 4) % 10) + 3, 1, 1, lys);
+  } else {
+    rekt(X + (h % 12) + 1, Y + ((h >> 4) % 10) + 4, 2, 1, tm.topp);
+    rekt(X + ((h >> 8) % 12) + 2, Y + ((h >> 12) % 8) + 6, 1, 1, mørk);
+    rekt(X + ((h >> 14) % 12) + 2, Y + ((h >> 18) % 8) + 3, 1, 1, '#00000033');
+  }
+  if (toppFri) {
+    rekt(X, Y, 16, 3, tm.topp); rekt(X, Y, 16, 1, '#ffffff33'); rekt(X, Y + 3, 16, 1, mørk);
+    if (y < BAKKE) for (let s = 0; s < 4; s++) rekt(X + s * 4, Y + 1, 2, 2, (s + x) % 2 ? '#ffcd3c' : '#1a1c2c');
+    else if (tm.monster === 'jord' && h % 3 === 0) { rekt(X + (h >> 5) % 13, Y - 2, 1, 2, '#38b764'); rekt(X + (h >> 5) % 13 + 2, Y - 1, 1, 1, '#38b764'); }
   }
 }
 
 function tegn() {
   const tm = bane.tema;
   const W = c.width, H = PH;
-  kx = Math.round(kamX / S);
+  const rx = rist > 0 ? Math.round((Math.random() - 0.5) * rist) : 0;
+  ky = rist > 0 ? Math.round((Math.random() - 0.5) * rist) : 0;
+  kx = Math.round(kamX / S) + rx;
 
-  // Himmel i bånd (retro uten gradient)
-  const band = 6;
-  for (let i = 0; i < band; i++) {
-    const t = i / (band - 1);
-    rekt(0, Math.floor(i * H / band), W, Math.ceil(H / band) + 1, blandFarge(tm.himmel[0], tm.himmel[1], t));
-  }
-  // Bygninger med vinduer (parallakse)
-  const bx0 = Math.floor(kx * 0.3);
-  for (let i = -1; i < W / 40 + 2; i++) {
-    const id = i + Math.floor(bx0 / 40);
-    const bh = 40 + (hash(id, 7) % 5) * 12, bx = i * 40 - (bx0 % 40);
-    rekt(bx, H - 40 - bh, 30, bh + 40, tm.bygg);
-    for (let wy = H - 36 - bh; wy < H - 50; wy += 6) for (let wx = bx + 3; wx < bx + 27; wx += 5)
-      if (hash(id * 31 + wx, wy) % 5 === 0) rekt(wx, wy, 2, 2, '#f2c23c55');
-  }
+  tegnBakgrunn(tm, W, H);
 
   const fra = Math.max(0, Math.floor(kamX / T) - 1), til = Math.min(bane.B, fra + Math.ceil(W * S / T) + 3);
 
+  // Sakselifter (tegnes bak bakken)
+  for (const l of bane.lifter) {
+    const X = px(l.x) - kx, Y = px(l.y), Wd = px(l.w);
+    if (X > W + 20 || X + Wd < -20) continue;
+    const bunn = H + 4, mx = X + Wd / 2;
+    rekt(X + 2, bunn - 6, Wd - 4, 6, '#566c86');
+    const ledd = 3, hoyde = bunn - 6 - (Y + 4);
+    for (let i = 0; i < ledd; i++) {
+      const y0 = Y + 4 + hoyde * i / ledd, y1 = Y + 4 + hoyde * (i + 1) / ledd;
+      linje(X + 3, y0, X + Wd - 4, y1, '#c98a1c'); linje(X + Wd - 4, y0, X + 3, y1, '#ffcd3c');
+    }
+    rekt(X, Y, Wd, 4, '#ffcd3c'); rekt(X, Y, Wd, 1, '#fff1a8');
+    for (let s = 0; s < Wd; s += 4) rekt(X + s, Y + 3, 2, 1, '#1a1c2c');
+    rekt(X, Y - 5, 1, 5, '#c2c3c7'); rekt(X + Wd - 1, Y - 5, 1, 5, '#c2c3c7'); rekt(X, Y - 5, Wd, 1, '#c2c3c7');
+    if (Math.floor(tid * 3) % 2) rekt(mx - 1, Y - 7, 2, 2, '#ff7a1a');
+    if (l.ny) tekst('SAKSELIFT', mx, Y - 24, '#ffcd3c');
+  }
+
   // Bakke og blokker (16×16 ruter med tekstur)
   for (let x = fra; x < til; x++) for (let y = 0; y < RADER; y++) {
-    if (!bane.fast[x][y]) continue;
+    const v = bane.fast[x][y];
+    if (!v) continue;
     const X = x * 16 - kx, Y = y * 16;
-    const toppFri = y === 0 || !bane.fast[x][y - 1];
-    rekt(X, Y, 16, 16, tm.bakke);
-    const h = hash(x, y);
-    rekt(X + (h % 12) + 1, Y + ((h >> 4) % 10) + 4, 2, 1, tm.topp);
-    rekt(X + ((h >> 8) % 12) + 2, Y + ((h >> 12) % 8) + 6, 1, 1, '#00000033');
-    rekt(X, Y + 15, 16, 1, '#00000033'); rekt(X + 15, Y, 1, 16, '#00000022');
-    if (toppFri) {
-      rekt(X, Y, 16, 2, tm.topp); rekt(X, Y, 16, 1, '#ffffff22');
-      if (y < BAKKE) for (let s = 0; s < 4; s++) rekt(X + s * 4, Y, 2, 2, (s + x) % 2 ? '#ffcd3c' : '#1a1c2c');
+    if (v === 2) {           // sperre foran sikringsskapet under bosskamp
+      rekt(X + 2, Y, 12, 16, '#333c57'); rekt(X + 2, Y, 1, 16, '#566c86');
+      for (let s = 0; s < 16; s += 4) rekt(X + 3, Y + s, 10, 2, (s / 4 + y) % 2 ? '#ffcd3c' : '#1a1c2c');
+      if (y === BAKKE - 3) { rekt(X + 4, Y + 4, 8, 7, '#b13e53'); rekt(X + 7, Y + 2, 2, 3, '#c2c3c7'); }
+      continue;
     }
+    tegnRute(X, Y, x, y, tm);
   }
 
   // Mynter
@@ -606,7 +1069,8 @@ function tegn() {
     const X = px(m.x) - kx; if (X < -8 || X > W + 8) continue;
     const f = Math.floor(tid * 6 + m.x * 0.02) % 4;
     const s = f === 0 ? SPR.mynt0() : f === 2 ? SPR.mynt2() : SPR.mynt1();
-    g.drawImage(s, X - Math.floor(s.width / 2), px(m.y) - 3 + (Math.floor(tid * 3 + m.x) % 2));
+    g.drawImage(s, X - Math.floor(s.width / 2), px(m.y) - 4 + (Math.floor(tid * 3 + m.x) % 2) + ky);
+    if ((Math.floor(tid * 5 + m.x) % 11) === 0) rekt(X + 1, px(m.y) - 4, 1, 1, '#ffffff');
   }
 
   // Farer
@@ -615,9 +1079,8 @@ function tegn() {
     if (X > W + 20 || X + Wd < -20) continue;
     if (f.type === 'kabel') {
       const gy = BAKKE * 16;
-      rekt(X - 3, gy - 3, Wd + 6, 2, '#1a1c2c');
+      rekt(X - 3, gy - 3, Wd + 6, 2, '#1a1c2c'); rekt(X - 3, gy - 3, Wd + 6, 1, '#333c57');
       rekt(X + Math.floor(Wd / 2) - 2, gy - 4, 4, 4, '#a35a2a');
-      // varselskilt
       const sx = X + Math.floor(Wd / 2), sy = gy - 16;
       rekt(sx, sy + 6, 1, 7, '#8a90a0');
       for (let r = 0; r < 6; r++) rekt(sx - r, sy + r, r * 2 + 1, 1, '#ffcd3c');
@@ -636,79 +1099,173 @@ function tegn() {
       const igjen = f.periode - ((tid + f.fase) % f.periode);
       if (f.paa) for (let i = 0; i < 3; i++) pixelLyn(X + Math.floor(Wd / 2), Y + 14, X + 2 + Math.random() * (Wd - 4), px(f.y + f.h), i ? '#9fe8ff' : '#ffffff');
       else if (igjen < 0.5 && Math.floor(tid * 10) % 2) rekt(X + Math.floor(Wd / 2), Y + 14, 1, px(f.h) - 14, '#ffcd3c88');
+    } else if (f.type === 'spiker') {
+      const gy = BAKKE * 16;
+      rekt(X - 1, gy - 2, Wd + 2, 2, '#8b5a2b'); rekt(X - 1, gy - 2, Wd + 2, 1, '#c28552');
+      for (let i = 1; i < Wd - 1; i += 3) { rekt(X + i, gy - 6, 1, 4, '#c2c3c7'); rekt(X + i, gy - 6, 1, 1, '#ffffff'); rekt(X + i - 1, gy - 3, 3, 1, '#8b9bb4'); }
+      if (f.ny) tekst('SPIKER', X + Wd / 2, gy - 30, '#ffcd3c');
+    } else if (f.type === 'verktoy') {
+      const cx = X + 5, beamY = px(f.top) - 4;
+      rekt(cx - 12, beamY - 2, 34, 4, '#566c86'); rekt(cx - 12, beamY - 2, 34, 1, '#94b0c2');
+      for (let s = 0; s < 34; s += 6) rekt(cx - 12 + s, beamY, 3, 2, '#ffcd3c');
+      rekt(cx - 10, 0, 1, beamY - 2, '#333c57'); rekt(cx + 20, 0, 1, beamY - 2, '#333c57');
+      const gy = BAKKE * 16;
+      if (f.fase2 === 'varsel' || f.fase2 === 'faller') {
+        const t = f.fase2 === 'faller' ? 1 : 0.5;
+        const sw = Math.round(4 + 6 * t);
+        rekt(cx + 5 - sw, gy - 1, sw * 2, 1, '#00000088');
+        if (f.fase2 === 'varsel' && Math.floor(tid * 8) % 2) { rekt(cx + 4, gy - 14, 2, 6, '#ff3b3b'); rekt(cx + 4, gy - 6, 2, 2, '#ff3b3b'); }
+      }
+      if (f.fase2 !== 'ligger' || ((tid + f.fase) % f.periode) < f.periode - 0.12) {
+        const s = [SPR.hammer, SPR.nokkel, SPR.drill][f.verktoy]();
+        const vy = px(f.y) + (f.fase2 === 'varsel' ? Math.round(Math.sin(tid * 40)) : 0) + 2;
+        g.drawImage(s, cx + 5 - Math.floor(s.width / 2), (f.fase2 === 'ligger' ? gy - s.height : vy) + ky);
+      }
+      if (f.ny) tekst('FALLENDE VERKTØY', cx + 5, px(f.top) - 22, '#ffcd3c');
     }
   }
 
-  // Gnister
+  // Fiender: gnister og kabeltromler
   for (const e of bane.fiender) {
-    const cx = px(e.x + e.w / 2) - kx, cy = px(e.y + e.h / 2) + Math.round(Math.sin(tid * 6 + e.fase) * 1.5);
-    if (cx < -10 || cx > W + 10) continue;
-    rekt(cx - 3, cy - 3, 7, 7, '#41a6f6'); rekt(cx - 2, cy - 2, 5, 5, '#9fe8ff'); rekt(cx - 1, cy - 1, 3, 3, '#ffffff');
-    for (let i = 0; i < 2; i++) { const a = Math.random() * 6.3; pixelLyn(cx, cy, cx + Math.round(Math.cos(a) * 7), cy + Math.round(Math.sin(a) * 7), '#ffffff'); }
-    rekt(cx - 1 + (e.vx > 0 ? 1 : -1), cy - 1, 1, 1, '#1a1c2c');
-  }
-
-  // Fagbokser
-  for (const b of bane.bokser) {
-    const X = px(b.x) - kx, Y = px(b.y) + (b.brukt ? 0 : Math.round(Math.sin(tid * 3)));
-    rekt(X, Y, 13, 13, b.brukt ? '#566c86' : '#ffcd3c'); rekt(X, Y, 13, 1, b.brukt ? '#94b0c2' : '#fff1a8');
-    rekt(X, Y + 12, 13, 1, b.brukt ? '#333c57' : '#c98a1c');
-    const ink = b.brukt ? '#94b0c2' : '#5d3a0c';
-    if (b.brukt) { rekt(X + 4, Y + 7, 1, 1, ink); rekt(X + 5, Y + 8, 1, 1, ink); rekt(X + 6, Y + 7, 1, 1, ink); rekt(X + 7, Y + 6, 1, 1, ink); rekt(X + 8, Y + 5, 1, 1, ink); }
-    else { rekt(X + 5, Y + 3, 3, 1, ink); rekt(X + 8, Y + 4, 1, 2, ink); rekt(X + 6, Y + 6, 2, 1, ink); rekt(X + 6, Y + 7, 1, 1, ink); rekt(X + 6, Y + 9, 1, 1, ink); }
+    if (e.dod) continue;
+    const cx = px(e.x + e.w / 2) - kx, cy = px(e.y + e.h / 2);
+    if (cx < -20 || cx > W + 20) continue;
+    if (e.type === 'trommel') tegnTrommel(cx, cy, 6, e.rot, false);
+    else {
+      const by = cy + Math.round(Math.sin(tid * 6 + (e.fase || 0)) * 1.5);
+      rekt(cx - 3, by - 3, 7, 7, '#41a6f6'); rekt(cx - 2, by - 2, 5, 5, '#9fe8ff'); rekt(cx - 1, by - 1, 3, 3, '#ffffff');
+      for (let i = 0; i < 2; i++) { const a = Math.random() * 6.3; pixelLyn(cx, by, cx + Math.round(Math.cos(a) * 7), by + Math.round(Math.sin(a) * 7), '#ffffff'); }
+      rekt(cx - 1 + (e.vx > 0 ? 1 : -1), by - 1, 1, 1, '#1a1c2c');
+      if (Math.random() < 0.15) stov(e.x + e.w / 2, e.y + e.h / 2, 1, ['#9fe8ff', '#ffffff'], 60, 1, 200);
+    }
+    if (e.ny) tekst('HOPP PÅ TROMMELEN', cx, cy - 26, '#ffcd3c');
   }
 
   // Mål: sikringsskap
   const m = bane.maal, MX = px(m.x) - kx, MY = px(m.y), MW = px(m.w), MH = px(m.h);
-  rekt(MX, MY, MW, MH, '#c2c3c7'); rekt(MX + 1, MY + 1, MW - 2, MH - 2, '#8b9bb4');
-  for (let i = 0; i < 5; i++) { rekt(MX + 3 + i * 4, MY + 5, 2, 6, '#1a1c2c'); rekt(MX + 3 + i * 4, MY + 16, 2, 6, '#1a1c2c'); rekt(MX + 3 + i * 4, MY + 5, 2, 1, '#ffffff'); }
+  const låst = bane.boss && !bane.boss.dod;
+  rekt(MX - 1, MY - 1, MW + 2, MH + 1, '#10111c');
+  rekt(MX, MY, MW, MH, '#c2c3c7'); rekt(MX + 1, MY + 1, MW - 2, MH - 2, '#8b9bb4'); rekt(MX + 1, MY + 1, MW - 2, 1, '#e8f0f0');
+  rekt(MX + 2, MY + 3, MW - 4, 22, '#2b3150');
+  for (let i = 0; i < 5; i++) {
+    const på = låst || Math.floor(tid * 4 + i) % 5 !== 0;
+    rekt(MX + 4 + i * 4, MY + 6, 2, 6, '#e8f0f0'); rekt(MX + 4 + i * 4, på ? MY + 6 : MY + 9, 2, 3, på ? '#38b764' : '#b13e53');
+    rekt(MX + 4 + i * 4, MY + 16, 2, 6, '#e8f0f0'); rekt(MX + 4 + i * 4, MY + 16, 2, 3, '#38b764');
+  }
+  rekt(MX + 3, MY + 27, 10, 3, '#ffcd3c'); rekt(MX + 6, MY + 28, 4, 1, '#1a1c2c');
   rekt(MX + MW - 4, MY + MH / 2 - 2, 2, 4, '#ffcd3c');
-  if (Math.floor(tid * 3) % 2) { const ax = MX + Math.floor(MW / 2); for (let r = 0; r < 4; r++) rekt(ax - 3 + r, MY - 10 + r, 7 - r * 2, 1, '#38b764'); }
+  if (låst) { rekt(MX + MW / 2 - 4, MY - 10, 8, 7, '#b13e53'); rekt(MX + MW / 2 - 2, MY - 14, 4, 4, '#c2c3c7'); rekt(MX + MW / 2 - 1, MY - 12, 2, 2, '#8b9bb4'); }
+  else if (Math.floor(tid * 3) % 2) { const ax = MX + Math.floor(MW / 2); for (let r = 0; r < 4; r++) rekt(ax - 3 + r, MY - 10 + r, 7 - r * 2, 1, '#38b764'); }
+
+  if (bane.boss) tegnBoss(W, H);
 
   tegnMontor();
+
+  // Partikler og flytende tekst
+  for (const p of partikler) rekt(px(p.x) - kx, px(p.y), 1, 1, p.farge);
+  for (const t of tekster) if (t.liv > 0.15 || Math.floor(t.liv * 30) % 2) tekst(t.tekst, px(t.x) - kx, px(t.y), t.farge);
 
   // Fremdrift
   const p = Math.min(1, sp.x / bane.maal.x), bw = 80, bx = Math.floor(W / 2 - bw / 2);
   rekt(bx - 1, H - 7, bw + 2, 4, '#1a1c2c'); rekt(bx, H - 6, Math.round(bw * p), 2, '#41a6f6');
+  if (bane.boss) rekt(bx + Math.round(bw * bane.boss.ax0 / bane.maal.x), H - 8, 1, 6, '#b13e53');
+}
+
+function tegnTrommel(cx, cy, r, rot, konge) {
+  disk(cx, cy, r + 1, '#10111c');
+  disk(cx, cy, r, '#8b5a2b');
+  disk(cx, cy, r - 2, '#e08a4c');
+  for (let i = -r + 3; i < r - 2; i += 2) rekt(cx - Math.floor(Math.sqrt(Math.max(0, (r - 2) ** 2 - i * i))), cy + i, 1, 1, '#a35a2a');
+  disk(cx, cy, Math.max(1, Math.floor(r / 3)), '#c2c3c7');
+  for (let k = 0; k < (konge ? 4 : 2); k++) {
+    const a = rot + k * Math.PI / (konge ? 2 : 1);
+    linje(cx + Math.cos(a) * (r / 3), cy + Math.sin(a) * (r / 3), cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1), '#5d3a1a');
+  }
+}
+
+function tegnBoss(W, H) {
+  const b = bane.boss;
+  const blink = b.usarbar > 0 && Math.floor(b.usarbar * 14) % 2 === 0;
+  if (!b.dod) {
+    const X = px(b.x) - kx, Y = px(b.y), BW = px(b.w), BH = px(b.h), cx = X + Math.round(BW / 2);
+    if (b.type === 'trommel' && !blink) {
+      const r = Math.round(BW / 2) - 1, cy = Y + Math.round(BH / 2);
+      tegnTrommel(cx, cy, r, b.rot, true);
+      // krone og sinte øyne
+      rekt(cx - 8, cy - r - 6, 17, 4, '#ffcd3c'); for (let i = 0; i < 3; i++) rekt(cx - 8 + i * 7, cy - r - 9, 3, 3, '#ffcd3c');
+      rekt(cx - 7, cy - r - 5, 2, 2, '#b13e53'); rekt(cx + 6, cy - r - 5, 2, 2, '#3b5dc9');
+      const ret = b.vx < 0 ? -3 : 3;
+      rekt(cx - 6 + ret, cy - 5, 4, 3, '#ffffff'); rekt(cx + 3 + ret, cy - 5, 4, 3, '#ffffff');
+      rekt(cx - 5 + ret, cy - 4, 2, 2, '#10111c'); rekt(cx + 4 + ret, cy - 4, 2, 2, '#10111c');
+      linje(cx - 7 + ret, cy - 8, cx - 3 + ret, cy - 6, '#10111c'); linje(cx + 7 + ret, cy - 8, cx + 3 + ret, cy - 6, '#10111c');
+    } else if (b.type === 'herre' && !blink) {
+      const s = SPR.herre();
+      const y = Y + BH - s.height;
+      g.save();
+      if (b.retning < 0) { g.translate(cx + Math.ceil(s.width / 2), y + ky); g.scale(-1, 1); g.drawImage(s, 0, 0); }
+      else g.drawImage(s, cx - Math.floor(s.width / 2), y + ky);
+      g.restore();
+      if (b.kastAnim > 0) rekt(cx + b.retning * 8, y + 6, 3, 4, '#ffffff');
+    } else if (b.type === 'sky') {
+      if (b.varsel > 0 && Math.floor(tid * 12) % 2) {
+        const lx = px(b.maalX) - kx, gy = px(bakkeUnder(b.maalX));
+        for (let y = Y + BH; y < gy; y += 4) rekt(lx, y, 1, 2, '#ff3b3b');
+        rekt(lx - 4, gy - 1, 9, 1, '#ff3b3b');
+      }
+      if (b.slag > 0) {
+        const lx = px(b.maalX) - kx, gy = px(bakkeUnder(b.maalX));
+        for (let i = 0; i < 3; i++) pixelLyn(cx + (Math.random() - 0.5) * 20, Y + BH - 4, lx + (i - 1), gy, i === 1 ? '#ffffff' : '#9fe8ff');
+        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, 0, W, H);
+      }
+      if (!blink) {
+        const mørk = '#3a2a5a', lys = '#6a5a9a';
+        for (const [dx, dy, r] of [[-12, 2, 7], [0, -2, 9], [12, 2, 7], [-6, 5, 6], [6, 5, 6]]) disk(cx + dx, Y + 10 + dy, r + 1, '#10111c');
+        for (const [dx, dy, r] of [[-12, 2, 7], [0, -2, 9], [12, 2, 7], [-6, 5, 6], [6, 5, 6]]) disk(cx + dx, Y + 10 + dy, r, mørk);
+        disk(cx - 2, Y + 5, 4, lys); disk(cx - 12, Y + 9, 3, lys);
+        rekt(cx - 7, Y + 9, 4, 3, '#ffcd3c'); rekt(cx + 4, Y + 9, 4, 3, '#ffcd3c');
+        rekt(cx - 6, Y + 10, 2, 2, '#b13e53'); rekt(cx + 5, Y + 10, 2, 2, '#b13e53');
+        linje(cx - 8, Y + 7, cx - 3, Y + 9, '#10111c'); linje(cx + 8, Y + 7, cx + 3, Y + 9, '#10111c');
+        if (Math.random() < 0.5) pixelLyn(cx + (Math.random() - 0.5) * 30, Y + 16, cx + (Math.random() - 0.5) * 40, Y + 24, '#9fe8ff');
+      }
+      // brytere
+      b.brytere.forEach((br, i) => {
+        const bx = px(br.x) - kx, by = px(br.y), aktiv = i === (b.maxHp - b.hp) % b.brytere.length && b.aktiv;
+        rekt(bx - 1, by - 1, 12, 13, '#10111c'); rekt(bx, by, 10, 11, '#8b9bb4'); rekt(bx, by, 10, 1, '#e8f0f0');
+        rekt(bx + 3, by + 2, 4, 7, '#2b3150'); rekt(bx + 3, aktiv ? by + 2 : by + 5, 4, 3, aktiv ? '#ffcd3c' : '#566c86');
+        if (aktiv && Math.floor(tid * 4) % 2) { for (let r = 0; r < 4; r++) rekt(bx + 2 + r, by - 9 + r, 7 - r * 2, 1, '#ffcd3c'); rekt(bx + 4, by - 13, 3, 4, '#ffcd3c'); rekt(bx - 2, by - 2, 14, 1, '#ffcd3c'); }
+      });
+    }
+  }
+  // papirer
+  for (const k of bane.kast) {
+    const X = px(k.x) - kx, Y = px(k.y), snu = Math.floor(tid * 10 + k.x) % 2;
+    rekt(X - 1, Y - 1, snu ? 8 : 6, snu ? 6 : 8, '#10111c');
+    rekt(X, Y, snu ? 6 : 4, snu ? 4 : 6, '#ffffff'); rekt(X + 1, Y + 1, snu ? 4 : 2, 1, '#8b9bb4');
+  }
+  // Livsmåler og navn
+  if (b.aktiv && !b.dod) {
+    const bw = Math.min(140, W - 40), bx = Math.floor(W / 2 - bw / 2), by = 46;
+    tekst(navnBoss(b).toUpperCase(), W / 2, by - 11, '#ffffff');
+    rekt(bx - 2, by - 1, bw + 4, 7, '#10111c');
+    rekt(bx, by + 1, bw, 3, '#3a2a3a');
+    rekt(bx, by + 1, Math.round(bw * b.hp / b.maxHp), 3, '#b13e53'); rekt(bx, by + 1, Math.round(bw * b.hp / b.maxHp), 1, '#ff6b7a');
+    if (b.banner > 0 && Math.floor(b.banner * 6) % 2) {
+      const hint = { trommel: 'HOPP PÅ HODET!', sky: 'SLÅ AV BRYTERNE!', herre: 'HOPP PÅ HJELMEN!' }[b.type];
+      tekst(hint, W / 2, H / 2 - 30, '#ffcd3c');
+    }
+  }
 }
 
 function blandFarge(a, b, t) {
-  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const pa = parseInt(a.slice(1, 7), 16), pb = parseInt(b.slice(1, 7), 16);
   const k = (sh) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
   return 'rgb(' + k(16) + ',' + k(8) + ',' + k(0) + ')';
 }
 
-// ── Fagboks ─────────────────────────────────────────────────────────
-function visFag() {
-  tilstand = 'fag';
-  const [q, riktig, feil] = FAG[Math.floor(Math.random() * FAG.length)];
-  $('fagSporsmal').textContent = q;
-  $('fagResultat').textContent = '';
-  $('fagVidere').style.display = 'none';
-  const svar = Math.random() < 0.5 ? [riktig, feil] : [feil, riktig];
-  const box = $('fagSvar'); box.innerHTML = '';
-  for (const s of svar) {
-    const b = document.createElement('button'); b.className = 'knapp svar'; b.textContent = s;
-    b.onclick = () => {
-      for (const k of box.children) k.disabled = true;
-      if (s === riktig) {
-        lagret.kobber += 15; levelKobber += 15; lagre(); pip(880, 0.1); pip(1320, 0.12);
-        b.style.background = '#153724'; $('fagResultat').innerHTML = 'Riktig! <span class="kobber">+15 Cu</span>';
-      } else {
-        b.style.background = '#3b1a1d'; $('fagResultat').textContent = 'Feil. Riktig svar er: ' + riktig + '.';
-      }
-      $('fagVidere').style.display = 'block'; oppdaterHud();
-    };
-    box.appendChild(b);
-  }
-  visLag('lagFag');
-}
-$('fagVidere').onclick = () => { visLag(null); tilstand = 'spill'; sistTid = performance.now(); };
-
 // ── Butikk ──────────────────────────────────────────────────────────
 function tegnButikk(id) {
   const el = $(id); el.innerHTML = '';
-  $('butikkKobber').textContent = lagret.kobber;
+  $('butikkKobber').textContent = fmt(lagret.kobber);
   for (const u of UTSTYR) {
     const lv = nivaa(u.id), maks = u.pris.length, pris = u.pris[lv];
     const rad = document.createElement('div'); rad.className = 'vare';
@@ -717,7 +1274,7 @@ function tegnButikk(id) {
       '</div><div class="info">' + u.info + '</div></div>';
     const b = document.createElement('button');
     if (lv >= maks) { b.textContent = 'Har'; b.disabled = true; }
-    else { b.textContent = pris + ' Cu'; b.disabled = lagret.kobber < pris; }
+    else { b.textContent = fmt(pris); b.disabled = lagret.kobber < pris; }
     b.onclick = () => {
       if (lagret.kobber < pris) return;
       lagret.kobber -= pris; lagret.upg[u.id] = lv + 1; lagre(); pip(990, 0.12, 'triangle');
@@ -731,7 +1288,7 @@ function tegnButikk(id) {
 let butikkFra = 'lagStart';
 function visMeny() {
   tilstand = 'meny';
-  $('startInfo').innerHTML = 'Du har <span class="kobber">' + lagret.kobber + ' Cu</span>. ' +
+  $('startInfo').innerHTML = 'Du har <span class="kobber">' + fmt(lagret.kobber) + '</span> kobber. ' +
     (lagret.niva > 1 ? 'Du er på nivå ' + lagret.niva + '.' : '');
   $('startKnapp').textContent = lagret.niva > 1 ? 'Fortsett på nivå ' + lagret.niva : 'Start';
   visLag('lagStart');
@@ -789,7 +1346,7 @@ visMeny();
 requestAnimationFrame(lokke);
 
 // Til testing
-window.__montor = { get tilstand() { return tilstand; }, get sp() { return sp; }, get bane() { return bane; }, startNiva, lagret };
+window.__montor = { get tilstand() { return tilstand; }, get sp() { return sp; }, get bane() { return bane; }, startNiva, lagret, fmt, myntVerdi };
 </script>
 </body>
 </html>
