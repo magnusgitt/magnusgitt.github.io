@@ -96,7 +96,7 @@
     <button class="knapp" id="startKnapp">Start</button>
     <button class="knapp sek" id="nyttKnapp" style="display:none">Start på nytt</button>
     <a class="knapp sek" href="/voltbase/app/spill">‹ Tilbake til Voltbase</a>
-    <p class="smaa">Første versjon: ett område. Si gjerne hva du vil ha mer av.</p>
+    <p class="smaa">Nytt: mørk kjeller, en boss og butikk der du betaler med kobber.</p>
   </div></div>
 
   <div class="lag" id="lagFerdig"><div class="boks">
@@ -127,9 +127,16 @@ addEventListener('resize', tilpass); tilpass();
 
 // ── Lagring ─────────────────────────────────────────────────────────
 const LAGRE = 'voltbase_eventyr_v1';
-const START = () => ({ ting: {}, flagg: {}, kobber: 0, aapnet: {} });
+const START = () => ({ ting: {}, flagg: {}, kobber: 0, aapnet: {}, cuGram: true, omr: 'ute' });
 let lagret = START();
-try { const r = localStorage.getItem(LAGRE); if (r) lagret = Object.assign(START(), JSON.parse(r)); } catch (e) {}
+try {
+  const r = localStorage.getItem(LAGRE);
+  if (r) {
+    const gml = JSON.parse(r);
+    if (!gml.cuGram) { gml.kobber = (gml.kobber || 0) * 50; gml.cuGram = true; } // første versjon talte «Cu», nå gram
+    lagret = Object.assign(START(), gml);
+  }
+} catch (e) {}
 const lagre = () => { try { localStorage.setItem(LAGRE, JSON.stringify(lagret)); } catch (e) {} };
 
 // ── Lyd ─────────────────────────────────────────────────────────────
@@ -146,8 +153,9 @@ const fanfare = () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => p
 
 // ── Kart ────────────────────────────────────────────────────────────
 // , gress  . grus  o gulv  # vegg  F anleggsgjerde  P paller  C container  T tre  D dør  k kabel  L kabel foran døra
-const MW = 40, MH = 30;
-const kart = Array.from({ length: MH }, () => new Array(MW).fill(','));
+// N trapp ned  V varebil  |  Kjeller: b betong  U trapp opp  H hovedtavle
+let MW = 40, MH = 30;
+let kart = Array.from({ length: MH }, () => new Array(MW).fill(','));
 const fyll = (x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) kart[y][x] = ch; };
 fyll(0, 0, MW - 1, 0, 'F'); fyll(0, MH - 1, MW - 1, MH - 1, 'F'); fyll(0, 0, 0, MH - 1, 'F'); fyll(MW - 1, 0, MW - 1, MH - 1, 'F');
 // Brakkeriggen (start)
@@ -171,12 +179,31 @@ fyll(28, 1, 28, 28, 'F'); fyll(28, 2, 28, 4, '.');
 fyll(29, 1, 38, 28, '.');
 fyll(30, 8, 37, 19, '#'); fyll(31, 9, 36, 18, 'o'); kart[19][33] = 'D'; fyll(32, 20, 34, 20, 'L');
 fyll(31, 24, 32, 25, 'P'); fyll(35, 26, 36, 27, 'C');
+kart[17][36] = 'N';
+fyll(35, 2, 37, 3, 'V');
+const kartUte = kart;
+
+// Kjelleren under bygg B
+const KW = 32, KH = 22;
+kart = Array.from({ length: KH }, () => new Array(KW).fill('#'));
+fyll(1, 1, 8, 7, 'b'); kart[1][2] = 'U';           // trapperommet
+fyll(9, 3, 20, 4, 'b');                             // gang øst
+fyll(21, 1, 30, 8, 'b'); fyll(23, 3, 24, 4, 'P'); fyll(27, 5, 28, 6, 'P'); // lager
+fyll(3, 8, 4, 14, 'b');                             // gang sør
+fyll(1, 15, 14, 20, 'b'); fyll(6, 15, 9, 20, 'k'); fyll(12, 19, 13, 19, 'P'); // kabelrommet
+fyll(15, 17, 19, 17, 'b');                          // gang til tavlerommet
+fyll(21, 12, 30, 20, 'b'); fyll(23, 11, 28, 11, 'H'); kart[15][23] = '#'; kart[15][28] = '#'; // tavlerommet
+const kartKjeller = kart;
+kart = kartUte;
 
 // Hvilke kabler i feltet som er spenningssatt (stien gjennom er trygg)
 const TRYGG = new Set(['19,13', '19,12', '19,11', '20,11', '21,11', '21,10', '21,9', '20,9', '19,9', '18,9', '18,8', '18,7', '19,7', '19,6']);
-const levende = (x, y) => kart[y][x] === 'k' && !TRYGG.has(x + ',' + y) && ((x * 7 + y * 13) % 5 !== 0);
+const TRYGG_K = new Set(['6,16', '7,16', '7,17', '7,18', '8,18', '9,18']);
+let omr = 'ute';
+const levende = (x, y) => kart[y][x] === 'k' && (omr === 'kjeller' ? !TRYGG_K.has(x + ',' + y)
+  : !TRYGG.has(x + ',' + y) && ((x * 7 + y * 13) % 5 !== 0));
 
-const SOLIDE = new Set(['#', 'F', 'P', 'C', 'T']);
+const SOLIDE = new Set(['#', 'F', 'P', 'C', 'T', 'V', 'H']);
 
 // ── Ting (verktøy) ─────────────────────────────────────────────────
 const TING = {
@@ -185,7 +212,20 @@ const TING = {
   stang: { ikon: '🔱', navn: 'Jordingsstang' },
   laas: { ikon: '🔒', navn: 'Lås og skilt' },
   iso: { ikon: '📟', navn: 'Isolasjonstester' },
+  lykt: { ikon: '💡', navn: 'Hodelykt' },
+  visir: { ikon: '🥽', navn: 'Lysbuevisir og -dress' },
+  hjerte: { ikon: '❤️', navn: 'Ekstra hjerte' },
+  isostang: { ikon: '⚡', navn: 'Isolert jordingsstang' },
 };
+// Butikken hos grossisten (pris i gram kobber)
+const BUTIKK = [
+  { id: 'visir', pris: 1000, tekst: 'Beskytter mot lysbue. Påbudt i tavlerommet i kjelleren.' },
+  { id: 'isostang', pris: 800, tekst: 'Oppgradering: lengre rekkevidde og dobbel effekt.' },
+  { id: 'hjerte', pris: 600, tekst: 'Ett hjerte mer å gå på.' },
+];
+const fmtCu = (gram) => gram < 1000 ? gram + ' g' : gram < 1e6
+  ? (gram / 1000).toLocaleString('nb-NO', { maximumFractionDigits: 2 }) + ' kg'
+  : (gram / 1e6).toLocaleString('nb-NO', { maximumFractionDigits: 2 }) + ' t';
 
 // ── Figurer ─────────────────────────────────────────────────────────
 const PAL = { Y: '#ffcd3c', y: '#c98a1c', S: '#f4c39a', s: '#c98b62', K: '#1a1c2c', O: '#ef7d57', W: '#f4f4f4',
@@ -223,9 +263,20 @@ const NPC_PAL = {
   byggeleder: { Y: '#f4f4f4', y: '#94b0c2', O: '#3b5dc9', W: '#ffcd3c', h: '#94b0c2' },
   hilde: { Y: '#f4f4f4', y: '#94b0c2', O: '#38b764', W: '#f4f4f4', h: '#b13e53' },
   kevin: { Y: '#ffcd3c', O: '#ffcd3c', W: '#ef7d57', h: '#ef7d57', B: '#5d275d' },
+  grete: { Y: '#41a6f6', y: '#29366f', O: '#29366f', W: '#41a6f6', h: '#1a1c2c', B: '#333c57' },
 };
 let objekter;
 function lagObjekter() {
+  if (omr === 'kjeller') {
+    objekter = [
+      { id: 'k_lykt', type: 'kiste', tx: 29, ty: 2, ting: 'lykt' },
+      { id: 'kaffe2', type: 'kaffe', tx: 8, ty: 1 },
+      { id: 'tavledor', type: 'dor', tx: 20, ty: 17, borte: !!lagret.flagg.dorAapen },
+      { id: 'skilt4', type: 'skilt', tx: 5, ty: 2, tekst: ['Kjeller', 'Lyset er gått. Hodelykta ligger visst på lageret øst for gangen.'] },
+      { id: 'skilt5', type: 'skilt', tx: 2, ty: 14, tekst: ['⚠ Kabelrom', 'Kablene på gulvet er spenningssatt. Bruk spenningstesteren!'] },
+    ];
+    return;
+  }
   objekter = [
     { id: 'byggeleder', type: 'npc', tx: 5, ty: 18, navn: 'Byggeleder Bjørn', retning: 'ned' },
     { id: 'hilde', type: 'npc', tx: 13, ty: 23, navn: 'Hilde (HMS)', retning: 'v' },
@@ -241,6 +292,7 @@ function lagObjekter() {
     { id: 'skilt1', type: 'skilt', tx: 18, ty: 14, tekst: ['⚠ FARE', 'Kablene i feltet kan være spenningssatt. Kontroller spenningsløshet før du går over!'] },
     { id: 'skilt2', type: 'skilt', tx: 12, ty: 22, tekst: ['Byggeplass', 'Ingen adgang uten hjelm og vernesko.'] },
     { id: 'skilt3', type: 'skilt', tx: 29, ty: 21, tekst: ['Bygg B', 'Kabel foran døra. Frakoble i byggestrømskapet først.'] },
+    { id: 'grete', type: 'npc', tx: 34, ty: 3, navn: 'Grete (grossist)', retning: 'ned' },
   ];
   if (lagret.flagg.hildeFlyttet) { const h = objekter.find((o) => o.id === 'hilde'); h.tx = 12; h.ty = 24; h.retning = 'h'; }
 }
@@ -248,32 +300,56 @@ lagObjekter();
 
 let mynter = [];
 function lagMynter() {
-  mynter = [[20, 18], [24, 18], [14, 27], [17, 3], [23, 4], [30, 3], [36, 5], [32, 27], [5, 26], [9, 24]]
-    .filter(([x, y]) => !lagret.aapnet['m' + x + ',' + y])
-    .map(([x, y]) => ({ x: x * TS + 8, y: y * TS + 8, id: 'm' + x + ',' + y }));
+  const kj = omr === 'kjeller', p = kj ? 'km' : 'm';
+  mynter = (kj ? [[6, 3], [12, 4], [18, 3], [22, 7], [26, 2], [30, 8], [3, 11], [2, 19], [12, 15], [13, 20], [17, 17], [29, 19]]
+    : [[20, 18], [24, 18], [14, 27], [17, 3], [23, 4], [30, 3], [36, 5], [32, 27], [5, 26], [9, 24]])
+    .filter(([x, y]) => !lagret.aapnet[p + x + ',' + y])
+    .map(([x, y]) => ({ x: x * TS + 8, y: y * TS + 8, id: p + x + ',' + y }));
 }
 lagMynter();
 
 let gnister = [];
 function lagGnister() {
-  gnister = [[19, 18], [24, 19], [17, 27], [23, 2], [24, 4], [25, 3], [33, 4], [36, 24]]
-    .map(([x, y], i) => ({ x: x * TS + 4, y: y * TS + 4, w: 8, h: 8, vx: 0, vy: 0, t: 0, i }))
-    .filter((s) => !lagret.aapnet['g' + s.i]);
+  const kj = omr === 'kjeller', p = kj ? 'kg' : 'g';
+  gnister = (kj ? [[15, 4], [25, 7], [28, 2], [11, 18], [3, 12]] : [[19, 18], [24, 19], [17, 27], [23, 2], [24, 4], [25, 3], [33, 4], [36, 24]])
+    .map(([x, y], i) => ({ x: x * TS + 4, y: y * TS + 4, w: 8, h: 8, vx: 0, vy: 0, t: 0, i, id: p + i }))
+    .filter((s) => !lagret.aapnet[s.id]);
 }
 lagGnister();
 
+// Bossen: Lysbuen i tavlerommet
+let boss = null, skudd = [];
+function lagBoss() {
+  skudd = [];
+  boss = omr === 'kjeller' && !lagret.flagg.bossBeseiret
+    ? { x: 25 * TS + 5, y: 16 * TS, w: 22, h: 22, hp: 8, maks: 8, fase: 'sover', t: 0, treffT: 0 } : null;
+}
+lagBoss();
+
 // ── Spiller ─────────────────────────────────────────────────────────
 const sp = { x: 6 * TS + 3, y: 22 * TS + 6, w: 10, h: 8, retning: 'opp', steg: 0, gaar: false, liv: 6, usarbar: 0, kb: null, zap: 0 };
-const MAKS_LIV = 6;
+const maksLiv = () => 6 + (lagret.ting.hjerte ? 2 : 0);
+sp.liv = maksLiv();
+const STARTPOS = { ute: [6, 22, 'opp'], kjeller: [2, 2, 'ned'] };
+function plasser(tx, ty, retning) { sp.x = tx * TS + 3; sp.y = ty * TS + 6; sp.retning = retning; sp.kb = null; }
+function byttOmr(id, tx, ty, retning) {
+  omr = id; lagret.omr = id; lagre();
+  kart = id === 'kjeller' ? kartKjeller : kartUte; MW = kart[0].length; MH = kart.length;
+  lagObjekter(); lagMynter(); lagGnister(); lagBoss();
+  const s = STARTPOS[id];
+  plasser(tx ?? s[0], ty ?? s[1], retning ?? s[2]);
+}
 
 // s1 = byggestrømmen til bygg B (på = farlig kabel foran døra)
 let s1Paa = !lagret.flagg.s1Av;
 let kevin = { aktiv: false, timer: 0, fase: 0 };
+if (lagret.omr === 'kjeller') byttOmr('kjeller');
 
 // ── Kollisjon ───────────────────────────────────────────────────────
 function solidRute(tx, ty) {
   if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return true;
   if (SOLIDE.has(kart[ty][tx])) return true;
+  if (kart[ty][tx] === 'N' && !lagret.flagg.ferdig) return true;
   return objekter.some((o) => o.tx === tx && o.ty === ty && !o.borte);
 }
 function kolliderer(o) {
@@ -352,9 +428,9 @@ function melding(tekst, sek = 3) { const m = $('melding'); m.textContent = tekst
 // ── HUD ─────────────────────────────────────────────────────────────
 function oppdaterHud() {
   let l = '';
-  for (let i = 0; i < MAKS_LIV / 2; i++) l += sp.liv >= (i + 1) * 2 ? '♥' : sp.liv === i * 2 + 1 ? '♥' : '♡';
+  for (let i = 0; i < maksLiv() / 2; i++) l += sp.liv >= (i + 1) * 2 ? '♥' : sp.liv === i * 2 + 1 ? '♥' : '♡';
   $('hudLiv').textContent = l;
-  $('hudKobber').textContent = lagret.kobber + ' Cu';
+  $('hudKobber').textContent = fmtCu(lagret.kobber) + ' Cu';
   $('hudTing').textContent = Object.keys(TING).filter((k) => lagret.ting[k]).map((k) => TING[k].ikon).join('') || '–';
 }
 
@@ -374,16 +450,38 @@ function handling() {
   const [tx, ty] = foran();
   const o = objekter.find((ob) => ob.tx === tx && ob.ty === ty && !ob.borte);
   if (o) return samhandle(o);
+  const rute = kart[ty] && kart[ty][tx];
+  if (rute === 'H') return samhandle({ id: 'hovedtavle' });
+  if (rute === 'V') return samhandle(objekter.find((ob) => ob.id === 'grete'));
+  if (rute === 'N' && !lagret.flagg.ferdig) return melding('Trappa til kjelleren. Stengt til strømmen i bygg B er fikset.', 3);
   if (lagret.ting.stang) {
+    const iso = lagret.ting.isostang;
     sp.zap = 0.25; pip(1400, 0.08, 'sawtooth', 0.03);
-    const [dx, dy] = RETN[sp.retning];
-    const sone = { x: sp.x + sp.w / 2 + dx * 14 - 9, y: sp.y + sp.h / 2 + dy * 14 - 9, w: 18, h: 18 };
+    const [dx, dy] = RETN[sp.retning], rek = iso ? 18 : 14, st = iso ? 26 : 18;
+    const sone = { x: sp.x + sp.w / 2 + dx * rek - st / 2, y: sp.y + sp.h / 2 + dy * rek - st / 2, w: st, h: st };
     for (const s of gnister) if (!s.borte && treff(sone, s)) {
-      s.borte = true; lagret.aapnet['g' + s.i] = true; lagret.kobber += 3; lagre(); oppdaterHud();
-      pip(300, 0.15, 'triangle'); melding('Gnisten er jordet og kortsluttet. +3 Cu', 2);
+      s.borte = true; lagret.aapnet[s.id] = true; lagret.kobber += 150; lagre(); oppdaterHud();
+      pip(300, 0.15, 'triangle'); melding('Gnisten er jordet og kortsluttet. +150 g Cu', 2);
+    }
+    for (const s of skudd) if (!s.borte && treff(sone, s)) { s.borte = true; pip(500, 0.06, 'triangle'); }
+    if (boss && boss.fase !== 'sover' && treff(sone, boss)) {
+      if (boss.fase === 'tom' && boss.treffT <= 0) {
+        boss.hp -= iso ? 2 : 1; boss.treffT = 0.4; pip(180, 0.25, 'square', 0.06);
+        const bx = boss.x + boss.w / 2 - (sp.x + sp.w / 2), by = boss.y + boss.h / 2 - (sp.y + sp.h / 2), d = Math.hypot(bx, by) || 1;
+        flytt(boss, bx / d * 14, by / d * 14);
+        if (boss.hp <= 0) bossBeseiret();
+      } else if (boss.fase === 'lader') melding('Lysbuen er fulladet! Vent til den lader ut og blir grå.', 2);
     }
   }
 }
+
+function bossBeseiret() {
+  lagret.flagg.bossBeseiret = true; lagret.kobber += 500; lagre(); oppdaterHud(); fanfare(); skudd = [];
+  const b = boss; boss = null;
+  for (let i = 0; i < 8; i++) gnistRegn.push({ x: b.x + 11, y: b.y + 11, vx: Math.cos(i * 0.785) * 60, vy: Math.sin(i * 0.785) * 60, t: 0.6 });
+  snakk('', ['Lysbuen er jordet og slukket! +500 g Cu', 'Nå er det trygt å se på hovedtavla. Den står ved nordveggen.']);
+}
+let gnistRegn = [];
 
 function samhandle(o) {
   const f = lagret.flagg, t = lagret.ting;
@@ -396,16 +494,41 @@ function samhandle(o) {
       stang: ['Du fant en JORDINGSSTANG!', 'Trykk A for å jorde og kortslutte gnister foran deg.'],
       laas: ['Du fant LÅS OG SKILT!', 'Når du frakobler noe, låser og merker du bryteren så ingen kobler inn igjen.'],
       iso: ['Du fant en ISOLASJONSTESTER!', 'Med den kan du måle isolasjonen på kursene i fordelingen.'],
+      lykt: ['Du fant en HODELYKT!', 'Nå ser du mye lenger i mørket.'],
     };
     return snakk('', tekster[o.ting]);
   }
   if (o.type === 'kaffe') {
-    sp.liv = MAKS_LIV; oppdaterHud(); pip(500, 0.2, 'triangle');
-    return snakk('', ['Du tar en kopp kaffe.', 'Livet er fylt opp igjen. ♥♥♥']);
+    sp.liv = maksLiv(); oppdaterHud(); pip(500, 0.2, 'triangle');
+    return snakk('', [o.id === 'kaffe2' ? 'Noen har glemt en termos med kaffe her nede.' : 'Du tar en kopp kaffe.', 'Livet er fylt opp igjen. ♥♥♥']);
   }
   if (o.type === 'skilt') return snakk(o.tekst[0], o.tekst.slice(1));
+  if (o.id === 'grete') return butikk(o);
+  if (o.id === 'tavledor') {
+    if (!t.visir || !t.stang) return snakk('⚠ LYSBUEFARE', ['Tavlerom. Adgang kun med lysbuevisir og -dress.',
+      t.visir ? 'Du trenger også en jordingsstang. Den ligger i en kiste nord på byggeplassen.' : 'Grossisten ved bilen nord for bygg B selger lysbuevisir. Betal med kobberet ditt.']);
+    return snakk('Tavlerom', ['Du tar på lysbuevisiret og -dressen og åpner døra.', 'Det knitrer og freser der inne...'], () => {
+      f.dorAapen = true; o.borte = true; lagre(); pip(150, 0.3, 'square');
+    });
+  }
+  if (o.id === 'hovedtavle') {
+    if (f.ferdig2) return snakk('Hovedtavle', ['Alt er i orden. Lyset og strømmen er tilbake i hele bygg B.']);
+    if (!f.bossBeseiret) return snakk('Hovedtavle', ['Det freser og smeller i tavla. Lysbuen må slukkes først!']);
+    return snakk('Hovedtavle', [
+      'Tavla er spenningsløs nå. Du ser en svidd kobling på samleskinna.',
+      { tekst: 'Hva var årsaken til lysbuen?', valg: [
+        ['Hodelykta mi blendet', () => feilSvar()],
+        ['Løs forbindelse som ga varmgang', () => ferdig2()],
+        ['Jordfeilbryteren var for følsom', () => feilSvar()],
+      ] },
+    ]);
+  }
   if (o.id === 'byggeleder') {
-    if (f.ferdig) return snakk(o.navn, ['Strålende jobba! Bygg B har strøm igjen.', 'Kaffe er på meg.']);
+    if (f.ferdig2) return snakk(o.navn, ['Bygg B har strøm, og kjelleren har lys. Du er en helt!', 'Kaffe er på meg.']);
+    if (f.ferdig) return snakk(o.navn, [
+      'Strålende jobba med bygg B!',
+      'Men noe smeller fortsatt i hovedtavla i kjelleren. Trappa ned er i hjørnet inne i bygg B.',
+      t.visir ? 'Lykke til der nede. Hold avstand til lysbuen når den lyser!' : 'Husk lysbuevisir. Grete ved bilen nord for bygg B selger det.']);
     if (!f.oppdrag) {
       f.oppdrag = true; lagre();
       return snakk(o.navn, [
@@ -480,12 +603,50 @@ function laasS1() {
 }
 
 function ferdig() {
-  lagret.flagg.ferdig = true; lagret.kobber += 25; lagre(); oppdaterHud(); fanfare();
-  snakk('Byggeleder Bjørn', ['Kurs 2 hadde isolasjonsfeil. En skrue gjennom kabelen bak gipsen!', 'Feilen er rettet, og strømmen er på i bygg B igjen. +25 Cu'], () => {
-    $('ferdigTekst').textContent = 'Du fant feilen og fikk strømmen på i bygg B, og du jobbet sikkert hele veien. Du samlet ' +
-      lagret.kobber + ' Cu. Dette er første versjon. Flere områder og verktøy kan komme!';
+  lagret.flagg.ferdig = true; lagret.kobber += 1000; lagre(); oppdaterHud(); fanfare();
+  snakk('Byggeleder Bjørn (på radio)', [
+    'Kurs 2 hadde isolasjonsfeil. En skrue gjennom kabelen bak gipsen!',
+    'Feilen er rettet, og strømmen er på i bygg B igjen. +1 kg Cu',
+    'Men vent... Nå smeller det i hovedtavla nede i kjelleren, og lyset der nede er borte.',
+    'Folk sier en LYSBUE har tatt bolig i tavlerommet! Trappa ned er i hjørnet her inne.',
+    'Tavlerommet krever lysbuevisir. Grete står med varebilen nord for bygg B og selger utstyr for kobber.',
+  ], () => melding('Nytt område: kjelleren! Trappa er i hjørnet nede til høyre.', 4));
+}
+
+function feilSvar() { pip(150, 0.3, 'sawtooth'); snakk('Hovedtavle', ['Nei, det stemmer ikke. Se på den svidde koblingen igjen.']); }
+
+function ferdig2() {
+  lagret.flagg.ferdig2 = true; lagret.kobber += 1000; lagre(); oppdaterHud(); fanfare();
+  snakk('Hovedtavle', [
+    'Riktig! Koblingen var ikke trukket til. Den ble varm, og til slutt slo det en lysbue.',
+    'Du rengjør skinna, bytter skadde deler og trekker til med momentnøkkel. +1 kg Cu',
+    'Lyset kommer tilbake i hele kjelleren!',
+  ], () => {
+    $('ferdigTekst').textContent = 'Du fikk strømmen på i bygg B, slukket lysbuen i kjelleren og reparerte hovedtavla, og du jobbet sikkert hele veien. Du har ' +
+      fmtCu(lagret.kobber) + ' kobber. Si gjerne hva du vil ha mer av!';
     $('lagFerdig').classList.add('vis'); tilstand = 'ferdig';
   });
+}
+
+function butikk(o) {
+  const t = lagret.ting;
+  const varer = BUTIKK.filter((v) => !t[v.id]);
+  const meny = () => snakk(o.navn, [{
+    tekst: varer.length ? 'Velkommen til bilen! Du har ' + fmtCu(lagret.kobber) + ' kobber. Hva vil du ha?' : 'Du har kjøpt alt jeg har. Lykke til!',
+    valg: [...varer.map((v) => [TING[v.id].ikon + ' ' + TING[v.id].navn + ': ' + fmtCu(v.pris), () => kjop(v)]), ['Ha det', () => {}]],
+  }]);
+  const kjop = (v) => {
+    if (v.id === 'isostang' && !t.stang) return snakk(o.navn, ['Den passer bare på en jordingsstang. Finn en først!'], () => butikk(o));
+    if (lagret.kobber < v.pris) { pip(150, 0.2, 'sawtooth'); return snakk(o.navn, ['Det koster ' + fmtCu(v.pris) + '. Du har bare ' + fmtCu(lagret.kobber) + '.', 'Samle mer kobber og kom tilbake!'], () => butikk(o)); }
+    lagret.kobber -= v.pris; faaTing(v.id);
+    if (v.id === 'hjerte') { sp.liv = maksLiv(); oppdaterHud(); }
+    snakk(o.navn, ['Du kjøpte ' + TING[v.id].navn.toUpperCase() + '!', v.tekst], () => butikk(o));
+  };
+  if (!lagret.flagg.moettGrete) {
+    lagret.flagg.moettGrete = true; lagre();
+    return snakk(o.navn, ['Hei! Jeg er Grete fra grossisten. Hos meg betaler du med kobber.', 'Alt kobber du samler på plassen kan brukes her.'], meny);
+  }
+  meny();
 }
 
 // ── Oppdatering ─────────────────────────────────────────────────────
@@ -499,8 +660,10 @@ function skade(fraX, fraY, tekst) {
   sp.kb = { vx: dx / d * 160, vy: dy / d * 160, t: 0.18 };
   if (tekst) melding(tekst, 2.5);
   if (sp.liv <= 0) {
-    sp.liv = MAKS_LIV; sp.x = 6 * TS + 3; sp.y = 22 * TS + 6; sp.retning = 'opp'; sp.kb = null; oppdaterHud();
-    snakk('', ['Du fikk støt og ble sendt tilbake til brakka.', 'Husk: kontroller alltid spenningsløshet før du tar på noe!']);
+    sp.liv = maksLiv(); const s = STARTPOS[omr]; plasser(s[0], s[1], s[2]); oppdaterHud();
+    if (omr === 'kjeller') lagBoss();
+    snakk('', [omr === 'kjeller' ? 'Du fikk støt og måtte tilbake til trappa.' : 'Du fikk støt og ble sendt tilbake til brakka.',
+      'Husk: kontroller alltid spenningsløshet før du tar på noe!']);
   }
 }
 
@@ -529,10 +692,22 @@ function oppdater(dt) {
   if (levende(ctx, cty)) skade(ctx * TS + 8, cty * TS + 8, lagret.ting.tester ? 'Au! Den kabelen var rød på testeren!' : 'Au! Kabelen var spenningssatt. Finn en spenningstester!');
   if (kart[cty] && kart[cty][ctx] === 'L' && s1Paa) skade(ctx * TS + 8, cty * TS + 2, 'Kabelen foran døra er spenningssatt. Frakoble i byggestrømskapet!');
 
+  // Trapper mellom områdene
+  if (kart[cty] && kart[cty][ctx] === 'N') {
+    byttOmr('kjeller'); pip(330, 0.15, 'triangle'); setTimeout(() => pip(250, 0.15, 'triangle'), 120);
+    if (!lagret.flagg.vaertNede) { lagret.flagg.vaertNede = true; lagre(); melding(lagret.ting.lykt ? 'Kjelleren.' : 'Bekmørkt! Finn en hodelykt.', 3); }
+    return;
+  }
+  if (kart[cty] && kart[cty][ctx] === 'U') { byttOmr('ute', 36, 16, 'opp'); pip(250, 0.15, 'triangle'); setTimeout(() => pip(330, 0.15, 'triangle'), 120); return; }
+
   // Mynter
   for (const m of mynter) if (!m.tatt && Math.hypot(sp.x + sp.w / 2 - m.x, sp.y + sp.h / 2 - m.y) < 10) {
-    m.tatt = true; lagret.aapnet[m.id] = true; lagret.kobber++; lagre(); oppdaterHud(); pip(1200, 0.05, 'triangle', 0.03);
+    m.tatt = true; lagret.aapnet[m.id] = true; lagret.kobber += 50; lagre(); oppdaterHud(); pip(1200, 0.05, 'triangle', 0.03);
   }
+
+  oppdaterBoss(dt);
+  for (const p of gnistRegn) { p.x += p.vx * dt; p.y += p.vy * dt; p.t -= dt; }
+  gnistRegn = gnistRegn.filter((p) => p.t > 0);
 
   // Gnister
   for (const s of gnister) {
@@ -544,8 +719,9 @@ function oppdater(dt) {
   }
 
   // Kevin slår på igjen hvis bryteren ikke er låst
+  const k = objekter.find((o) => o.id === 'kevin');
+  if (kevin.aktiv && !k) kevin.aktiv = false;
   if (kevin.aktiv) {
-    const k = objekter.find((o) => o.id === 'kevin');
     kevin.timer -= dt;
     if (kevin.fase === 0 && kevin.timer <= 0) {
       kevin.fase = 1; melding('Kevin: «Hvem slo av byggestrømmen? Kappsagen stoppet!»', 3);
@@ -571,6 +747,42 @@ function oppdater(dt) {
 }
 let kamX = 0, kamY = 0;
 
+function oppdaterBoss(dt) {
+  for (const s of skudd) {
+    if (s.borte) continue;
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    if (kolliderer(s)) s.borte = true;
+    else if (treff(sp, s)) { s.borte = true; skade(s.x + 3, s.y + 3, ''); }
+  }
+  skudd = skudd.filter((s) => !s.borte);
+  if (!boss) return;
+  const b = boss, px = sp.x + sp.w / 2, py = sp.y + sp.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2;
+  if (b.treffT > 0) b.treffT -= dt;
+  if (b.fase === 'sover') {
+    if (px > 21 * TS && py > 12 * TS) {
+      b.fase = 'lader'; b.t = 2.2; pip(90, 0.6, 'sawtooth', 0.06);
+      melding('LYSBUEN våkner! Jord den med stangen når den er grå.', 3.5);
+    }
+    return;
+  }
+  b.t -= dt;
+  const d = Math.hypot(px - bx, py - by) || 1, fart = b.fase === 'lader' ? 16 + (b.maks - b.hp) * 3 : 7;
+  flytt(b, (px - bx) / d * fart * dt, (py - by) / d * fart * dt);
+  if (b.fase === 'lader') {
+    if (Math.random() < dt * 6) pip(1800 + Math.random() * 900, 0.02, 'sawtooth', 0.012);
+    if (treff({ x: sp.x, y: sp.y - 4, w: sp.w, h: sp.h + 4 }, b)) skade(bx, by, 'Au! Hold avstand når lysbuen lyser!');
+    if (b.t <= 0) {
+      const n = b.hp <= b.maks / 2 ? 12 : 8, sigte = Math.atan2(py - by, px - bx);
+      for (let i = 0; i < n; i++) {
+        const a = sigte + i * Math.PI * 2 / n;
+        skudd.push({ x: bx - 3, y: by - 3, w: 6, h: 6, vx: Math.cos(a) * 75, vy: Math.sin(a) * 75 });
+      }
+      pip(140, 0.35, 'sawtooth', 0.07);
+      b.fase = 'tom'; b.t = 2.6;
+    }
+  } else if (b.t <= 0) { b.fase = 'lader'; b.t = 1.6 + b.hp * 0.15; pip(90, 0.4, 'sawtooth', 0.05); }
+}
+
 // ── Tegning ─────────────────────────────────────────────────────────
 const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) >>> 0; h = (h ^ (h >>> 13)) * 1274126177 >>> 0; return h; };
 const r = (x, y, w, h, f) => { g.fillStyle = f; g.fillRect(x, y, w, h); };
@@ -589,14 +801,39 @@ function tegnRute(x, y, X, Y) {
     case ',': gress(); break;
     case '.': grus(); break;
     case 'o': r(X, Y, 16, 16, (x + y) % 2 ? '#94b0c2' : '#8aa4b8'); r(X, Y, 16, 1, '#a9c1d1'); break;
-    case '#': r(X, Y, 16, 16, '#566c86'); r(X, Y, 16, 3, '#94b0c2'); r(X + (y % 2) * 8, Y + 8, 1, 8, '#333c57'); r(X, Y + 8, 16, 1, '#333c57'); break;
+    case 'b': r(X, Y, 16, 16, '#5a5e6e'); r(X + h % 15, Y + (h >> 4) % 15, 1, 1, '#454857'); r(X + (h >> 8) % 15, Y + (h >> 12) % 15, 2, 1, '#6e7385');
+      if (!(x % 4) && !(y % 3)) r(X, Y, 1, 16, '#4b4f5d'); break;
+    case 'U': case 'N': {
+      const opp = ch === 'U';
+      r(X, Y, 16, 16, opp ? '#2b2f3d' : '#1a1c2c');
+      for (let i = 0; i < 4; i++) r(X + 1, Y + 1 + i * 4, 14, 2, opp ? ['#c2c3c7', '#94b0c2', '#8b9bb4', '#566c86'][i] : ['#566c86', '#454857', '#333c57', '#262b44'][i]);
+      if (ch === 'N' && !lagret.flagg.ferdig) for (let i = 0; i < 16; i += 4) r(X + i, Y + 6, 2, 3, i % 8 ? '#1a1c2c' : '#ffcd3c'), r(X + i + 2, Y + 6, 2, 3, i % 8 ? '#ffcd3c' : '#1a1c2c');
+      break;
+    }
+    case 'V': {
+      grus(); const v = x - 35, top = y === 2;
+      r(X, Y + (top ? 3 : 0), 16, top ? 13 : 12, '#f4f4f4');
+      if (top) { r(X, Y + 3, 16, 1, '#c2c3c7'); if (v === 0) r(X + 1, Y + 5, 9, 6, '#41a6f6'); }
+      else { r(X, Y + 2, 16, 3, '#3b5dc9'); r(X, Y + 11, 16, 1, '#94b0c2'); if (v !== 1) { r(X + 4, Y + 10, 8, 6, '#1a1c2c'); r(X + 6, Y + 12, 4, 2, '#566c86'); }
+        if (v === 1) { r(X + 3, Y + 6, 10, 3, '#e08a4c'); r(X + 4, Y + 7, 8, 1, '#ffd9a8'); } }
+      break;
+    }
+    case 'H': {
+      r(X, Y, 16, 16, '#2b2f3d'); r(X + 1, Y + 1, 14, 15, '#8b9bb4'); r(X + 2, Y + 2, 12, 13, '#566c86');
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) r(X + 3 + i * 4, Y + 4 + j * 5, 2, 3, '#1a1c2c');
+      if (!lagret.flagg.ferdig2 && x === 25) { r(X + 4, Y + 13, 8, 2, '#1a1c2c'); if (Math.random() < 0.3) lyn(X + 8, Y + 12, X + Math.random() * 16, Y + 16 + Math.random() * 8, '#9fe8ff'); }
+      else r(X + 7, Y + 13, 2, 1, lagret.flagg.ferdig2 ? '#38b764' : '#ff4d6d');
+      break;
+    }
+    case '#': if (omr === 'kjeller') { r(X, Y, 16, 16, '#2b2f3d'); r(X, Y, 16, 2, '#3e4354'); r(X + (h % 12), Y + 6 + (h >> 5) % 8, 3, 1, '#23262f'); break; }
+      r(X, Y, 16, 16, '#566c86'); r(X, Y, 16, 3, '#94b0c2'); r(X + (y % 2) * 8, Y + 8, 1, 8, '#333c57'); r(X, Y + 8, 16, 1, '#333c57'); break;
     case 'D': r(X, Y, 16, 16, '#5d3a1a'); r(X + 2, Y, 12, 16, '#3a240f'); r(X + 11, Y + 8, 2, 2, '#ffcd3c'); break;
     case 'T': gress(); r(X + 7, Y + 10, 3, 6, '#5d3a1a'); r(X + 2, Y + 1, 12, 10, '#257179'); r(X + 3, Y + 2, 7, 5, '#38b764'); r(X + 4, Y + 3, 2, 2, '#a7f070'); break;
     case 'F': grus(); r(X, Y + 2, 16, 11, '#c2c3c7aa'); for (let i = 0; i < 16; i += 3) r(X + i, Y + 2, 1, 11, '#566c86'); for (let j = 2; j < 13; j += 3) r(X, Y + j, 16, 1, '#566c86'); r(X, Y + 1, 16, 1, '#333c57'); r(X + 1, Y + 1, 2, 14, '#333c57'); r(X, Y + 14, 4, 2, '#b13e53'); break;
     case 'P': grus(); r(X + 1, Y + 3, 14, 12, '#8b5a2b'); for (let j = 4; j < 15; j += 4) r(X + 1, Y + j, 14, 1, '#5d3a1a'); r(X + 1, Y + 3, 14, 1, '#c98b62'); break;
     case 'C': { const blaa = Math.floor(x / 3 + y / 2) % 2; r(X, Y, 16, 16, blaa ? '#3b5dc9' : '#b13e53'); for (let i = 1; i < 16; i += 3) r(X + i, Y, 1, 16, blaa ? '#29366f' : '#5d275d'); r(X, Y, 16, 1, '#ffffff44'); break; }
     case 'k': case 'L': {
-      grus();
+      if (omr === 'kjeller') r(X, Y, 16, 16, '#4b4f5d'); else grus();
       const paa = ch === 'L' ? s1Paa : levende(x, y);
       const vis = ch === 'L' || lagret.ting.tester;
       r(X, Y + 7, 16, 3, '#1a1c2c'); r(X + ((h >> 3) % 10) + 2, Y + 6, 3, 5, '#1a1c2c');
@@ -613,7 +850,8 @@ function tegnObjekt(o) {
     const fig = figur(o.retning, Math.floor(tid * 2) % 2 && o.id === 'kevin' && kevin.aktiv ? 1 : 0, NPC_PAL[o.id], o.id);
     r(X + 3, Y + 14, 10, 2, '#00000044');
     g.save(); if (o.retning === 'v') { g.translate(X + 14, Y); g.scale(-1, 1); g.drawImage(fig, 0, 0); } else g.drawImage(fig, X + 2, Y); g.restore();
-    const relevant = (o.id === 'byggeleder' && !lagret.flagg.oppdrag) || (o.id === 'hilde' && lagret.ting.hjelm && !lagret.flagg.hildeFlyttet);
+    const relevant = (o.id === 'byggeleder' && !lagret.flagg.oppdrag) || (o.id === 'hilde' && lagret.ting.hjelm && !lagret.flagg.hildeFlyttet)
+      || (o.id === 'grete' && lagret.flagg.ferdig && !lagret.ting.visir);
     if (relevant && Math.floor(tid * 2) % 2) { r(X + 7, Y - 7, 2, 4, '#ffcd3c'); r(X + 7, Y - 2, 2, 1, '#ffcd3c'); }
   } else if (o.type === 'kiste') {
     const aapen = lagret.aapnet[o.id];
@@ -629,6 +867,9 @@ function tegnObjekt(o) {
   } else if (o.type === 'kaffe') {
     r(X + 3, Y + 2, 10, 13, '#333c57'); r(X + 4, Y + 3, 8, 3, '#b13e53'); r(X + 6, Y + 9, 4, 4, '#f4f4f4'); r(X + 7, Y + 10, 2, 2, '#5d3a1a');
     if (Math.floor(tid * 2) % 2) r(X + 7, Y + 6, 1, 2, '#f4f4f4');
+  } else if (o.type === 'dor') {
+    r(X, Y, 16, 16, '#566c86'); r(X + 2, Y + 1, 12, 15, '#8b9bb4'); r(X + 2, Y + 1, 12, 1, '#c2c3c7');
+    r(X + 4, Y + 3, 8, 6, '#ffcd3c'); r(X + 7, Y + 4, 2, 3, '#1a1c2c'); r(X + 7, Y + 8, 2, 1, '#1a1c2c'); r(X + 11, Y + 10, 2, 2, '#1a1c2c');
   } else if (o.type === 'skilt') {
     r(X + 7, Y + 8, 2, 8, '#5d3a1a'); r(X + 2, Y + 2, 12, 8, '#ffcd3c'); r(X + 2, Y + 2, 12, 1, '#fff1a8');
     r(X + 4, Y + 4, 8, 1, '#1a1c2c'); r(X + 4, Y + 6, 6, 1, '#1a1c2c');
@@ -650,10 +891,15 @@ function tegn() {
   const liste = objekter.filter((o) => !o.borte).map((o) => ({ y: o.ty * TS + 15, f: () => tegnObjekt(o) }));
   liste.push({ y: sp.y + sp.h, f: tegnSpiller });
   for (const s of gnister) if (!s.borte) liste.push({ y: s.y + 8, f: () => tegnGnist(s) });
+  if (boss) liste.push({ y: boss.y + boss.h, f: tegnBoss });
   liste.sort((a, b) => a.y - b.y).forEach((e) => e.f());
+  for (const s of skudd) { const X = Math.round(s.x - kx), Y = Math.round(s.y - ky); r(X, Y, 6, 6, '#9fe8ff'); r(X + 1, Y + 1, 4, 4, '#ffffff'); }
+  for (const p of gnistRegn) r(Math.round(p.x - kx), Math.round(p.y - ky), 2, 2, Math.random() < 0.5 ? '#ffffff' : '#ffcd3c');
+
+  if (omr === 'kjeller' && !lagret.flagg.ferdig2) tegnMorke(kx, ky);
 
   // Kabelfeltet: varsel når man ikke har tester
-  if (!lagret.ting.tester) {
+  if (omr === 'ute' && !lagret.ting.tester) {
     const X = 18 * TS - kx, Y = 6 * TS - ky;
     if (Math.floor(tid * 2) % 2) r(X, Y, 64, 1, '#ffcd3c66');
   }
@@ -672,6 +918,43 @@ function tegnSpiller() {
   }
 }
 
+const morkCv = document.createElement('canvas'), mg = morkCv.getContext('2d');
+function lys(x, y, rad, styrke = 1) {
+  const gr = mg.createRadialGradient(x, y, rad * 0.35, x, y, rad);
+  gr.addColorStop(0, 'rgba(0,0,0,' + styrke + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  mg.fillStyle = gr; mg.beginPath(); mg.arc(x, y, rad, 0, 7); mg.fill();
+}
+function tegnMorke(kx, ky) {
+  if (morkCv.width !== VW || morkCv.height !== VH) { morkCv.width = VW; morkCv.height = VH; }
+  mg.globalCompositeOperation = 'source-over'; mg.clearRect(0, 0, VW, VH);
+  mg.fillStyle = 'rgba(4,4,12,0.96)'; mg.fillRect(0, 0, VW, VH);
+  mg.globalCompositeOperation = 'destination-out';
+  const flimmer = Math.sin(tid * 9) * 1.5;
+  lys(sp.x + sp.w / 2 - kx, sp.y - ky, (lagret.ting.lykt ? 78 : 30) + flimmer);
+  lys(2 * TS + 8 - kx, 1 * TS + 8 - ky, 40, 0.8);  // lys fra trappa
+  if (boss) lys(boss.x + 11 - kx, boss.y + 11 - ky, boss.fase === 'lader' ? 70 + Math.random() * 10 : boss.fase === 'tom' ? 34 : 24, boss.fase === 'sover' ? 0.5 : 1);
+  if (!lagret.flagg.ferdig2) lys(25 * TS + 8 - kx, 11 * TS + 14 - ky, 18 + Math.random() * 8, 0.7);
+  for (const s of skudd) lys(s.x + 3 - kx, s.y + 3 - ky, 16, 0.9);
+  for (const s of gnister) if (!s.borte) lys(s.x + 4 - kx, s.y + 4 - ky, 18, 0.8);
+  g.drawImage(morkCv, 0, 0);
+}
+
+function tegnBoss() {
+  const b = boss, X = Math.round(b.x - kamX), Y = Math.round(b.y - kamY) + Math.round(Math.sin(tid * 4) * 2);
+  const lader = b.fase === 'lader', blink = b.treffT > 0 && Math.floor(b.treffT * 20) % 2;
+  r(X + 3, Y + 22, 16, 3, '#00000055');
+  const ytre = blink ? '#ffffff' : lader ? '#41a6f6' : '#566c86', midt = lader ? '#9fe8ff' : '#8b9bb4', kjerne = lader ? '#ffffff' : '#c2c3c7';
+  r(X + 4, Y, 14, 22, ytre); r(X, Y + 4, 22, 14, ytre); r(X + 2, Y + 2, 18, 18, ytre);
+  r(X + 4, Y + 4, 14, 14, midt); r(X + 7, Y + 7, 8, 8, kjerne);
+  // Sinte øyne
+  r(X + 6, Y + 8, 3, 3, '#1a1c2c'); r(X + 13, Y + 8, 3, 3, '#1a1c2c'); r(X + 5, Y + 7, 4, 1, '#1a1c2c'); r(X + 13, Y + 7, 4, 1, '#1a1c2c');
+  r(X + 8, Y + 14, 6, 2, '#1a1c2c');
+  if (lader) for (let i = 0; i < 4; i++) { const a = Math.random() * 6.3; lyn(X + 11, Y + 11, X + 11 + Math.round(Math.cos(a) * 18), Y + 11 + Math.round(Math.sin(a) * 18), i % 2 ? '#9fe8ff' : '#ffffff'); }
+  if (b.fase !== 'sover') {  // livsmåler
+    r(X - 4, Y - 7, 30, 4, '#1a1c2c'); r(X - 3, Y - 6, Math.round(28 * b.hp / b.maks), 2, '#ff4d6d');
+  } else if (Math.floor(tid * 1.5) % 2) { r(X + 20, Y - 4, 3, 1, '#c2c3c7'); r(X + 22, Y - 7, 3, 1, '#c2c3c7'); }
+}
+
 function tegnGnist(s) {
   const X = Math.round(s.x - kamX), Y = Math.round(s.y - kamY) + Math.round(Math.sin(tid * 8 + s.i));
   r(X, Y, 8, 8, '#41a6f6'); r(X + 1, Y + 1, 6, 6, '#9fe8ff'); r(X + 2, Y + 2, 4, 4, '#ffffff');
@@ -688,9 +971,8 @@ $('startKnapp').onclick = startSpill;
 $('nyttKnapp').onclick = () => { if (confirmNytt()) { nullstill(); startSpill(); } };
 function confirmNytt() { return true; }
 function nullstill() {
-  lagret = START(); lagre(); s1Paa = true; kevin = { aktiv: false, timer: 0, fase: 0 };
-  lagObjekter(); lagMynter(); lagGnister();
-  Object.assign(sp, { x: 6 * TS + 3, y: 22 * TS + 6, retning: 'opp', liv: MAKS_LIV, kb: null });
+  lagret = START(); lagre(); s1Paa = true; kevin = { aktiv: false, timer: 0, fase: 0 }; gnistRegn = [];
+  byttOmr('ute'); sp.liv = maksLiv();
 }
 $('igjenKnapp').onclick = () => { $('lagFerdig').classList.remove('vis'); nullstill(); startSpill(); };
 $('menyKnapp').onclick = () => { tilstand = 'meny'; visStart(); };
@@ -713,7 +995,8 @@ function lokke(n) {
 oppdaterHud();
 requestAnimationFrame(lokke);
 
-window.__eventyr = { sp, get tilstand() { return tilstand; }, lagret: () => lagret, objekter: () => objekter, get iDialog() { return iDialog; } };
+window.__eventyr = { sp, get tilstand() { return tilstand; }, lagret: () => lagret, objekter: () => objekter, get iDialog() { return iDialog; },
+  get omr() { return omr; }, get boss() { return boss; }, byttOmr, plasser };
 </script>
 </body>
 </html>
