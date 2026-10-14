@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1a1c2c">
+<title>Strømmen må på – Voltbase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #1a1c2c; --kort: #262b44; --kant: #566c86; --tekst: #f4f4f4; --dempet: #c2c3c7; --gul: #ffcd3c; --kobber: #e08a4c; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #0e0f18; color: var(--tekst); overflow: hidden;
+    font-family: 'Press Start 2P', monospace; -webkit-user-select: none; user-select: none; touch-action: none; }
+  #app { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #flate { position: relative; width: 100%; max-width: 1100px; }
+  canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; }
+  #hud { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 6px; align-items: center; padding: 6px;
+    font-size: clamp(8px, 1.5vw, 12px); pointer-events: none; }
+  .pill { background: rgba(26,28,44,.85); border: 2px solid #333c57; padding: 5px 7px; }
+  #hudLiv { color: #ff4d6d; letter-spacing: 1px; }
+  #hudKobber { color: var(--kobber); }
+  #hudTing { margin-left: auto; letter-spacing: 3px; }
+  #menyKnapp { pointer-events: auto; cursor: pointer; }
+  #dialog { position: absolute; left: 3%; right: 3%; bottom: 4%; display: none; background: #1a1c2c; color: #f4f4f4;
+    border: 3px solid #f4f4f4; box-shadow: 0 0 0 3px #1a1c2c; padding: 12px 14px; font-size: clamp(9px, 1.7vw, 14px); line-height: 1.7; z-index: 4; }
+  #dialog.vis { display: block; }
+  #dialogNavn { color: var(--gul); margin-bottom: 4px; }
+  #dialogVidere { position: absolute; right: 10px; bottom: 6px; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #valg { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  #valg button { font-family: inherit; font-size: inherit; text-align: left; background: #333c57; color: #fff; border: 2px solid #566c86;
+    padding: 8px; cursor: pointer; }
+  #valg button:hover, #valg button:focus { border-color: var(--gul); outline: none; }
+  #melding { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); background: rgba(26,28,44,.92);
+    border: 2px solid var(--gul); padding: 8px 10px; font-size: clamp(8px, 1.4vw, 12px); line-height: 1.6; text-align: center;
+    max-width: 90%; display: none; z-index: 3; pointer-events: none; }
+  .lag { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 14px;
+    background: rgba(10,10,18,.85); z-index: 6; overflow-y: auto; }
+  .lag.vis { display: flex; }
+  .boks { background: var(--kort); border: 3px solid #f4f4f4; box-shadow: 0 0 0 4px #1a1c2c; padding: 18px; width: 100%; max-width: 520px; }
+  .boks h1 { font-size: 16px; line-height: 1.6; margin: 0 0 12px; color: var(--gul); }
+  .boks p { font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: var(--dempet); margin: 8px 0; }
+  .knapp { display: block; width: 100%; margin-top: 10px; padding: 12px; font-family: inherit; font-size: 12px; cursor: pointer;
+    background: #3b5dc9; color: #fff; border: 0; box-shadow: inset 0 -4px 0 rgba(0,0,0,.35); text-align: center; text-decoration: none; }
+  .knapp.sek { background: #333c57; }
+  .smaa { font-size: 13px !important; }
+  #kontroller { display: none; width: 100%; max-width: 1100px; padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
+    justify-content: space-between; align-items: center; }
+  .touch #kontroller { display: flex; }
+  #dpad { position: relative; width: 150px; height: 150px; }
+  .pil { position: absolute; width: 52px; height: 52px; background: #333c57; border: 3px solid #566c86; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .pil.aktiv, .aknapp.aktiv { background: #3b5dc9; }
+  #pO { left: 49px; top: 0; } #pN { left: 49px; bottom: 0; } #pV { left: 0; top: 49px; } #pH { right: 0; top: 49px; }
+  .aknapp { width: 86px; height: 86px; border-radius: 50%; background: #b13e53; border: 4px solid #5d275d; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .aknapp.aktiv { background: #ef7d57; }
+  @media (orientation: landscape) and (max-height: 560px) {
+    .touch #kontroller { position: fixed; left: 0; right: 0; bottom: 0; max-width: none; pointer-events: none; }
+    .touch #kontroller > * { pointer-events: auto; opacity: .75; }
+    #flate { height: 100%; max-width: none; display: flex; justify-content: center; }
+    canvas { width: auto; height: 100%; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="flate">
+    <canvas id="c" aria-label="Strømmen må på"></canvas>
+    <div id="hud">
+      <span class="pill" id="hudLiv"></span>
+      <span class="pill" id="hudKobber">0</span>
+      <span class="pill" id="hudTing"></span>
+      <span class="pill" id="menyKnapp">❚❚</span>
+    </div>
+    <div id="melding"></div>
+    <div id="dialog">
+      <div id="dialogNavn"></div>
+      <div id="dialogTekst"></div>
+      <div id="valg"></div>
+      <div id="dialogVidere">▼</div>
+    </div>
+  </div>
+  <div id="kontroller">
+    <div id="dpad">
+      <div class="pil" id="pO">▲</div><div class="pil" id="pV">◀</div><div class="pil" id="pH">▶</div><div class="pil" id="pN">▼</div>
+    </div>
+    <div class="aknapp" id="knA">A</div>
+  </div>
+
+  <div class="lag vis" id="lagStart"><div class="boks">
+    <h1>⚡ Strømmen må på</h1>
+    <p>Bygg B står uten strøm, og byggelederen trenger deg. Utforsk byggeplassen, finn verktøy og løs problemene. Men jobb sikkert!</p>
+    <p class="smaa"><b>PC:</b> piltaster/WASD for å gå, mellomrom eller E for å snakke, åpne og bruke verktøy.<br><b>Mobil:</b> pilene og A-knappen.</p>
+    <button class="knapp" id="startKnapp">Start</button>
+    <button class="knapp sek" id="nyttKnapp" style="display:none">Start på nytt</button>
+    <a class="knapp sek" href="/voltbase/app/spill">‹ Tilbake til Voltbase</a>
+    <p class="smaa">Første versjon: ett område. Si gjerne hva du vil ha mer av.</p>
+  </div></div>
+
+  <div class="lag" id="lagFerdig"><div class="boks">
+    <h1>🎉 Strømmen er på!</h1>
+    <p id="ferdigTekst"></p>
+    <button class="knapp" id="igjenKnapp">Spill igjen</button>
+    <a class="knapp sek" href="/voltbase/app/spill">‹ Tilbake til Voltbase</a>
+  </div></div>
+</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const c = $('c'), g = c.getContext('2d');
+const TS = 16, VH = 12 * TS;  // 12 ruter høyt
+let VW = 16 * TS;
+const erTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+if (erTouch) document.body.classList.add('touch');
+
+function tilpass() {
+  const liggende = erTouch && innerWidth > innerHeight && innerHeight <= 560;
+  const w = Math.min(innerWidth, liggende ? innerWidth : 1100);
+  const h = innerHeight - (erTouch && !liggende ? 190 : 0);
+  VW = Math.max(11 * TS, Math.min(24 * TS, Math.round(VH * w / Math.max(200, h) / 2) * 2));
+  c.width = VW; c.height = VH; g.imageSmoothingEnabled = false;
+}
+addEventListener('resize', tilpass); tilpass();
+
+// ── Lagring ─────────────────────────────────────────────────────────
+const LAGRE = 'voltbase_eventyr_v1';
+const START = () => ({ ting: {}, flagg: {}, kobber: 0, aapnet: {} });
+let lagret = START();
+try { const r = localStorage.getItem(LAGRE); if (r) lagret = Object.assign(START(), JSON.parse(r)); } catch (e) {}
+const lagre = () => { try { localStorage.setItem(LAGRE, JSON.stringify(lagret)); } catch (e) {} };
+
+// ── Lyd ─────────────────────────────────────────────────────────────
+let lydKtx = null;
+function pip(f = 600, d = 0.08, type = 'square', vol = 0.04) {
+  try {
+    lydKtx = lydKtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = lydKtx.createOscillator(), v = lydKtx.createGain();
+    o.type = type; o.frequency.value = f; v.gain.value = vol; o.connect(v); v.connect(lydKtx.destination);
+    const t0 = lydKtx.currentTime; o.start(t0); v.gain.exponentialRampToValueAtTime(0.0001, t0 + d); o.stop(t0 + d + 0.02);
+  } catch (e) {}
+}
+const fanfare = () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => pip(f, 0.12, 'square', 0.05), i * 110));
+
+// ── Kart ────────────────────────────────────────────────────────────
+// , gress  . grus  o gulv  # vegg  F anleggsgjerde  P paller  C container  T tre  D dør  k kabel  L kabel foran døra
+const MW = 40, MH = 30;
+const kart = Array.from({ length: MH }, () => new Array(MW).fill(','));
+const fyll = (x0, y0, x1, y1, ch) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) kart[y][x] = ch; };
+fyll(0, 0, MW - 1, 0, 'F'); fyll(0, MH - 1, MW - 1, MH - 1, 'F'); fyll(0, 0, 0, MH - 1, 'F'); fyll(MW - 1, 0, MW - 1, MH - 1, 'F');
+// Brakkeriggen (start)
+fyll(1, 15, 12, 28, '.');
+fyll(2, 16, 10, 21, '#'); fyll(3, 17, 9, 20, 'o'); kart[21][6] = 'D';
+fyll(1, 1, 12, 14, ','); [[3, 4], [7, 3], [10, 7], [4, 10], [8, 12], [2, 13], [11, 2]].forEach(([x, y]) => kart[y][x] = 'T');
+[[2, 24], [11, 26], [3, 27]].forEach(([x, y]) => kart[y][x] = 'T');
+// Gjerde med port
+fyll(13, 1, 13, 28, 'F'); kart[23][13] = '.';
+// Containerplassen
+fyll(14, 14, 27, 28, '.');
+fyll(15, 16, 17, 17, 'C'); fyll(22, 15, 25, 16, 'C'); fyll(15, 22, 16, 25, 'C'); fyll(20, 20, 23, 21, 'C'); fyll(25, 23, 26, 26, 'C');
+fyll(18, 25, 19, 25, 'P');
+// Kabelfeltet
+fyll(14, 13, 27, 13, 'F'); fyll(14, 6, 17, 12, 'P'); fyll(22, 6, 27, 12, 'P'); fyll(18, 6, 21, 13, 'k');
+// Øverst
+fyll(14, 1, 27, 5, '.'); fyll(20, 2, 21, 3, 'C');
+// Gjerde mot høyre side, åpning øverst
+fyll(28, 1, 28, 28, 'F'); fyll(28, 2, 28, 4, '.');
+// Bygg B
+fyll(29, 1, 38, 28, '.');
+fyll(30, 8, 37, 19, '#'); fyll(31, 9, 36, 18, 'o'); kart[19][33] = 'D'; fyll(32, 20, 34, 20, 'L');
+fyll(31, 24, 32, 25, 'P'); fyll(35, 26, 36, 27, 'C');
+
+// Hvilke kabler i feltet som er spenningssatt (stien gjennom er trygg)
+const TRYGG = new Set(['19,13', '19,12', '19,11', '20,11', '21,11', '21,10', '21,9', '20,9', '19,9', '18,9', '18,8', '18,7', '19,7', '19,6']);
+const levende = (x, y) => kart[y][x] === 'k' && !TRYGG.has(x + ',' + y) && ((x * 7 + y * 13) % 5 !== 0);
+
+const SOLIDE = new Set(['#', 'F', 'P', 'C', 'T']);
+
+// ── Ting (verktøy) ─────────────────────────────────────────────────
+const TING = {
+  hjelm: { ikon: '⛑️', navn: 'Hjelm og vernesko' },
+  tester: { ikon: '🔦', navn: 'Spenningstester' },
+  stang: { ikon: '🔱', navn: 'Jordingsstang' },
+  laas: { ikon: '🔒', navn: 'Lås og skilt' },
+  iso: { ikon: '📟', navn: 'Isolasjonstester' },
+};
+
+// ── Figurer ─────────────────────────────────────────────────────────
+const PAL = { Y: '#ffcd3c', y: '#c98a1c', S: '#f4c39a', s: '#c98b62', K: '#1a1c2c', O: '#ef7d57', W: '#f4f4f4',
+  B: '#3b5dc9', D: '#333c57', h: '#5d3a1a' };
+const FIG = {
+  ned: [
+    '....YYYY....', '..YYYYYYYY..', '.yyyyyyyyyy.', '..SSSSSSSS..', '..SKSSSSKS..', '..SSSSSSSS..', '...SSssSS...',
+    '..OOOOOOOO..', '.SOWWWWWWOS.', '.SOOOOOOOOS.', '..OOOOOOOO..', '..BBBBBBBB..'],
+  opp: [
+    '....YYYY....', '..YYYYYYYY..', '.yyyyyyyyyy.', '..hhhhhhhh..', '..hhhhhhhh..', '..hhhhhhhh..', '...hhhhhh...',
+    '..OOOOOOOO..', '.SOWWWWWWOS.', '.SOOOOOOOOS.', '..OOOOOOOO..', '..BBBBBBBB..'],
+  side: [
+    '....YYYY....', '...YYYYYYY..', '..yyyyyyyyyy', '...hSSSSSS..', '...hSSSSKS..', '...hSSSSSS..', '....SSSSs...',
+    '...OOOOOO...', '...OWWWWO...', '...OOOOOS...', '...OOOOOO...', '...BBBBBB...'],
+};
+const BEN = {
+  ned: [['..BBB..BBB..', '..BBB..BBB..', '..DDD..DDD..', '............'], ['..BBB...BB..', '..DDD...BB..', '........DD..', '............']],
+  side: [['...BB..BB...', '..BB....BB..', '.DDD....DDD.', '............'], ['....BBBB....', '....BBBB....', '....DDDD....', '............']],
+};
+const cache = {};
+function figur(retning, steg, pal = {}, nokkel = 'm') {
+  const k = nokkel + retning + steg;
+  if (cache[k]) return cache[k];
+  const topp = FIG[retning === 'v' || retning === 'h' ? 'side' : retning];
+  const ben = BEN[retning === 'v' || retning === 'h' ? 'side' : 'ned'][steg];
+  const rader = [...topp, ...ben];
+  const cv = document.createElement('canvas'); cv.width = 12; cv.height = 16;
+  const x = cv.getContext('2d');
+  rader.forEach((r, j) => [...r].forEach((ch, i) => { const f = pal[ch] || PAL[ch]; if (ch !== '.' && f) { x.fillStyle = f; x.fillRect(i, j, 1, 1); } }));
+  return (cache[k] = cv);
+}
+
+// ── Personer og gjenstander på kartet ──────────────────────────────
+const NPC_PAL = {
+  byggeleder: { Y: '#f4f4f4', y: '#94b0c2', O: '#3b5dc9', W: '#ffcd3c', h: '#94b0c2' },
+  hilde: { Y: '#f4f4f4', y: '#94b0c2', O: '#38b764', W: '#f4f4f4', h: '#b13e53' },
+  kevin: { Y: '#ffcd3c', O: '#ffcd3c', W: '#ef7d57', h: '#ef7d57', B: '#5d275d' },
+};
+let objekter;
+function lagObjekter() {
+  objekter = [
+    { id: 'byggeleder', type: 'npc', tx: 5, ty: 18, navn: 'Byggeleder Bjørn', retning: 'ned' },
+    { id: 'hilde', type: 'npc', tx: 13, ty: 23, navn: 'Hilde (HMS)', retning: 'v' },
+    { id: 'kevin', type: 'npc', tx: 31, ty: 23, navn: 'Kevin (lærling)', retning: 'ned' },
+    { id: 'kaffe', type: 'kaffe', tx: 9, ty: 17 },
+    { id: 'k_hjelm', type: 'kiste', tx: 3, ty: 17, ting: 'hjelm' },
+    { id: 'k_tester', type: 'kiste', tx: 26, ty: 28 - 1, ting: 'tester' },
+    { id: 'k_stang', type: 'kiste', tx: 15, ty: 2, ting: 'stang' },
+    { id: 'k_laas', type: 'kiste', tx: 26, ty: 2, ting: 'laas' },
+    { id: 'k_iso', type: 'kiste', tx: 31, ty: 10, ting: 'iso' },
+    { id: 's1', type: 'skap', tx: 37, ty: 22, navn: 'Byggestrømskap' },
+    { id: 's2', type: 'skap', tx: 35, ty: 9, navn: 'Fordeling bygg B' },
+    { id: 'skilt1', type: 'skilt', tx: 18, ty: 14, tekst: ['⚠ FARE', 'Kablene i feltet kan være spenningssatt. Kontroller spenningsløshet før du går over!'] },
+    { id: 'skilt2', type: 'skilt', tx: 12, ty: 22, tekst: ['Byggeplass', 'Ingen adgang uten hjelm og vernesko.'] },
+    { id: 'skilt3', type: 'skilt', tx: 29, ty: 21, tekst: ['Bygg B', 'Kabel foran døra. Frakoble i byggestrømskapet først.'] },
+  ];
+  if (lagret.flagg.hildeFlyttet) { const h = objekter.find((o) => o.id === 'hilde'); h.tx = 12; h.ty = 24; h.retning = 'h'; }
+}
+lagObjekter();
+
+let mynter = [];
+function lagMynter() {
+  mynter = [[20, 18], [24, 18], [14, 27], [17, 3], [23, 4], [30, 3], [36, 5], [32, 27], [5, 26], [9, 24]]
+    .filter(([x, y]) => !lagret.aapnet['m' + x + ',' + y])
+    .map(([x, y]) => ({ x: x * TS + 8, y: y * TS + 8, id: 'm' + x + ',' + y }));
+}
+lagMynter();
+
+let gnister = [];
+function lagGnister() {
+  gnister = [[19, 18], [24, 19], [17, 27], [23, 2], [24, 4], [25, 3], [33, 4], [36, 24]]
+    .map(([x, y], i) => ({ x: x * TS + 4, y: y * TS + 4, w: 8, h: 8, vx: 0, vy: 0, t: 0, i }))
+    .filter((s) => !lagret.aapnet['g' + s.i]);
+}
+lagGnister();
+
+// ── Spiller ─────────────────────────────────────────────────────────
+const sp = { x: 6 * TS + 3, y: 22 * TS + 6, w: 10, h: 8, retning: 'opp', steg: 0, gaar: false, liv: 6, usarbar: 0, kb: null, zap: 0 };
+const MAKS_LIV = 6;
+
+// s1 = byggestrømmen til bygg B (på = farlig kabel foran døra)
+let s1Paa = !lagret.flagg.s1Av;
+let kevin = { aktiv: false, timer: 0, fase: 0 };
+
+// ── Kollisjon ───────────────────────────────────────────────────────
+function solidRute(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return true;
+  if (SOLIDE.has(kart[ty][tx])) return true;
+  return objekter.some((o) => o.tx === tx && o.ty === ty && !o.borte);
+}
+function kolliderer(o) {
+  const x0 = Math.floor(o.x / TS), x1 = Math.floor((o.x + o.w - 0.01) / TS);
+  const y0 = Math.floor(o.y / TS), y1 = Math.floor((o.y + o.h - 0.01) / TS);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (solidRute(x, y)) return true;
+  return false;
+}
+function flytt(o, dx, dy) {
+  let traff = false;
+  o.x += dx; if (kolliderer(o)) { o.x -= dx; traff = true; }
+  o.y += dy; if (kolliderer(o)) { o.y -= dy; traff = true; }
+  return traff;
+}
+const treff = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+// ── Inndata ─────────────────────────────────────────────────────────
+const tast = { o: false, n: false, v: false, h: false };
+let aTrykk = false;
+const TK = { ArrowUp: 'o', KeyW: 'o', ArrowDown: 'n', KeyS: 'n', ArrowLeft: 'v', KeyA: 'v', ArrowRight: 'h', KeyD: 'h' };
+addEventListener('keydown', (e) => {
+  if (TK[e.code]) { tast[TK[e.code]] = true; e.preventDefault(); }
+  if (iDialog && dialogKo[0] && dialogKo[0].valg && /^Digit[1-9]$/.test(e.code)) {
+    const b = $('valg').children[Number(e.code.slice(5)) - 1];
+    if (b) b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    return;
+  }
+  if ((e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') && !e.repeat) { aTrykk = true; e.preventDefault(); }
+});
+addEventListener('keyup', (e) => { if (TK[e.code]) tast[TK[e.code]] = false; });
+function knapp(id, ned, opp) {
+  const el = $(id);
+  el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.classList.add('aktiv'); ned(); });
+  const slipp = (e) => { e.preventDefault(); el.classList.remove('aktiv'); if (opp) opp(); };
+  el.addEventListener('pointerup', slipp); el.addEventListener('pointercancel', slipp); el.addEventListener('pointerleave', slipp);
+}
+knapp('pO', () => tast.o = true, () => tast.o = false);
+knapp('pN', () => tast.n = true, () => tast.n = false);
+knapp('pV', () => tast.v = true, () => tast.v = false);
+knapp('pH', () => tast.h = true, () => tast.h = false);
+knapp('knA', () => aTrykk = true);
+
+// ── Dialog ──────────────────────────────────────────────────────────
+let dialogKo = [], iDialog = false;
+function snakk(navn, sider, ferdig) {
+  dialogKo = sider.map((s) => (typeof s === 'string' ? { tekst: s } : s));
+  dialogKo.navn = navn; dialogKo.ferdig = ferdig;
+  iDialog = true; meldingTimer = 0; $('melding').style.display = 'none'; visSide();
+}
+function visSide() {
+  const s = dialogKo[0];
+  $('dialogNavn').textContent = dialogKo.navn || '';
+  $('dialogTekst').textContent = s.tekst;
+  const v = $('valg'); v.innerHTML = '';
+  $('dialogVidere').style.display = s.valg ? 'none' : 'block';
+  if (s.valg) for (const [i, [tekst, fn]] of s.valg.entries()) {
+    const b = document.createElement('button'); b.textContent = (erTouch ? '' : (i + 1) + '. ') + tekst;
+    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); lukkDialog(); fn(); });
+    v.appendChild(b);
+  }
+  $('dialog').classList.add('vis');
+  pip(880, 0.03, 'square', 0.02);
+}
+function nesteSide() {
+  if (dialogKo[0] && dialogKo[0].valg) return;
+  dialogKo.shift();
+  if (dialogKo.length) visSide();
+  else { const f = dialogKo.ferdig; lukkDialog(); if (f) f(); }
+}
+function lukkDialog() { iDialog = false; $('dialog').classList.remove('vis'); }
+$('dialog').addEventListener('pointerdown', (e) => { if (e.target.tagName !== 'BUTTON') { e.preventDefault(); nesteSide(); } });
+
+let meldingTimer = 0;
+function melding(tekst, sek = 3) { const m = $('melding'); m.textContent = tekst; m.style.display = 'block'; meldingTimer = sek; }
+
+// ── HUD ─────────────────────────────────────────────────────────────
+function oppdaterHud() {
+  let l = '';
+  for (let i = 0; i < MAKS_LIV / 2; i++) l += sp.liv >= (i + 1) * 2 ? '♥' : sp.liv === i * 2 + 1 ? '♥' : '♡';
+  $('hudLiv').textContent = l;
+  $('hudKobber').textContent = lagret.kobber + ' Cu';
+  $('hudTing').textContent = Object.keys(TING).filter((k) => lagret.ting[k]).map((k) => TING[k].ikon).join('') || '–';
+}
+
+function faaTing(id) {
+  lagret.ting[id] = true; lagre(); oppdaterHud(); fanfare();
+}
+
+// ── Samhandling (A-knappen) ────────────────────────────────────────
+const RETN = { o: [0, -1], n: [0, 1], v: [-1, 0], h: [1, 0], opp: [0, -1], ned: [0, 1] };
+function foran() {
+  const [dx, dy] = RETN[sp.retning];
+  const cx = sp.x + sp.w / 2 + dx * 12, cy = sp.y + sp.h / 2 + dy * 12;
+  return [Math.floor(cx / TS), Math.floor(cy / TS)];
+}
+
+function handling() {
+  const [tx, ty] = foran();
+  const o = objekter.find((ob) => ob.tx === tx && ob.ty === ty && !ob.borte);
+  if (o) return samhandle(o);
+  if (lagret.ting.stang) {
+    sp.zap = 0.25; pip(1400, 0.08, 'sawtooth', 0.03);
+    const [dx, dy] = RETN[sp.retning];
+    const sone = { x: sp.x + sp.w / 2 + dx * 14 - 9, y: sp.y + sp.h / 2 + dy * 14 - 9, w: 18, h: 18 };
+    for (const s of gnister) if (!s.borte && treff(sone, s)) {
+      s.borte = true; lagret.aapnet['g' + s.i] = true; lagret.kobber += 3; lagre(); oppdaterHud();
+      pip(300, 0.15, 'triangle'); melding('Gnisten er jordet og kortsluttet. +3 Cu', 2);
+    }
+  }
+}
+
+function samhandle(o) {
+  const f = lagret.flagg, t = lagret.ting;
+  if (o.type === 'kiste') {
+    if (lagret.aapnet[o.id]) return melding('Kista er tom.', 1.5);
+    lagret.aapnet[o.id] = true; faaTing(o.ting);
+    const tekster = {
+      hjelm: ['Du fant HJELM OG VERNESKO!', 'Nå slipper Hilde deg inn på byggeplassen.'],
+      tester: ['Du fant en SPENNINGSTESTER!', 'Nå ser du hvilke kabler som er spenningssatt. Røde kabler: hold deg unna!', 'Husk: test den mot kjent spenning før og etter bruk.'],
+      stang: ['Du fant en JORDINGSSTANG!', 'Trykk A for å jorde og kortslutte gnister foran deg.'],
+      laas: ['Du fant LÅS OG SKILT!', 'Når du frakobler noe, låser og merker du bryteren så ingen kobler inn igjen.'],
+      iso: ['Du fant en ISOLASJONSTESTER!', 'Med den kan du måle isolasjonen på kursene i fordelingen.'],
+    };
+    return snakk('', tekster[o.ting]);
+  }
+  if (o.type === 'kaffe') {
+    sp.liv = MAKS_LIV; oppdaterHud(); pip(500, 0.2, 'triangle');
+    return snakk('', ['Du tar en kopp kaffe.', 'Livet er fylt opp igjen. ♥♥♥']);
+  }
+  if (o.type === 'skilt') return snakk(o.tekst[0], o.tekst.slice(1));
+  if (o.id === 'byggeleder') {
+    if (f.ferdig) return snakk(o.navn, ['Strålende jobba! Bygg B har strøm igjen.', 'Kaffe er på meg.']);
+    if (!f.oppdrag) {
+      f.oppdrag = true; lagre();
+      return snakk(o.navn, [
+        'Der er du! Bygg B har mistet strømmen, og vi har innflytting i morgen.',
+        'Jeg tror det er en isolasjonsfeil på en av kursene i fordelingen der borte.',
+        'Hent hjelm og vernesko i kista her i brakka først. Hilde slipper ingen inn uten.',
+        'Og vær forsiktig i kabelfeltet bak containerne. Noen av kablene der er spenningssatt.',
+      ]);
+    }
+    if (!t.hjelm) return snakk(o.navn, ['Kista med hjelm og vernesko står i hjørnet her.']);
+    if (!t.tester) return snakk(o.navn, ['Det ligger en spenningstester i en kiste borte ved containerne. Hent den før kabelfeltet!']);
+    if (!t.iso) return snakk(o.navn, ['Isolasjonstesteren ligger inne i bygg B. Kabelen foran døra må frakobles først.']);
+    return snakk(o.navn, ['Mål kursene i fordelingen i bygg B og finn den som har feil.']);
+  }
+  if (o.id === 'hilde') {
+    if (f.hildeFlyttet) return snakk(o.navn, ['Fint at du bruker verneutstyret. Lykke til!']);
+    if (!t.hjelm) return snakk(o.navn, ['Stopp! Ingen kommer inn på byggeplassen uten hjelm og vernesko.', 'Utstyret ligger i brakka.']);
+    return snakk(o.navn, ['Hjelm og vernesko, flott. Da kan du gå inn.'], () => {
+      f.hildeFlyttet = true; lagre(); o.tx = 12; o.ty = 24; o.retning = 'h';
+      if (kolliderer(sp)) { sp.x = 11 * TS + 3; sp.y = 22 * TS + 4; }
+    });
+  }
+  if (o.id === 'kevin') {
+    if (f.s1Laast) return snakk(o.navn, ['Jeg så skiltet ditt på skapet. Da lar jeg det være!', 'Kappsagen kan vente.']);
+    return snakk(o.navn, ['Hei! Jeg kapper takrenner her. Trenger strøm til kappsagen.', 'Ikke slå av byggestrømmen, da!']);
+  }
+  if (o.id === 's1') {
+    if (f.s1Laast) return snakk(o.navn, ['Bryteren er av, låst og merket med navnet ditt.']);
+    if (!s1Paa) {
+      if (t.laas) return laasS1();
+      return snakk(o.navn, ['Bryteren er av, men ikke låst. Hvem som helst kan slå den på igjen.']);
+    }
+    return snakk(o.navn, [{
+      tekst: 'Byggestrømskapet. Kursen «Bygg B, inngang» er på.',
+      valg: [['Frakoble kursen', () => {
+        s1Paa = false; f.s1Av = true; lagre(); pip(200, 0.2, 'square');
+        if (t.laas) laasS1();
+        else {
+          melding('Kursen er frakoblet. Kabelen foran døra er spenningsløs.', 3);
+          kevin.aktiv = true; kevin.timer = 3.5; kevin.fase = 0;
+        }
+      }], ['La være', () => {}]],
+    }]);
+  }
+  if (o.id === 's2') {
+    if (f.ferdig) return snakk(o.navn, ['Alt er i orden. Kurs 2 er reparert.']);
+    if (!t.iso) return snakk(o.navn, ['Du trenger en isolasjonstester for å finne feilen.']);
+    const maal = { 1: 'Kurs 1 Lys: over 500 MΩ. Helt fint.', 2: 'Kurs 2 Stikk: 0,05 MΩ! Langt under kravet på 1 MΩ.', 3: 'Kurs 3 Varme: 230 MΩ. Helt fint.' };
+    const valgMeny = () => snakk(o.navn, [{
+      tekst: 'Kursene er frakoblet og spenningsløse. Hvilken kurs vil du isolasjonsmåle (500 V DC)?',
+      valg: [
+        ['Mål kurs 1 (lys)', () => snakk(o.navn, [maal[1]], valgMeny)],
+        ['Mål kurs 2 (stikk)', () => snakk(o.navn, [maal[2]], valgMeny)],
+        ['Mål kurs 3 (varme)', () => snakk(o.navn, [maal[3]], valgMeny)],
+        ['Jeg vet hvilken som har feil', () => snakk(o.navn, [{
+          tekst: 'Hvilken kurs har isolasjonsfeilen?',
+          valg: [1, 2, 3].map((n) => ['Kurs ' + n, () => {
+            if (n === 2) ferdig();
+            else { pip(150, 0.3, 'sawtooth'); snakk(o.navn, ['Hmm, det stemmer ikke med målingene. Mål igjen.'], valgMeny); }
+          }]),
+        }])],
+      ],
+    }]);
+    return valgMeny();
+  }
+}
+
+function laasS1() {
+  const f = lagret.flagg;
+  f.s1Av = true; f.s1Laast = true; s1Paa = false; kevin.aktiv = false; lagre(); fanfare();
+  snakk('', ['Du låser bryteren og henger på skilt med navnet ditt.', 'Sikret mot innkobling! Nå kan ingen slå den på mens du jobber.']);
+}
+
+function ferdig() {
+  lagret.flagg.ferdig = true; lagret.kobber += 25; lagre(); oppdaterHud(); fanfare();
+  snakk('Byggeleder Bjørn', ['Kurs 2 hadde isolasjonsfeil. En skrue gjennom kabelen bak gipsen!', 'Feilen er rettet, og strømmen er på i bygg B igjen. +25 Cu'], () => {
+    $('ferdigTekst').textContent = 'Du fant feilen og fikk strømmen på i bygg B, og du jobbet sikkert hele veien. Du samlet ' +
+      lagret.kobber + ' Cu. Dette er første versjon. Flere områder og verktøy kan komme!';
+    $('lagFerdig').classList.add('vis'); tilstand = 'ferdig';
+  });
+}
+
+// ── Oppdatering ─────────────────────────────────────────────────────
+let tilstand = 'meny', tid = 0;
+
+function skade(fraX, fraY, tekst) {
+  if (sp.usarbar > 0) return;
+  sp.liv--; sp.usarbar = 1.1; oppdaterHud(); pip(120, 0.25, 'sawtooth', 0.06);
+  if (navigator.vibrate) navigator.vibrate(60);
+  const dx = sp.x + sp.w / 2 - fraX, dy = sp.y + sp.h / 2 - fraY, d = Math.hypot(dx, dy) || 1;
+  sp.kb = { vx: dx / d * 160, vy: dy / d * 160, t: 0.18 };
+  if (tekst) melding(tekst, 2.5);
+  if (sp.liv <= 0) {
+    sp.liv = MAKS_LIV; sp.x = 6 * TS + 3; sp.y = 22 * TS + 6; sp.retning = 'opp'; sp.kb = null; oppdaterHud();
+    snakk('', ['Du fikk støt og ble sendt tilbake til brakka.', 'Husk: kontroller alltid spenningsløshet før du tar på noe!']);
+  }
+}
+
+function oppdater(dt) {
+  tid += dt;
+  if (meldingTimer > 0) { meldingTimer -= dt; if (meldingTimer <= 0) $('melding').style.display = 'none'; }
+  if (iDialog) { if (aTrykk) { aTrykk = false; nesteSide(); } return; }
+  if (aTrykk) { aTrykk = false; handling(); }
+
+  // Bevegelse
+  let mx = (tast.h ? 1 : 0) - (tast.v ? 1 : 0), my = (tast.n ? 1 : 0) - (tast.o ? 1 : 0);
+  if (sp.kb) { flytt(sp, sp.kb.vx * dt, sp.kb.vy * dt); sp.kb.t -= dt; if (sp.kb.t <= 0) sp.kb = null; mx = my = 0; }
+  sp.gaar = !!(mx || my);
+  if (sp.gaar) {
+    if (mx && my) { mx *= 0.707; my *= 0.707; }
+    if (Math.abs(mx) > Math.abs(my)) sp.retning = mx > 0 ? 'h' : 'v'; else if (my) sp.retning = my > 0 ? 'ned' : 'opp';
+    const v = 64;
+    flytt(sp, mx * v * dt, my * v * dt);
+    sp.steg += dt * 8;
+  }
+  if (sp.usarbar > 0) sp.usarbar -= dt;
+  if (sp.zap > 0) sp.zap -= dt;
+
+  // Spenningssatte kabler
+  const ctx = Math.floor((sp.x + sp.w / 2) / TS), cty = Math.floor((sp.y + sp.h / 2) / TS);
+  if (levende(ctx, cty)) skade(ctx * TS + 8, cty * TS + 8, lagret.ting.tester ? 'Au! Den kabelen var rød på testeren!' : 'Au! Kabelen var spenningssatt. Finn en spenningstester!');
+  if (kart[cty] && kart[cty][ctx] === 'L' && s1Paa) skade(ctx * TS + 8, cty * TS + 2, 'Kabelen foran døra er spenningssatt. Frakoble i byggestrømskapet!');
+
+  // Mynter
+  for (const m of mynter) if (!m.tatt && Math.hypot(sp.x + sp.w / 2 - m.x, sp.y + sp.h / 2 - m.y) < 10) {
+    m.tatt = true; lagret.aapnet[m.id] = true; lagret.kobber++; lagre(); oppdaterHud(); pip(1200, 0.05, 'triangle', 0.03);
+  }
+
+  // Gnister
+  for (const s of gnister) {
+    if (s.borte) continue;
+    s.t -= dt;
+    if (s.t <= 0) { const a = Math.floor(Math.random() * 4); s.vx = [30, -30, 0, 0][a]; s.vy = [0, 0, 30, -30][a]; s.t = 0.8 + Math.random() * 1.2; }
+    if (flytt(s, s.vx * dt, s.vy * dt)) { s.vx *= -1; s.vy *= -1; }
+    if (treff({ x: sp.x + 1, y: sp.y - 4, w: sp.w - 2, h: sp.h + 4 }, s)) skade(s.x + 4, s.y + 4, lagret.ting.stang ? '' : 'En gnist! Med en jordingsstang kan du ta den.');
+  }
+
+  // Kevin slår på igjen hvis bryteren ikke er låst
+  if (kevin.aktiv) {
+    const k = objekter.find((o) => o.id === 'kevin');
+    kevin.timer -= dt;
+    if (kevin.fase === 0 && kevin.timer <= 0) {
+      kevin.fase = 1; melding('Kevin: «Hvem slo av byggestrømmen? Kappsagen stoppet!»', 3);
+    }
+    if (kevin.fase === 1) {
+      const mal = [36, 22]; k.retning = 'h';
+      if (k.tx !== mal[0]) k.tx += Math.sign(mal[0] - k.tx) * (kevin.timer < -0.25 * (Math.abs(k.tx - 31) + 1) ? 1 : 0);
+      if (k.tx === mal[0] && k.ty === 23) k.ty = 22;
+      if (k.tx === mal[0] && k.ty === 22) {
+        kevin.fase = 2; s1Paa = true; lagret.flagg.s1Av = false; lagre(); pip(300, 0.2, 'square');
+        melding('Kevin slo på strømmen igjen! Du må sikre bryteren mot innkobling.', 4);
+        kevin.timer = 2;
+      }
+    }
+    if (kevin.fase === 2) {
+      if (kevin.timer <= 0) { k.tx = 31; k.ty = 23; k.retning = 'ned'; kevin.aktiv = false; }
+    }
+  }
+
+  // Kamera
+  kamX = Math.max(0, Math.min(MW * TS - VW, sp.x + sp.w / 2 - VW / 2));
+  kamY = Math.max(0, Math.min(MH * TS - VH, sp.y - VH / 2));
+}
+let kamX = 0, kamY = 0;
+
+// ── Tegning ─────────────────────────────────────────────────────────
+const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) >>> 0; h = (h ^ (h >>> 13)) * 1274126177 >>> 0; return h; };
+const r = (x, y, w, h, f) => { g.fillStyle = f; g.fillRect(x, y, w, h); };
+
+function lyn(x1, y1, x2, y2, f) {
+  g.fillStyle = f; const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) || 1; let j = 0;
+  for (let i = 0; i <= n; i++) { if (i % 2 === 0) j = Math.round((Math.random() - 0.5) * 3); const t = i / n;
+    g.fillRect(Math.round(x1 + (x2 - x1) * t + (Math.abs(y2 - y1) > Math.abs(x2 - x1) ? j : 0)), Math.round(y1 + (y2 - y1) * t + (Math.abs(y2 - y1) > Math.abs(x2 - x1) ? 0 : j)), 1, 1); }
+}
+
+function tegnRute(x, y, X, Y) {
+  const ch = kart[y][x], h = hash(x, y);
+  const gress = () => { r(X, Y, 16, 16, '#38b764'); r(X + h % 14, Y + (h >> 4) % 14, 1, 2, '#257179'); r(X + (h >> 8) % 14, Y + (h >> 12) % 14, 1, 2, '#a7f070'); };
+  const grus = () => { r(X, Y, 16, 16, '#c2a77a'); r(X + h % 15, Y + (h >> 4) % 15, 1, 1, '#8b6b45'); r(X + (h >> 8) % 15, Y + (h >> 12) % 15, 2, 1, '#e6cfa0'); r(X + (h >> 6) % 15, Y + (h >> 10) % 15, 1, 1, '#8b6b45'); };
+  switch (ch) {
+    case ',': gress(); break;
+    case '.': grus(); break;
+    case 'o': r(X, Y, 16, 16, (x + y) % 2 ? '#94b0c2' : '#8aa4b8'); r(X, Y, 16, 1, '#a9c1d1'); break;
+    case '#': r(X, Y, 16, 16, '#566c86'); r(X, Y, 16, 3, '#94b0c2'); r(X + (y % 2) * 8, Y + 8, 1, 8, '#333c57'); r(X, Y + 8, 16, 1, '#333c57'); break;
+    case 'D': r(X, Y, 16, 16, '#5d3a1a'); r(X + 2, Y, 12, 16, '#3a240f'); r(X + 11, Y + 8, 2, 2, '#ffcd3c'); break;
+    case 'T': gress(); r(X + 7, Y + 10, 3, 6, '#5d3a1a'); r(X + 2, Y + 1, 12, 10, '#257179'); r(X + 3, Y + 2, 7, 5, '#38b764'); r(X + 4, Y + 3, 2, 2, '#a7f070'); break;
+    case 'F': grus(); r(X, Y + 2, 16, 11, '#c2c3c7aa'); for (let i = 0; i < 16; i += 3) r(X + i, Y + 2, 1, 11, '#566c86'); for (let j = 2; j < 13; j += 3) r(X, Y + j, 16, 1, '#566c86'); r(X, Y + 1, 16, 1, '#333c57'); r(X + 1, Y + 1, 2, 14, '#333c57'); r(X, Y + 14, 4, 2, '#b13e53'); break;
+    case 'P': grus(); r(X + 1, Y + 3, 14, 12, '#8b5a2b'); for (let j = 4; j < 15; j += 4) r(X + 1, Y + j, 14, 1, '#5d3a1a'); r(X + 1, Y + 3, 14, 1, '#c98b62'); break;
+    case 'C': { const blaa = Math.floor(x / 3 + y / 2) % 2; r(X, Y, 16, 16, blaa ? '#3b5dc9' : '#b13e53'); for (let i = 1; i < 16; i += 3) r(X + i, Y, 1, 16, blaa ? '#29366f' : '#5d275d'); r(X, Y, 16, 1, '#ffffff44'); break; }
+    case 'k': case 'L': {
+      grus();
+      const paa = ch === 'L' ? s1Paa : levende(x, y);
+      const vis = ch === 'L' || lagret.ting.tester;
+      r(X, Y + 7, 16, 3, '#1a1c2c'); r(X + ((h >> 3) % 10) + 2, Y + 6, 3, 5, '#1a1c2c');
+      if (vis && paa) { r(X, Y + 8, 16, 1, '#ff4d6d'); if (Math.random() < 0.5) lyn(X + Math.random() * 16, Y + 8, X + Math.random() * 16, Y + 2 + Math.random() * 4, '#9fe8ff'); }
+      else if (vis && lagret.ting.tester) r(X, Y + 8, 16, 1, '#38b764');
+      break;
+    }
+  }
+}
+
+function tegnObjekt(o) {
+  const X = o.tx * TS - Math.round(kamX), Y = o.ty * TS - Math.round(kamY);
+  if (o.type === 'npc') {
+    const fig = figur(o.retning, Math.floor(tid * 2) % 2 && o.id === 'kevin' && kevin.aktiv ? 1 : 0, NPC_PAL[o.id], o.id);
+    r(X + 3, Y + 14, 10, 2, '#00000044');
+    g.save(); if (o.retning === 'v') { g.translate(X + 14, Y); g.scale(-1, 1); g.drawImage(fig, 0, 0); } else g.drawImage(fig, X + 2, Y); g.restore();
+    const relevant = (o.id === 'byggeleder' && !lagret.flagg.oppdrag) || (o.id === 'hilde' && lagret.ting.hjelm && !lagret.flagg.hildeFlyttet);
+    if (relevant && Math.floor(tid * 2) % 2) { r(X + 7, Y - 7, 2, 4, '#ffcd3c'); r(X + 7, Y - 2, 2, 1, '#ffcd3c'); }
+  } else if (o.type === 'kiste') {
+    const aapen = lagret.aapnet[o.id];
+    r(X + 2, Y + 5, 12, 10, '#8b5a2b'); r(X + 2, Y + 5, 12, 2, aapen ? '#3a240f' : '#c98b62'); r(X + 2, Y + 9, 12, 1, '#5d3a1a');
+    r(X + 7, Y + 8, 2, 3, aapen ? '#566c86' : '#ffcd3c');
+    if (!aapen && Math.floor(tid * 3 + o.tx) % 6 === 0) r(X + 12, Y + 4, 1, 1, '#ffffff');
+  } else if (o.type === 'skap') {
+    r(X + 1, Y, 14, 16, '#c2c3c7'); r(X + 2, Y + 1, 12, 14, '#8b9bb4');
+    for (let i = 0; i < 4; i++) r(X + 3 + i * 3, Y + 4, 2, 4, '#1a1c2c');
+    const paa = o.id === 's1' ? s1Paa : !lagret.flagg.ferdig;
+    r(X + 6, Y + 11, 4, 2, paa ? '#ff4d6d' : '#38b764');
+    if (o.id === 's1' && lagret.flagg.s1Laast) { r(X + 10, Y + 9, 4, 4, '#ffcd3c'); r(X + 11, Y + 7, 2, 2, '#c2c3c7'); }
+  } else if (o.type === 'kaffe') {
+    r(X + 3, Y + 2, 10, 13, '#333c57'); r(X + 4, Y + 3, 8, 3, '#b13e53'); r(X + 6, Y + 9, 4, 4, '#f4f4f4'); r(X + 7, Y + 10, 2, 2, '#5d3a1a');
+    if (Math.floor(tid * 2) % 2) r(X + 7, Y + 6, 1, 2, '#f4f4f4');
+  } else if (o.type === 'skilt') {
+    r(X + 7, Y + 8, 2, 8, '#5d3a1a'); r(X + 2, Y + 2, 12, 8, '#ffcd3c'); r(X + 2, Y + 2, 12, 1, '#fff1a8');
+    r(X + 4, Y + 4, 8, 1, '#1a1c2c'); r(X + 4, Y + 6, 6, 1, '#1a1c2c');
+  }
+}
+
+function tegn() {
+  r(0, 0, VW, VH, '#1a1c2c');
+  const kx = Math.round(kamX), ky = Math.round(kamY);
+  const x0 = Math.floor(kx / TS), y0 = Math.floor(ky / TS);
+  for (let y = y0; y <= y0 + VH / TS + 1 && y < MH; y++) for (let x = x0; x <= x0 + VW / TS + 1 && x < MW; x++) tegnRute(x, y, x * TS - kx, y * TS - ky);
+
+  for (const m of mynter) if (!m.tatt) {
+    const X = m.x - kx, Y = m.y - ky + (Math.floor(tid * 3 + m.x) % 2), f = Math.floor(tid * 6 + m.x) % 4, w = [4, 3, 1, 3][f];
+    r(X - w / 2, Y - 3, w, 6, '#e08a4c'); r(X - w / 2, Y - 3, 1, 3, '#ffd9a8');
+  }
+
+  // Tegn objekter og spiller sortert etter y
+  const liste = objekter.filter((o) => !o.borte).map((o) => ({ y: o.ty * TS + 15, f: () => tegnObjekt(o) }));
+  liste.push({ y: sp.y + sp.h, f: tegnSpiller });
+  for (const s of gnister) if (!s.borte) liste.push({ y: s.y + 8, f: () => tegnGnist(s) });
+  liste.sort((a, b) => a.y - b.y).forEach((e) => e.f());
+
+  // Kabelfeltet: varsel når man ikke har tester
+  if (!lagret.ting.tester) {
+    const X = 18 * TS - kx, Y = 6 * TS - ky;
+    if (Math.floor(tid * 2) % 2) r(X, Y, 64, 1, '#ffcd3c66');
+  }
+}
+
+function tegnSpiller() {
+  if (sp.usarbar > 0 && Math.floor(sp.usarbar * 14) % 2) return;
+  const X = Math.round(sp.x - kamX) - 1, Y = Math.round(sp.y - kamY) - 8;
+  r(X + 1, Y + 14, 10, 2, '#00000044');
+  const fig = figur(sp.retning, sp.gaar ? Math.floor(sp.steg) % 2 : 0);
+  g.save(); if (sp.retning === 'v') { g.translate(X + 12, Y); g.scale(-1, 1); g.drawImage(fig, 0, 0); } else g.drawImage(fig, X, Y); g.restore();
+  if (sp.zap > 0) {
+    const [dx, dy] = RETN[sp.retning], cx = X + 6 + dx * 12, cy = Y + 10 + dy * 12;
+    r(X + 6 + dx * 4, Y + 10 + dy * 4, dx ? 8 * dx : 1, dy ? 8 * dy : 1, '#94b0c2');
+    for (let i = 0; i < 3; i++) lyn(cx, cy, cx + (Math.random() - 0.5) * 14, cy + (Math.random() - 0.5) * 14, i ? '#9fe8ff' : '#ffffff');
+  }
+}
+
+function tegnGnist(s) {
+  const X = Math.round(s.x - kamX), Y = Math.round(s.y - kamY) + Math.round(Math.sin(tid * 8 + s.i));
+  r(X, Y, 8, 8, '#41a6f6'); r(X + 1, Y + 1, 6, 6, '#9fe8ff'); r(X + 2, Y + 2, 4, 4, '#ffffff');
+  r(X + 2, Y + 3, 1, 1, '#1a1c2c'); r(X + 5, Y + 3, 1, 1, '#1a1c2c');
+  for (let i = 0; i < 2; i++) { const a = Math.random() * 6.3; lyn(X + 4, Y + 4, X + 4 + Math.round(Math.cos(a) * 7), Y + 4 + Math.round(Math.sin(a) * 7), '#ffffff'); }
+}
+
+// ── Menyer ──────────────────────────────────────────────────────────
+function startSpill() {
+  $('lagStart').classList.remove('vis'); tilstand = 'spill'; oppdaterHud();
+  if (!lagret.flagg.oppdrag) setTimeout(() => melding('Snakk med byggelederen i brakka (A / mellomrom).', 4), 300);
+}
+$('startKnapp').onclick = startSpill;
+$('nyttKnapp').onclick = () => { if (confirmNytt()) { nullstill(); startSpill(); } };
+function confirmNytt() { return true; }
+function nullstill() {
+  lagret = START(); lagre(); s1Paa = true; kevin = { aktiv: false, timer: 0, fase: 0 };
+  lagObjekter(); lagMynter(); lagGnister();
+  Object.assign(sp, { x: 6 * TS + 3, y: 22 * TS + 6, retning: 'opp', liv: MAKS_LIV, kb: null });
+}
+$('igjenKnapp').onclick = () => { $('lagFerdig').classList.remove('vis'); nullstill(); startSpill(); };
+$('menyKnapp').onclick = () => { tilstand = 'meny'; visStart(); };
+function visStart() {
+  const iGang = lagret.flagg.oppdrag;
+  $('startKnapp').textContent = iGang ? 'Fortsett' : 'Start';
+  $('nyttKnapp').style.display = iGang ? 'block' : 'none';
+  $('lagStart').classList.add('vis');
+}
+visStart();
+
+// ── Hovedløkke ──────────────────────────────────────────────────────
+let sist = performance.now();
+function lokke(n) {
+  const dt = Math.min(0.05, (n - sist) / 1000); sist = n;
+  if (tilstand === 'spill') oppdater(dt); else tid += dt;
+  tegn();
+  requestAnimationFrame(lokke);
+}
+oppdaterHud();
+requestAnimationFrame(lokke);
+
+window.__eventyr = { sp, get tilstand() { return tilstand; }, lagret: () => lagret, objekter: () => objekter, get iDialog() { return iDialog; } };
+</script>
+</body>
+</html>
