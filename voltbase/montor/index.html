@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b1220">
 <title>Montørløpet – Voltbase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0b1220; --kort: #131d31; --kant: #2a3754; --tekst: #eef3ff; --dempet: #b0bdd6;
@@ -16,16 +18,17 @@
     -webkit-user-select: none; user-select: none; touch-action: none; }
   #app { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
   #spillflate { position: relative; width: 100%; max-width: 1200px; }
-  canvas { display: block; width: 100%; height: auto; background: #10192b; border-radius: 10px; }
+  canvas { display: block; width: 100%; height: auto; background: #10192b; border-radius: 0;
+    image-rendering: pixelated; image-rendering: crisp-edges; }
   #hud { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 8px; align-items: center;
-    padding: 8px 10px; pointer-events: none; font-weight: 800; font-size: clamp(12px, 2.2vw, 18px); }
-  #hud .pill { background: rgba(11,18,32,.75); border: 1px solid var(--kant); border-radius: 999px; padding: 4px 10px; }
+    padding: 8px 10px; pointer-events: none; font-family: 'Press Start 2P', monospace; font-size: clamp(8px, 1.6vw, 13px); }
+  #hud .pill { background: rgba(26,28,44,.8); border: 2px solid #333c57; border-radius: 0; padding: 5px 8px; }
   #hud .hoyre { margin-left: auto; }
   #pauseKnapp { pointer-events: auto; cursor: pointer; }
   #kontroller { display: none; width: 100%; max-width: 1200px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
     justify-content: space-between; gap: 12px; }
   .touch #kontroller { display: flex; }
-  .kn { width: 76px; height: 76px; border-radius: 50%; background: rgba(27,38,64,.85); border: 2px solid var(--kant);
+  .kn { width: 76px; height: 76px; border-radius: 6px; background: rgba(27,38,64,.85); border: 2px solid var(--kant);
     color: #fff; font-size: 30px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
   .kn.aktiv { background: var(--aksent); border-color: var(--aksent); }
   .kn.hopp { width: 96px; height: 96px; font-size: 18px; }
@@ -41,25 +44,25 @@
   .lag { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 12px;
     background: rgba(6,10,20,.82); z-index: 5; overflow-y: auto; }
   .lag.vis { display: flex; }
-  .boks { background: var(--kort); border: 1px solid var(--kant); border-radius: 18px; padding: 18px; width: 100%;
+  .boks { background: var(--kort); border: 1px solid var(--kant); border-radius: 0; box-shadow: 0 0 0 3px #1a1c2c, 0 0 0 6px #333c57; padding: 18px; width: 100%;
     max-width: 520px; max-height: 100%; overflow-y: auto; }
-  .boks h1 { margin: 0 0 6px; font-size: 26px; }
-  .boks h2 { margin: 0 0 6px; font-size: 21px; }
+  .boks h1 { margin: 0 0 10px; font-size: 20px; font-family: 'Press Start 2P', monospace; line-height: 1.4; }
+  .boks h2 { margin: 0 0 10px; font-size: 15px; font-family: 'Press Start 2P', monospace; line-height: 1.5; }
   .boks p { color: var(--dempet); line-height: 1.45; margin: 6px 0 12px; font-size: 15px; }
-  .knapp { display: block; width: 100%; border: 0; border-radius: 14px; padding: 13px; font-size: 16px; font-weight: 800;
+  .knapp { display: block; width: 100%; border: 0; border-radius: 0; box-shadow: inset 0 -4px 0 rgba(0,0,0,.35); padding: 13px; font-size: 16px; font-weight: 800;
     background: var(--aksent); color: #fff; margin-top: 10px; cursor: pointer; font-family: inherit; }
   .knapp.sek { background: #1b2640; color: var(--tekst); }
   .knapp:disabled { opacity: .4; cursor: default; }
-  .tips { background: #0f1830; border-left: 3px solid var(--gul); border-radius: 8px; padding: 10px 12px; margin: 10px 0;
+  .tips { background: #0f1830; border-left: 3px solid var(--gul); border-radius: 0; padding: 10px 12px; margin: 10px 0;
     font-size: 14px; line-height: 1.45; color: #dfe7f7; }
   .butikk { display: grid; gap: 8px; margin-top: 8px; }
   .vare { display: flex; align-items: center; gap: 10px; background: #1b2640; border: 1px solid var(--kant);
-    border-radius: 12px; padding: 10px; }
+    border-radius: 0; padding: 10px; }
   .vare .ikon { font-size: 24px; width: 32px; text-align: center; }
   .vare .tekst { flex: 1; min-width: 0; }
   .vare .navn { font-weight: 800; font-size: 15px; }
   .vare .info { color: var(--dempet); font-size: 12.5px; line-height: 1.35; }
-  .vare button { border: 0; border-radius: 10px; padding: 8px 10px; font-weight: 800; background: var(--kobber); color: #1a0f05;
+  .vare button { border: 0; border-radius: 0; box-shadow: inset 0 -3px 0 rgba(0,0,0,.3); padding: 8px 10px; font-weight: 800; background: var(--kobber); color: #1a0f05;
     font-family: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
   .vare button:disabled { background: #39445e; color: #8d98b2; cursor: default; }
   .kobber { color: var(--kobber); font-weight: 900; }
@@ -159,7 +162,8 @@ function tilpass() {
   const w = Math.min(innerWidth, liggendeMobil ? innerWidth : 1200);
   const h = innerHeight - (erTouch && !liggendeMobil ? 130 : 0);
   VW = Math.max(600, Math.min(1100, Math.round(VH * w / Math.max(200, h))));
-  c.width = VW; c.height = VH;
+  c.width = Math.round(VW / 2.5); c.height = Math.round(VH / 2.5);
+  g.imageSmoothingEnabled = false;
 }
 addEventListener('resize', tilpass);
 tilpass();
@@ -229,11 +233,11 @@ function pip(f = 600, d = 0.08, type = 'square', vol = 0.04) {
 function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
 const TEMA = [
-  { navn: 'Kjelleren', himmel: ['#121a2c', '#1b2741'], bygg: '#18233a', bakke: '#3a4458', topp: '#58627a' },
-  { navn: 'Byggeplassen', himmel: ['#1d2b4d', '#3b4a72'], bygg: '#26355a', bakke: '#5a4a3a', topp: '#7d6a52' },
-  { navn: 'Loftet', himmel: ['#2a1f2f', '#4a3446'], bygg: '#33263a', bakke: '#5b4636', topp: '#7a5d45' },
-  { navn: 'Industrihallen', himmel: ['#14232a', '#20404a'], bygg: '#1b3138', bakke: '#45525a', topp: '#6b7a83' },
-  { navn: 'Taket', himmel: ['#0e1630', '#2d3f7a'], bygg: '#1a2550', bakke: '#3e4a66', topp: '#66739a' },
+  { navn: 'Kjelleren', himmel: ['#1a1c2c', '#29366f'], bygg: '#252b45', bakke: '#566c86', topp: '#94b0c2' },
+  { navn: 'Byggeplassen', himmel: ['#29366f', '#3b5dc9'], bygg: '#25307a', bakke: '#7a4e2f', topp: '#c28552' },
+  { navn: 'Loftet', himmel: ['#2a1a2e', '#5d275d'], bygg: '#3a1f3f', bakke: '#6e4a3a', topp: '#b07a52' },
+  { navn: 'Industrihallen', himmel: ['#14232a', '#257179'], bygg: '#1b3a40', bakke: '#4a5a66', topp: '#8aa0ac' },
+  { navn: 'Taket', himmel: ['#1a1c2c', '#b13e53'], bygg: '#3a1f3f', bakke: '#333c57', topp: '#566c86' },
 ];
 
 function lagBane(n) {
@@ -473,133 +477,205 @@ function oppdater(dt) {
   kamX = Math.max(0, Math.min(kamX, bane.B * T - VW));
 }
 
-// ── Tegning ─────────────────────────────────────────────────────────
-function tegnLyn(x1, y1, x2, y2, seg, bredde, farge) {
-  g.strokeStyle = farge; g.lineWidth = bredde; g.beginPath(); g.moveTo(x1, y1);
-  for (let i = 1; i < seg; i++) {
-    const t = i / seg;
-    g.lineTo(x1 + (x2 - x1) * t + (Math.random() - 0.5) * 12, y1 + (y2 - y1) * t + (Math.random() - 0.5) * 12);
+// ── Tegning (pixel-stil) ────────────────────────────────────────────
+// Verden regnes i «store» koordinater (rute = 40). Alt tegnes på et lite lerret
+// (rute = 16 piksler) som skaleres opp uten utjevning.
+const PAL = {
+  '.': null, Y: '#ffcd3c', y: '#c98a1c', S: '#f4c39a', s: '#c98b62', K: '#1a1c2c', O: '#ff7a1a', o: '#c2520c',
+  W: '#f4f4f4', B: '#3b5dc9', b: '#29366f', D: '#333c57', T: '#8b5a2b', C: '#e08a4c', c: '#a35a2a', L: '#ffd9a8',
+};
+const MONTOR = {
+  topp: [
+    '....YYYY....',
+    '...YYYYYY...',
+    '..yyyyyyyyy.',
+    '...SSSSKS...',
+    '...SSSSSS...',
+    '....ssss....',
+    '...OOOOOO...',
+    '..OOOOOOOO..',
+    '..OWWWWWWO..',
+    '..OOOOOOOOS.',
+    '..ooOOOOoo..',
+    '...BBBBBB...',
+    '...BBBBBB...',
+  ],
+  sta: ['...BB..BB...', '...BB..BB...', '...bb..bb...', '..DDD..DDD..', '............'],
+  lop1: ['..BB....BB..', '.BB......BB.', '.bb......bb.', 'DDD......DDD', '............'],
+  lop2: ['....BBBB....', '....BBBB....', '....bbbb....', '...DDDDDD...', '............'],
+  hopp: ['..BB...BB...', '.BB.....BB..', 'DDD.....DDD.', '............', '............'],
+};
+const SPRITE_CACHE = {};
+function sprite(navn, rader) {
+  if (SPRITE_CACHE[navn]) return SPRITE_CACHE[navn];
+  const cv = document.createElement('canvas'); cv.width = rader[0].length; cv.height = rader.length;
+  const x = cv.getContext('2d');
+  rader.forEach((r, j) => [...r].forEach((ch, i) => { if (PAL[ch]) { x.fillStyle = PAL[ch]; x.fillRect(i, j, 1, 1); } }));
+  return (SPRITE_CACHE[navn] = cv);
+}
+const SPR = {
+  sta: () => sprite('sta', [...MONTOR.topp, ...MONTOR.sta]),
+  lop1: () => sprite('lop1', [...MONTOR.topp, ...MONTOR.lop1]),
+  lop2: () => sprite('lop2', [...MONTOR.topp, ...MONTOR.lop2]),
+  hopp: () => sprite('hopp', [...MONTOR.topp, ...MONTOR.hopp]),
+  mynt0: () => sprite('mynt0', ['.CCCC.', 'CLCCCC', 'CLCCcC', 'CCCCcC', 'CCCccC', '.cccc.']),
+  mynt1: () => sprite('mynt1', ['.CC.', 'CLCC', 'CLcC', 'CCcC', 'CCcC', '.cc.']),
+  mynt2: () => sprite('mynt2', ['CC', 'LC', 'Cc', 'Cc', 'Cc', 'cc']),
+};
+
+const S = 2.5;                      // forhold mellom verden og piksler
+const PH = Math.round(VH / S);      // lerretshøyde i piksler (208)
+let kx = 0;                         // kamera i piksler
+const px = (v) => Math.round(v / S);
+function rekt(x, y, w, h, farge) { g.fillStyle = farge; g.fillRect(x, y, w, h); }
+
+// Hash for fast «tilfeldig» tekstur per rute
+const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) >>> 0; h = (h ^ (h >>> 13)) * 1274126177 >>> 0; return h; };
+
+function pixelLyn(x1, y1, x2, y2, farge) {
+  g.fillStyle = farge;
+  const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
+  let jx = 0;
+  for (let i = 0; i <= n; i++) {
+    if (i % 3 === 0) jx = Math.round((Math.random() - 0.5) * 3);
+    const t = n ? i / n : 0;
+    g.fillRect(Math.round(x1 + (x2 - x1) * t) + (Math.abs(y2 - y1) >= Math.abs(x2 - x1) ? jx : 0),
+      Math.round(y1 + (y2 - y1) * t) + (Math.abs(y2 - y1) < Math.abs(x2 - x1) ? jx : 0), 1, 1);
   }
-  g.lineTo(x2, y2); g.stroke();
 }
 
-function tegnMontor(x, y) {
+function tegnMontor() {
   const blink = sp.usarbar > 0 && Math.floor(sp.usarbar * 12) % 2 === 0;
   if (blink) return;
-  g.save(); g.translate(x + sp.w / 2, y); g.scale(sp.retning, 1);
-  const ben = sp.paaBakke ? Math.sin(sp.steg) * 7 : 4;
-  g.fillStyle = '#2b3550';                                     // bukse
-  g.fillRect(-9, 30, 7, 14 + (sp.paaBakke ? 0 : -3)); g.fillRect(2, 30, 7, 14);
-  g.fillStyle = '#1a1f2b';                                     // sko
-  g.fillRect(-10 + ben, 41, 10, 4); g.fillRect(1 - ben, 41, 10, 4);
-  g.fillStyle = '#f07a1a'; g.fillRect(-11, 14, 22, 18);         // vest
-  g.fillStyle = '#e8eef8'; g.fillRect(-11, 22, 22, 3);          // refleks
-  g.fillStyle = '#f2c9a0'; g.fillRect(-7, 3, 14, 12);           // ansikt
-  g.fillStyle = '#1a1f2b'; g.fillRect(3, 7, 2, 3);              // øye
-  g.fillStyle = '#f2c23c';                                     // hjelm
-  g.beginPath(); g.arc(0, 4, 10, Math.PI, 0); g.fill(); g.fillRect(-10, 3, 23, 3);
-  g.fillStyle = '#c8901a'; g.fillRect(4, 18, 10, 3);            // verktøy
-  if (skjold > 0) { g.strokeStyle = 'rgba(79,140,255,.5)'; g.lineWidth = 2; g.beginPath(); g.ellipse(0, 22, 20, 28, 0, 0, Math.PI * 2); g.stroke(); }
+  let s = SPR.sta();
+  if (!sp.paaBakke) s = SPR.hopp();
+  else if (Math.abs(sp.vx) > 20) s = Math.floor(sp.steg / 2) % 2 ? SPR.lop1() : SPR.lop2();
+  const x = px(sp.x + sp.w / 2) - kx - 6, y = px(sp.y + sp.h) - 18;
+  g.save();
+  if (sp.retning < 0) { g.translate(x + 12, y); g.scale(-1, 1); g.drawImage(s, 0, 0); }
+  else g.drawImage(s, x, y);
   g.restore();
+  if (skjold > 0 && Math.floor(tid * 4) % 2 === 0) {
+    g.fillStyle = 'rgba(120,180,255,.55)';
+    for (let a = 0; a < 16; a++) { const v = a / 16 * Math.PI * 2; g.fillRect(x + 6 + Math.round(Math.cos(v) * 9), y + 9 + Math.round(Math.sin(v) * 11), 1, 1); }
+  }
 }
 
 function tegn() {
   const tm = bane.tema;
-  const grd = g.createLinearGradient(0, 0, 0, VH);
-  grd.addColorStop(0, tm.himmel[0]); grd.addColorStop(1, tm.himmel[1]);
-  g.fillStyle = grd; g.fillRect(0, 0, VW, VH);
+  const W = c.width, H = PH;
+  kx = Math.round(kamX / S);
 
-  // Bakgrunn med parallakse
-  g.fillStyle = tm.bygg;
-  for (let i = -1; i < 14; i++) {
-    const bx = i * 120 - (kamX * 0.3) % 120, h = 120 + ((i + Math.floor(kamX * 0.3 / 120)) * 37 % 5) * 30;
-    g.fillRect(bx, VH - 120 - h, 90, h + 120);
+  // Himmel i bånd (retro uten gradient)
+  const band = 6;
+  for (let i = 0; i < band; i++) {
+    const t = i / (band - 1);
+    rekt(0, Math.floor(i * H / band), W, Math.ceil(H / band) + 1, blandFarge(tm.himmel[0], tm.himmel[1], t));
   }
-  g.fillStyle = 'rgba(255,255,255,0.04)';
-  for (let i = -1; i < 26; i++) g.fillRect(i * 40 - (kamX * 0.6) % 40, 60, 2, VH);
+  // Bygninger med vinduer (parallakse)
+  const bx0 = Math.floor(kx * 0.3);
+  for (let i = -1; i < W / 40 + 2; i++) {
+    const id = i + Math.floor(bx0 / 40);
+    const bh = 40 + (hash(id, 7) % 5) * 12, bx = i * 40 - (bx0 % 40);
+    rekt(bx, H - 40 - bh, 30, bh + 40, tm.bygg);
+    for (let wy = H - 36 - bh; wy < H - 50; wy += 6) for (let wx = bx + 3; wx < bx + 27; wx += 5)
+      if (hash(id * 31 + wx, wy) % 5 === 0) rekt(wx, wy, 2, 2, '#f2c23c55');
+  }
 
-  g.save(); g.translate(-Math.round(kamX), 0);
-  const fra = Math.max(0, Math.floor(kamX / T) - 1), til = Math.min(bane.B, fra + VW / T + 3);
+  const fra = Math.max(0, Math.floor(kamX / T) - 1), til = Math.min(bane.B, fra + Math.ceil(W * S / T) + 3);
 
-  // Bakke og blokker
+  // Bakke og blokker (16×16 ruter med tekstur)
   for (let x = fra; x < til; x++) for (let y = 0; y < RADER; y++) {
     if (!bane.fast[x][y]) continue;
+    const X = x * 16 - kx, Y = y * 16;
     const toppFri = y === 0 || !bane.fast[x][y - 1];
-    g.fillStyle = tm.bakke; g.fillRect(x * T, y * T, T, T);
+    rekt(X, Y, 16, 16, tm.bakke);
+    const h = hash(x, y);
+    rekt(X + (h % 12) + 1, Y + ((h >> 4) % 10) + 4, 2, 1, tm.topp);
+    rekt(X + ((h >> 8) % 12) + 2, Y + ((h >> 12) % 8) + 6, 1, 1, '#00000033');
+    rekt(X, Y + 15, 16, 1, '#00000033'); rekt(X + 15, Y, 1, 16, '#00000022');
     if (toppFri) {
-      g.fillStyle = tm.topp; g.fillRect(x * T, y * T, T, 6);
-      if (y < BAKKE) { g.fillStyle = '#f2c23c'; for (let s = 0; s < 4; s++) if ((s + x) % 2 === 0) g.fillRect(x * T + s * 10, y * T, 10, 4); }
+      rekt(X, Y, 16, 2, tm.topp); rekt(X, Y, 16, 1, '#ffffff22');
+      if (y < BAKKE) for (let s = 0; s < 4; s++) rekt(X + s * 4, Y, 2, 2, (s + x) % 2 ? '#ffcd3c' : '#1a1c2c');
     }
-    g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 1; g.strokeRect(x * T + .5, y * T + .5, T - 1, T - 1);
   }
 
   // Mynter
   for (const m of bane.mynter) {
-    if (m.tatt || m.x < kamX - 40 || m.x > kamX + VW + 40) continue;
-    const s = Math.abs(Math.cos(tid * 3 + m.x * 0.01));
-    g.fillStyle = '#e08a4c'; g.beginPath(); g.ellipse(m.x, m.y, 10 * s + 2, 11, 0, 0, Math.PI * 2); g.fill();
-    if (s > 0.5) { g.fillStyle = '#5a2c0e'; g.font = 'bold 9px system-ui'; g.textAlign = 'center'; g.fillText('Cu', m.x, m.y + 3); }
+    if (m.tatt) continue;
+    const X = px(m.x) - kx; if (X < -8 || X > W + 8) continue;
+    const f = Math.floor(tid * 6 + m.x * 0.02) % 4;
+    const s = f === 0 ? SPR.mynt0() : f === 2 ? SPR.mynt2() : SPR.mynt1();
+    g.drawImage(s, X - Math.floor(s.width / 2), px(m.y) - 3 + (Math.floor(tid * 3 + m.x) % 2));
   }
 
   // Farer
   for (const f of bane.farer) {
-    if (f.x > kamX + VW + 50 || f.x + f.w < kamX - 50) continue;
+    const X = px(f.x) - kx, Y = px(f.y), Wd = px(f.w);
+    if (X > W + 20 || X + Wd < -20) continue;
     if (f.type === 'kabel') {
-      const glod = g.createRadialGradient(f.x + f.w / 2, f.y + 6, 2, f.x + f.w / 2, f.y + 6, f.w);
-      glod.addColorStop(0, 'rgba(120,200,255,.45)'); glod.addColorStop(1, 'rgba(120,200,255,0)');
-      g.fillStyle = glod; g.fillRect(f.x - f.w / 2, f.y - f.w / 2, f.w * 2, f.w);
-      g.fillStyle = '#111'; g.fillRect(f.x - 8, f.y + 3, f.w + 16, 9);
-      g.fillStyle = '#c4672a'; g.fillRect(f.x + f.w / 2 - 8, f.y + 1, 16, 12);
-      g.fillStyle = '#f2c23c'; g.beginPath(); g.moveTo(f.x + f.w / 2, f.y - 38); g.lineTo(f.x + f.w / 2 + 13, f.y - 16); g.lineTo(f.x + f.w / 2 - 13, f.y - 16); g.closePath(); g.fill();
-      g.fillStyle = '#111'; g.font = 'bold 13px system-ui'; g.textAlign = 'center'; g.fillText('⚡', f.x + f.w / 2, f.y - 20);
-      g.fillStyle = '#6b7385'; g.fillRect(f.x + f.w / 2 - 1, f.y - 16, 2, 16);
-      for (let i = 0; i < 3; i++) tegnLyn(f.x + Math.random() * f.w, f.y + 6, f.x + Math.random() * f.w, f.y - 14 - Math.random() * 10, 4, 2, '#9fd8ff');
+      const gy = BAKKE * 16;
+      rekt(X - 3, gy - 3, Wd + 6, 2, '#1a1c2c');
+      rekt(X + Math.floor(Wd / 2) - 2, gy - 4, 4, 4, '#a35a2a');
+      // varselskilt
+      const sx = X + Math.floor(Wd / 2), sy = gy - 16;
+      rekt(sx, sy + 6, 1, 7, '#8a90a0');
+      for (let r = 0; r < 6; r++) rekt(sx - r, sy + r, r * 2 + 1, 1, '#ffcd3c');
+      rekt(sx, sy + 2, 1, 2, '#1a1c2c'); rekt(sx, sy + 5, 1, 1, '#1a1c2c');
+      if (Math.random() < 0.8) pixelLyn(X + Math.random() * Wd, gy - 3, X + Math.random() * Wd, gy - 9 - Math.random() * 4, '#9fe8ff');
     } else if (f.type === 'vann') {
-      g.fillStyle = 'rgba(70,140,230,.75)'; g.fillRect(f.x, f.y, f.w, f.h);
-      g.fillStyle = '#1c1c1c'; g.fillRect(f.x + f.w * 0.3, f.y - 20, 4, 24);
-      if (Math.random() < 0.6) tegnLyn(f.x + Math.random() * f.w, f.y + 4, f.x + Math.random() * f.w, f.y + 2, 5, 1.5, '#d8f1ff');
+      rekt(X, Y, Wd, 4, '#3b5dc9'); rekt(X, Y, Wd, 1, '#73eff7');
+      for (let i = 0; i < Wd; i += 6) rekt(X + ((i + Math.floor(tid * 8)) % Wd), Y + 2, 2, 1, '#73eff7');
+      rekt(X + Math.floor(Wd * 0.3), Y - 8, 2, 9, '#1a1c2c');
+      if (Math.random() < 0.6) pixelLyn(X + Math.random() * Wd, Y + 1, X + Math.random() * Wd, Y + 1, '#ffffff');
     } else if (f.type === 'boks') {
-      g.fillStyle = '#6b7385'; g.fillRect(f.x - 6, f.y, f.w + 12, T - 6);
-      g.fillStyle = f.paa ? '#ff5a4a' : '#3bd16f'; g.fillRect(f.x + f.w / 2 - 4, f.y + 8, 8, 8);
-      g.fillStyle = '#f2c23c'; g.font = 'bold 14px system-ui'; g.textAlign = 'center'; g.fillText('⚡', f.x + f.w / 2, f.y + 30);
-      const ttl = (f.periode - ((tid + f.fase) % f.periode));
-      if (f.paa) for (let i = 0; i < 3; i++) tegnLyn(f.x + f.w / 2, f.y + T - 6, f.x + 4 + Math.random() * (f.w - 8), f.y + f.h, 7, 2.5, i ? '#9fd8ff' : '#ffffff');
-      else if (ttl < 0.5) { g.fillStyle = 'rgba(255,220,120,.35)'; g.fillRect(f.x + 4, f.y + T, f.w - 8, f.h - T); }
+      rekt(X + Math.floor(Wd / 2), 0, 1, Y, '#1a1c2c');
+      rekt(X - 3, Y, Wd + 6, 14, '#566c86'); rekt(X - 3, Y, Wd + 6, 1, '#94b0c2'); rekt(X - 3, Y + 13, Wd + 6, 1, '#333c57');
+      rekt(X + Math.floor(Wd / 2) - 1, Y + 3, 3, 3, f.paa ? '#ff3b3b' : '#38b764');
+      rekt(X + Math.floor(Wd / 2) - 1, Y + 8, 3, 1, '#ffcd3c');
+      const igjen = f.periode - ((tid + f.fase) % f.periode);
+      if (f.paa) for (let i = 0; i < 3; i++) pixelLyn(X + Math.floor(Wd / 2), Y + 14, X + 2 + Math.random() * (Wd - 4), px(f.y + f.h), i ? '#9fe8ff' : '#ffffff');
+      else if (igjen < 0.5 && Math.floor(tid * 10) % 2) rekt(X + Math.floor(Wd / 2), Y + 14, 1, px(f.h) - 14, '#ffcd3c88');
     }
   }
 
-  // Gnister (fiender)
+  // Gnister
   for (const e of bane.fiender) {
-    if (e.x > kamX + VW + 40 || e.x < kamX - 40) continue;
-    const cx = e.x + e.w / 2, cy = e.y + e.h / 2 + Math.sin(tid * 6 + e.fase) * 3;
-    const r = g.createRadialGradient(cx, cy, 2, cx, cy, 18);
-    r.addColorStop(0, '#ffffff'); r.addColorStop(0.4, '#9fd8ff'); r.addColorStop(1, 'rgba(80,160,255,0)');
-    g.fillStyle = r; g.beginPath(); g.arc(cx, cy, 18, 0, Math.PI * 2); g.fill();
-    for (let i = 0; i < 3; i++) { const a = Math.random() * 6.3; tegnLyn(cx, cy, cx + Math.cos(a) * 20, cy + Math.sin(a) * 20, 3, 1.5, '#d8f1ff'); }
+    const cx = px(e.x + e.w / 2) - kx, cy = px(e.y + e.h / 2) + Math.round(Math.sin(tid * 6 + e.fase) * 1.5);
+    if (cx < -10 || cx > W + 10) continue;
+    rekt(cx - 3, cy - 3, 7, 7, '#41a6f6'); rekt(cx - 2, cy - 2, 5, 5, '#9fe8ff'); rekt(cx - 1, cy - 1, 3, 3, '#ffffff');
+    for (let i = 0; i < 2; i++) { const a = Math.random() * 6.3; pixelLyn(cx, cy, cx + Math.round(Math.cos(a) * 7), cy + Math.round(Math.sin(a) * 7), '#ffffff'); }
+    rekt(cx - 1 + (e.vx > 0 ? 1 : -1), cy - 1, 1, 1, '#1a1c2c');
   }
 
   // Fagbokser
   for (const b of bane.bokser) {
-    g.fillStyle = b.brukt ? '#3a4458' : '#f2c23c'; g.fillRect(b.x, b.y + Math.sin(tid * 3) * (b.brukt ? 0 : 3), b.w, b.h);
-    g.fillStyle = b.brukt ? '#58627a' : '#3a2a05'; g.font = 'bold 22px system-ui'; g.textAlign = 'center';
-    g.fillText(b.brukt ? '✓' : '?', b.x + b.w / 2, b.y + b.h / 2 + 8 + Math.sin(tid * 3) * (b.brukt ? 0 : 3));
+    const X = px(b.x) - kx, Y = px(b.y) + (b.brukt ? 0 : Math.round(Math.sin(tid * 3)));
+    rekt(X, Y, 13, 13, b.brukt ? '#566c86' : '#ffcd3c'); rekt(X, Y, 13, 1, b.brukt ? '#94b0c2' : '#fff1a8');
+    rekt(X, Y + 12, 13, 1, b.brukt ? '#333c57' : '#c98a1c');
+    const ink = b.brukt ? '#94b0c2' : '#5d3a0c';
+    if (b.brukt) { rekt(X + 4, Y + 7, 1, 1, ink); rekt(X + 5, Y + 8, 1, 1, ink); rekt(X + 6, Y + 7, 1, 1, ink); rekt(X + 7, Y + 6, 1, 1, ink); rekt(X + 8, Y + 5, 1, 1, ink); }
+    else { rekt(X + 5, Y + 3, 3, 1, ink); rekt(X + 8, Y + 4, 1, 2, ink); rekt(X + 6, Y + 6, 2, 1, ink); rekt(X + 6, Y + 7, 1, 1, ink); rekt(X + 6, Y + 9, 1, 1, ink); }
   }
 
   // Mål: sikringsskap
-  const m = bane.maal;
-  g.fillStyle = '#d6dbe4'; g.fillRect(m.x, m.y, m.w, m.h);
-  g.fillStyle = '#9aa3b3'; g.fillRect(m.x + 4, m.y + 4, m.w - 8, m.h - 8);
-  for (let i = 0; i < 5; i++) { g.fillStyle = '#2b3550'; g.fillRect(m.x + 8 + i * 8, m.y + 14, 6, 14); g.fillRect(m.x + 8 + i * 8, m.y + 40, 6, 14); }
-  g.fillStyle = Math.floor(tid * 2) % 2 ? '#34c46e' : '#1a6b3c'; g.fillRect(m.x + m.w / 2 - 4, m.y - 10, 8, 8);
-  g.fillStyle = '#ffffff'; g.font = 'bold 12px system-ui'; g.textAlign = 'center'; g.fillText('MÅL', m.x + m.w / 2, m.y - 16);
+  const m = bane.maal, MX = px(m.x) - kx, MY = px(m.y), MW = px(m.w), MH = px(m.h);
+  rekt(MX, MY, MW, MH, '#c2c3c7'); rekt(MX + 1, MY + 1, MW - 2, MH - 2, '#8b9bb4');
+  for (let i = 0; i < 5; i++) { rekt(MX + 3 + i * 4, MY + 5, 2, 6, '#1a1c2c'); rekt(MX + 3 + i * 4, MY + 16, 2, 6, '#1a1c2c'); rekt(MX + 3 + i * 4, MY + 5, 2, 1, '#ffffff'); }
+  rekt(MX + MW - 4, MY + MH / 2 - 2, 2, 4, '#ffcd3c');
+  if (Math.floor(tid * 3) % 2) { const ax = MX + Math.floor(MW / 2); for (let r = 0; r < 4; r++) rekt(ax - 3 + r, MY - 10 + r, 7 - r * 2, 1, '#38b764'); }
 
-  tegnMontor(sp.x, sp.y);
-  g.restore();
+  tegnMontor();
 
   // Fremdrift
-  const p = Math.min(1, sp.x / bane.maal.x);
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(VW / 2 - 120, VH - 14, 240, 6);
-  g.fillStyle = '#4f8cff'; g.fillRect(VW / 2 - 120, VH - 14, 240 * p, 6);
+  const p = Math.min(1, sp.x / bane.maal.x), bw = 80, bx = Math.floor(W / 2 - bw / 2);
+  rekt(bx - 1, H - 7, bw + 2, 4, '#1a1c2c'); rekt(bx, H - 6, Math.round(bw * p), 2, '#41a6f6');
+}
+
+function blandFarge(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const k = (sh) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  return 'rgb(' + k(16) + ',' + k(8) + ',' + k(0) + ')';
 }
 
 // ── Fagboks ─────────────────────────────────────────────────────────
@@ -703,7 +779,7 @@ function lokke(n) {
     for (let i = 0; i < steg && tilstand === 'spill'; i++) oppdater(dt / steg);
   }
   if (bane) tegn();
-  else { g.fillStyle = '#10192b'; g.fillRect(0, 0, VW, VH); }
+  else { g.fillStyle = '#10192b'; g.fillRect(0, 0, c.width, c.height); }
   requestAnimationFrame(lokke);
 }
 bane = lagBane(lagret.niva);
