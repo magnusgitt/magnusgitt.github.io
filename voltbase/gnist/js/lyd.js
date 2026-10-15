@@ -63,6 +63,16 @@ function lyd(n) {
     case 'gjenoppstaa': tone(260, 780, .5, 'sine', .035); tone(390, 1170, .5, 'sine', .02, .08); break;
     case 'bue': sus(.25, 7000, 2500, .05, 0, 'highpass'); break;
     case 'bossdod': [200, 150, 100, 60].forEach((f, i) => tone(f, f / 2, .6, 'sawtooth', .06, i * .22)); sus(1.6, 4000, 60, .12); break;
+    case 'krok': tone(1500, 700, .08, 'square', .02); sus(.12, 4000, 1500, .05, 0, 'bandpass'); tone(260, 180, .12, 'triangle', .04, .06); break;
+    case 'slipp': sus(.1, 2500, 800, .035); break;
+    case 'plask': sus(.35, 1800, 200, .1); tone(900, 200, .25, 'sawtooth', .03); break;
+    case 'relelad': tone(200, 700, .7, 'square', .012); break;
+    case 'releskudd': tone(1200, 400, .12, 'square', .02); sus(.08, 6000, 2000, .03, 0, 'highpass'); break;
+    case 'brol2': tone(90, 45, 1.2, 'square', .05); sus(1.1, 6000, 400, .08, 0, 'bandpass'); tone(180, 60, .9, 'sawtooth', .03, .15); break;
+    case 'golvvarsel': [0, .3, .6, .9].forEach(d => tone(1000, 1000, .1, 'square', .016, d)); break;
+    case 'golv': sus(.7, 7000, 1500, .1, 0, 'highpass'); tone(100, 100, .8, 'sawtooth', .05); break;
+    case 'utmattet': tone(400, 90, .9, 'triangle', .05); break;
+    case 'b2treff': sus(.12, 2000, 300, .12); tone(600, 120, .5, 'square', .04); tone(150, 40, .8, 'sawtooth', .05, .08); break;
     case 'slutt': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 1.6, 'triangle', .04, i * .16)); break;
   }
 }

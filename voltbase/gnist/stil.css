@@ -41,6 +41,8 @@ button { font-family:inherit; touch-action:manipulation; }
 #boss .navn { font-size:20px; letter-spacing:.06em; color:#f3d9ff; text-shadow:0 0 14px rgba(200,140,255,.8); }
 #boss .sik { display:flex; gap:8px; justify-content:center; margin-top:3px; }
 #boss .sik i { width:26px; height:8px; border-radius:4px; background:#c58cff; box-shadow:0 0 10px #b070ff; transition:all .4s; }
+#boss.b2 .navn { color:#d9f6ff; text-shadow:0 0 14px rgba(120,220,255,.8); }
+#boss.b2 .sik i { background:#7fe0ff; box-shadow:0 0 10px #40c0ff; }
 #boss .sik i.av { background:rgba(255,255,255,.12); box-shadow:none; }
 
 #hint { position:fixed; left:50%; top:24%; transform:translateX(-50%); width:min(92vw,560px); text-align:center;
@@ -75,9 +77,12 @@ button { font-family:inherit; touch-action:manipulation; }
 #tStot { width:72px; height:72px; margin-bottom:36px; border-color:rgba(255,197,107,.55); color:var(--varm); }
 #tStot.brukt { opacity:.4; }
 #tStot.skjult { display:none; }
+#tKrok { width:72px; height:72px; margin-bottom:12px; border-color:rgba(143,227,255,.55); color:#bfefff; }
+#tKrok.skjult { display:none; }
+#tKrok.klar { background:rgba(143,227,255,.2); box-shadow:0 0 16px rgba(143,227,255,.45); }
 @media (max-width:520px) {
   .hoyreKnapper { flex-direction:column; align-items:center; gap:14px; }
-  #tStot { margin-bottom:0; }
+  #tStot, #tKrok { margin-bottom:0; }
   #boss { top:calc(100px + env(safe-area-inset-top)); }
   .touch #toast { top:calc(152px + env(safe-area-inset-top)); }
 }

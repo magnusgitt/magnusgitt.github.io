@@ -10,7 +10,7 @@ function synlig(x, y, m) { const vw = cssW / skala, vh = cssH / skala; return x 
 
 function tegnBakgrunn(kx, ky) {
   const cw = cv.width, ch = cv.height;
-  const maxY = Math.max(1, MH * T - cssH / skala), t = clamp(ky / maxY, 0, 1);
+  const maxY = Math.max(1, 34 * T - cssH / skala), t = clamp(ky / maxY, 0, 1);
   const hk = Math.max(cw / LW, ch / LH) * 1.08;
   ctx.drawImage(BG.himmel, (cw - LW * hk) / 2 - (kx / (MW * T)) * LW * hk * .04, -(LH * hk - ch) * (.25 + t * .5), LW * hk, LH * hk);
   // skyer som driver sakte
@@ -87,11 +87,15 @@ function tegnFunn(f) {
   ctx.save(); ctx.translate(X, Y); ctx.fillStyle = '#ffd36b';
   if (f.id === 'dobbel') { ctx.beginPath(); ctx.moveTo(-5, -7); ctx.lineTo(-1, -7); ctx.lineTo(-1, 2); ctx.lineTo(6, 3); ctx.lineTo(6, 7); ctx.lineTo(-5, 7); ctx.closePath(); ctx.fill(); }
   else if (f.id === 'hansker') { rr(ctx, -5, -4, 10, 11, 3); ctx.fill(); for (let i = 0; i < 3; i++) { rr(ctx, -5 + i * 3.4, -9, 2.6, 7, 1.3); ctx.fill(); } rr(ctx, 4, -2, 5, 2.6, 1.3); ctx.fill(); }
-  else if (f.id === 'liv') { ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(0, 7); ctx.bezierCurveTo(-9, 1, -7, -8, 0, -3); ctx.bezierCurveTo(7, -8, 9, 1, 0, 7); ctx.fill(); }
+  else if (f.id === 'krok') { ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(-1, -2, 5, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, -2); ctx.quadraticCurveTo(9, 4, 2, 8); ctx.stroke(); ctx.fillRect(-2, -3, 2, 2); }
+  else if (f.id === 'liv' || f.id === 'liv2') { ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(0, 7); ctx.bezierCurveTo(-9, 1, -7, -8, 0, -3); ctx.bezierCurveTo(7, -8, 9, 1, 0, 7); ctx.fill(); }
   else { ctx.beginPath(); ctx.moveTo(2, -9); ctx.lineTo(-5, 1); ctx.lineTo(0, 1); ctx.lineTo(-2, 9); ctx.lineTo(5, -2); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill(); }
   ctx.restore();
 }
 function tegnFiende(e) {
+  if (e.type === 'sveve') return tegnSveve(e);
+  if (e.type === 'rele') return tegnRele(e);
   const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t;
   ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir, 1);
   ctx.strokeStyle = '#0b0f18'; ctx.lineWidth = 1.6;
@@ -100,6 +104,29 @@ function tegnFiende(e) {
   ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, -7, 11, 7, 0, Math.PI, 0); ctx.lineTo(11, -4); ctx.lineTo(-11, -4); ctx.closePath(); ctx.fill();
   ctx.fillStyle = 'rgba(140,230,255,.9)'; ctx.beginPath(); ctx.arc(8, -7, 1.6, 0, 7); ctx.fill();
   ctx.strokeStyle = 'rgba(160,240,255,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-6, -12); ctx.lineTo(-3, -9); ctx.lineTo(0, -13); ctx.lineTo(3, -9); ctx.lineTo(6, -12); ctx.stroke();
+  ctx.restore();
+}
+// svevegnist: en liten flygende isolator med summende vinger
+function tegnSveve(e) {
+  const X = e.x + e.w / 2, Y = e.y + e.h / 2, t = e.t;
+  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir, 1);
+  ctx.fillStyle = 'rgba(170,230,255,.35)'; const v = Math.sin(t * 40) * 3;
+  ctx.beginPath(); ctx.ellipse(-3, -7 + v * .3, 8, 3 + v * .5, -.4, 0, 7); ctx.ellipse(4, -7 - v * .3, 8, 3 - v * .4, .4, 0, 7); ctx.fill();
+  const gr = ctx.createLinearGradient(0, -8, 0, 8); gr.addColorStop(0, '#3b4b68'); gr.addColorStop(1, '#151b2a');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, 9, 7, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#c9a23a'; ctx.fillRect(-6, 4, 12, 2.5);
+  ctx.fillStyle = 'rgba(160,240,255,.95)'; ctx.beginPath(); ctx.arc(5, -1, 2, 0, 7); ctx.fill();
+  ctx.restore();
+}
+// releet står på gulvet og blinker mens det lader
+function tegnRele(e) {
+  const X = e.x + e.w / 2, Y = e.y + e.h;
+  ctx.save(); ctx.translate(X, Y);
+  ctx.fillStyle = '#2a3245'; rr(ctx, -11, -20, 22, 20, 3); ctx.fill(); ctx.strokeStyle = '#4a5574'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#b8641f'; for (let k = 0; k < 3; k++) ctx.fillRect(-7, -16 + k * 4, 14, 2.2);
+  const lad = e.lad > 0 && Math.sin(S.t * (14 + e.lad * 30)) > 0;
+  ctx.fillStyle = lad ? '#ffffff' : '#7fe6ff'; ctx.beginPath(); ctx.arc(e.dir * 8, -9, 2.6, 0, 7); ctx.fill();
+  ctx.fillStyle = '#151a26'; ctx.fillRect(-12, -2, 24, 2);
   ctx.restore();
 }
 function tegnKran() {
@@ -147,6 +174,7 @@ function figur(lean, pose) {
 function poseFor(p) {
   const fart = Math.min(1, Math.abs(p.vx) / RUN), ph = p.anim;
   if (p.dashT > 0) return { b1: [-.9, .5], b2: [-.4, 1.1], a1: [-1.3, .3], a2: [-1.6, .2], bob: 0, hode: 0 };
+  if (p.krok) { const sv = Math.sin(S.t * 6) * .15; return { b1: [-.3 + sv, .6], b2: [.25 - sv, .8], a1: [3.0, .1], a2: [2.9, .15], bob: 0, hode: 0 }; }
   if (!p.onGround) {
     if (p.vy < -80) return { b1: [-.35, 1.0], b2: [.75, 1.4], a1: [-2.5, .5], a2: [2.3, .4], bob: 0, hode: -.5 };
     const fl = Math.sin(S.t * 18) * .18;
@@ -197,6 +225,67 @@ function tegnBoss() {
   else for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 6, -10); ctx.lineTo(s * 18, -14 - raseri); ctx.lineTo(s * 17, -9); ctx.closePath(); ctx.fill(); }
   ctx.restore(); ctx.globalAlpha = 1; ctx.lineCap = 'butt';
 }
+function tegnBoss2() {
+  if (!B2.aktiv) return;
+  const X = B2.x, Y = B2.y, a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1, rs = 3 - B2.hp, ned = B2.ned > 0;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(X + (B2.fase === 'dod' ? (Math.random() - .5) * 8 : 0), Y);
+  // kablene den henger i
+  ctx.strokeStyle = '#0c1018'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 14, -18); ctx.bezierCurveTo(s * 20, -60, s * 10, -120, s * 26, -(Y - 43 * T)); ctx.stroke(); }
+  // armene: avisolerte ledere som gnistrer
+  for (const s of [-1, 1]) { const vift = Math.sin(B2.t * 3 + s) * .3 + (ned ? .9 : 0);
+    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(s * 18, 0); ctx.quadraticCurveTo(s * 34, 10 + vift * 10, s * 30, 30 + vift * 8); ctx.stroke();
+    ctx.strokeStyle = '#d68a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s * 30, 30 + vift * 8); ctx.lineTo(s * 33, 38 + vift * 8); ctx.stroke(); }
+  const flimmer = B2.stun > 0 && Math.sin(S.t * 40) > 0;
+  const gr = ctx.createLinearGradient(0, -22, 0, 22); gr.addColorStop(0, flimmer ? '#e6fbff' : rs === 2 ? '#2f4a5a' : '#2a3a52'); gr.addColorStop(1, flimmer ? '#9fdcff' : '#121a28');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(0, -26); ctx.lineTo(22, -10); ctx.lineTo(18, 18); ctx.lineTo(0, 26); ctx.lineTo(-18, 18); ctx.lineTo(-22, -10); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#5a7090'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#c9a23a'; for (let i = -1; i <= 1; i++) ctx.fillRect(i * 9 - 2, -30, 4, 6);
+  // kjernen: to elektroder som slår over i hverandre
+  const puls = .7 + .3 * Math.sin(S.t * 9);
+  const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, 15); cg.addColorStop(0, '#ffffff'); cg.addColorStop(.45, ned ? 'rgba(255,190,90,.9)' : `rgba(120,230,255,${puls})`); cg.addColorStop(1, 'rgba(60,160,255,0)');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, 15, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e6faff';
+  if (ned || B2.stun > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 7, -12); ctx.lineTo(s * 12, -7); ctx.moveTo(s * 12, -12); ctx.lineTo(s * 7, -7); ctx.stroke(); } }
+  else for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 4, -8); ctx.lineTo(s * 14, -12 - rs); ctx.lineTo(s * 13, -7); ctx.closePath(); ctx.fill(); }
+  ctx.restore(); ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+}
+function tegnDor(kol, y0, y1) { const X = kol * T, Y0 = y0 * T, Y1 = (y1 + 1) * T; if (!synlig(X, Y0, 200)) return;
+  ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 2, Y0 - 8, T + 4, 9);
+  if (tile(kol, y0) !== DOOR) return;
+  const gr = ctx.createLinearGradient(X, 0, X + T, 0); gr.addColorStop(0, '#2b3044'); gr.addColorStop(.5, '#424a64'); gr.addColorStop(1, '#22263a');
+  ctx.fillStyle = gr; ctx.fillRect(X + 2, Y0, T - 4, Y1 - Y0); ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let y = Y0 + 8; y < Y1; y += 12) ctx.fillRect(X + 2, y, T - 4, 2);
+  ctx.fillStyle = 'rgba(255,120,60,.8)'; ctx.fillRect(X + T / 2 - 1.5, Y0, 3, Y1 - Y0); }
+function tegnLuke() { const X = 125 * T, Y = 19 * T, W = 4 * T; if (!synlig(X, Y, 200)) return;
+  if (tile(125, 19) === LUKE) { const gr = ctx.createLinearGradient(0, Y, 0, Y + T); gr.addColorStop(0, '#59647f'); gr.addColorStop(1, '#2a3042');
+    ctx.fillStyle = gr; ctx.fillRect(X, Y, W, T); ctx.fillStyle = 'rgba(0,0,0,.4)'; for (let i = 1; i < 4; i++) ctx.fillRect(X + i * T - 1, Y + 3, 2, T - 6);
+    ctx.fillStyle = 'rgba(240,195,60,.5)'; for (let i = 0; i < 8; i++) ctx.fillRect(X + 4 + i * 16, Y + 2, 8, 3);
+    ctx.fillStyle = '#c9ced8'; ctx.fillRect(X + W / 2 - 8, Y + T / 2 - 2, 16, 4); }
+  else { ctx.fillStyle = '#0d1216'; ctx.fillRect(X, Y, W, T); ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 6, Y, 6, T); ctx.fillRect(X + W, Y, 6, T);
+    ctx.save(); ctx.translate(X + W + 6, Y); ctx.rotate(-1.25); ctx.fillStyle = '#4a5470'; ctx.fillRect(0, -6, W * .55, 6); ctx.restore(); } }
+function tegnKroker() {
+  for (const k of KROKER) { const X = k[0] * T + T / 2, Y = k[1] * T; if (!synlig(X, Y, 80)) continue;
+    let top = k[1] - 1; while (top > 0 && !fast(k[0], top)) top--; const Y0 = (top + 1) * T;
+    ctx.strokeStyle = '#3a4558'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, Y0); ctx.lineTo(X, Y - 6); ctx.stroke();
+    ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 7, Y0 - 1, 14, 4);
+    const maal = S.krokMaal === k, i = P.krok && P.krok.k === k;
+    ctx.strokeStyle = maal || i ? '#bff4ff' : '#9aa3b5'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(X, Y, 5.5, 0, 7); ctx.stroke(); }
+  if (P.krok && S.dod <= 0) { const hx = P.x + P.w / 2 + P.face * 2, hy = P.y + 4;
+    ctx.strokeStyle = '#1b1f28'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(P.krok.x, P.krok.y); ctx.stroke();
+    ctx.strokeStyle = '#e07a22'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(P.krok.x, P.krok.y); ctx.stroke(); }
+}
+// strømførende vann (VANN) og vannet i koblingsrommet (BVANN), som bare er farlig når bossen setter strøm på
+function tegnVann() {
+  for (const [x, y] of vannListe) { const X = x * T, Y = y * T; if (!synlig(X, Y, T)) continue;
+    if (tile(x, y) === VANN) { const b = Math.sin(S.t * 2.2 + x * .9) * 2;
+      const gr = ctx.createLinearGradient(0, Y + 8, 0, Y + T); gr.addColorStop(0, 'rgba(70,170,210,.75)'); gr.addColorStop(1, 'rgba(10,40,70,.9)');
+      ctx.fillStyle = gr; ctx.fillRect(X - .5, Y + 9 + b, T + 1, T - 9 - b);
+      ctx.fillStyle = 'rgba(190,240,255,.55)'; ctx.fillRect(X - .5, Y + 9 + b, T + 1, 1.5); }
+    else { const fa = B2.aktiv ? B2.golv : 0, Yf = Y - 4;
+      ctx.fillStyle = fa === 2 ? 'rgba(120,220,255,.75)' : fa === 1 ? `rgba(240,200,80,${.45 + .3 * Math.sin(S.t * 18)})` : 'rgba(60,130,170,.55)';
+      ctx.fillRect(X - .5, Yf + Math.sin(S.t * 2 + x) * 1, T + 1, 6);
+      ctx.fillStyle = 'rgba(200,240,255,.4)'; ctx.fillRect(X - .5, Yf + Math.sin(S.t * 2 + x), T + 1, 1); } }
+}
 function tegnDynamiskeFliser() {
   for (const [x, y] of hazListe) { const X = x * T, Y = y * T; if (!synlig(X, Y, T)) continue;
     ctx.fillStyle = 'rgba(240,195,60,.55)'; for (let i = 0; i < 4; i++) ctx.fillRect(X + i * 8 + 1, Y + T - 2, 4, 2);
@@ -222,13 +311,18 @@ function samleLys() {
   if (S.dod <= 0) { L(P.x + P.w / 2 + P.face * 8, P.y + 2, 220, .95); L(GN.x, GN.y, 130 + GN.flare * 80, .8); }
   SJEKK.forEach((c, i) => { const X = c.x * T + T / 2, Y = (c.y + 1) * T - 30; if (synlig(X, Y, 250)) L(X, Y, S.cpLit.has(i) ? 230 : 60, S.cpLit.has(i) ? .95 : .4); });
   ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const X = x * T + T / 2, Y = y * T + T / 2; if (synlig(X, Y, 60)) L(X, Y, 55, .6); });
-  for (const f of FUNN) if (!S.ev[f.id] && !(f.boss && !S.bossDone)) { const X = f.x * T + T / 2, Y = f.y * T + T / 2; if (synlig(X, Y, 200)) L(X, Y, 170, .9); }
+  for (const f of FUNN) if (funnSynlig(f)) { const X = f.x * T + T / 2, Y = f.y * T + T / 2; if (synlig(X, Y, 200)) L(X, Y, 170, .9); }
   for (const [x, y] of hazListe) { const X = x * T + T / 2, Y = y * T + T - 10; if (synlig(X, Y, 80)) L(X, Y, 70 * (.6 + .4 * Math.sin(S.t * 30 + x * 3)), .6); }
   for (const kol of [73, 101]) { const t0 = tile(kol, 13); if (t0 === AIR) continue; L(kol * T + T / 2, 16 * T, t0 === DOOR ? 120 : 170, t0 === DOOR ? .5 : (S.ev.hansker ? .5 : .8)); }
   if (B.aktiv || !S.bossDone) BRYTERE.forEach(b => { if (synlig(b.x * T, b.y * T, 100)) L(b.x * T + T / 2, b.y * T + 6, b.av ? 60 : 90, .7); });
   if (synlig(TAVLE.x * T, TAVLE.y * T, 400)) L(TAVLE.x * T + T, TAVLE.y * T + 20, (S.ending > 0 || S.ferdig) ? 380 : 110, .9);
   if (B.aktiv) { const a = B.fase === 'dod' ? clamp(B.dod / 2.4, 0, 1) : 1; L(B.x, B.y, 300 + B.lad * 60, .9 * a); }
   for (const q of prosj) L(q.x, q.y, 70, .7);
+  for (const q of bolter) L(q.x, q.y, 70, .7);
+  for (const q of sveip) L(q.varsel > 0 ? q.x : q.x, (ARENA2.gulv - .55) * T, q.varsel > 0 ? 70 : 160, .8);
+  if (B2.aktiv) { const a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1; L(B2.x, B2.y, 260, .9 * a); if (B2.golv === 2) for (let x = ARENA2.x0; x <= ARENA2.x1; x += 4) L(x * T, ARENA2.gulv * T, 140, .6); }
+  for (const [x, y] of vannListe) if (tile(x, y) === VANN && x % 2 === 0 && synlig(x * T, y * T, 80)) L(x * T + T / 2, y * T + 12, 70, .35);
+  if (S.ev.krok) for (const k of KROKER) if (synlig(k[0] * T, k[1] * T, 60)) L(k[0] * T + T / 2, k[1] * T, S.krokMaal === k ? 90 : 40, S.krokMaal === k ? .7 : .35);
   for (const b of bolger) L(b.x, b.row * T - 12, 80, .7);
   for (const s of striker) L(s.x, 15 * T, s.aktiv > 0 ? 260 : 90, s.aktiv > 0 ? .9 : .35);
   for (const e of fiender) if (e.liv && synlig(e.x, e.y, 80)) L(e.x + e.w / 2, e.y + 4, 50, .5);
@@ -246,7 +340,7 @@ function tegnGlod() {
     else glod(SPR.w, X, Y, 30, .25); });
   ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const X = x * T + T / 2, Y = y * T + T / 2 + Math.sin(S.t * 2 + i) * 4; if (!synlig(X, Y, 60)) return;
     glod(SPR.c, X, Y, 26, .8 + .2 * Math.sin(S.t * 4 + i)); glod(SPR.h, X, Y, 6, .9); });
-  for (const f of FUNN) { if (S.ev[f.id] || (f.boss && !S.bossDone)) continue; const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2) * 4; if (!synlig(X, Y, 200)) continue;
+  for (const f of FUNN) { if (!funnSynlig(f)) continue; const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2) * 4; if (!synlig(X, Y, 200)) continue;
     glod(f.liten ? SPR.c : SPR.w, X, Y, 70 + 8 * Math.sin(S.t * 3), .8); glod(SPR.h, X, Y, 20, .5);
     ctx.save(); ctx.translate(X, Y); ctx.rotate(S.t * .4); ctx.globalAlpha = .22; ctx.fillStyle = f.liten ? '#b8f1ff' : '#ffe9b0';
     for (let i = 0; i < 6; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-4, 70); ctx.lineTo(4, 70); ctx.fill(); } ctx.restore(); }
@@ -273,7 +367,26 @@ function tegnGlod() {
       for (let i = 0; i < 3 + rs; i++) { const v = (S.t * 3 + i * 2.1), r = 50 + 30 * Math.sin(v * 1.7); jagget(B.x, B.y - 4, B.x + Math.cos(v) * r, B.y + Math.sin(v) * r, 6, 5, (S.t * 18 | 0) + i * 7); } }
     if (B.varsel > 0) { ctx.globalAlpha = B.varsel * .6; ctx.fillStyle = 'rgba(200,140,255,1)'; const col = Math.floor(B.x / T); let row = Math.floor(B.y / T) + 1; while (row < MH && tile(col, row) !== SOL) row++;
       ctx.fillRect(B.x - 60, row * T - 3, 120, 3); } }
-  for (const q of prosj) { glod(SPR.p, q.x, q.y, 28, .9); glod(SPR.h, q.x, q.y, 7, 1); }
+  for (const q of prosj) { glod(SPR[q.f || 'p'], q.x, q.y, 28, .9); glod(SPR.h, q.x, q.y, 7, 1); }
+  for (const q of bolter) { glod(SPR.c, q.x, q.y, 24, .95); glod(SPR.h, q.x, q.y, 6, 1); }
+  for (const e of fiender) if (e.liv && e.type === 'rele' && e.lad > 0) glod(SPR.c, e.x + e.w / 2 + e.dir * 8, e.y + 13, 14 + e.lad * 40, .5 + e.lad * .5);
+  // vann: små utladninger i det strømførende vannet, og hele gulvet i koblingsrommet når det er strøm på
+  for (const [x, y] of vannListe) { const X = x * T + T / 2; if (!synlig(X, y * T, 40)) continue;
+    if (tile(x, y) === VANN) { glod(SPR.c, X, y * T + 14, 22, .25 + .1 * Math.sin(S.t * 5 + x));
+      if (hs(x, (S.t * 6) | 0, 3) < .08) { ctx.globalAlpha = .9; ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(200,245,255,.95)'; jagget(X - 12, y * T + 11, X + 12, y * T + 11, 5, 5, (S.t * 20 | 0) + x); } }
+    else if (B2.aktiv && B2.golv) { const Y = y * T - 2;
+      if (B2.golv === 1) glod(SPR.o, X, Y, 26, .25 + .2 * Math.sin(S.t * 18));
+      else { glod(SPR.c, X, Y, 40, .55); if (hs(x, (S.t * 12) | 0, 5) < .3) { ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(220,250,255,.95)'; jagget(X - 16, Y, X + 16, Y - 4, 6, 5, (S.t * 25 | 0) + x); } } } }
+  if (S.krokMaal && !P.krok) { const X = S.krokMaal[0] * T + T / 2, Y = S.krokMaal[1] * T; glod(SPR.c, X, Y, 30 + 6 * Math.sin(S.t * 8), .9); glod(SPR.h, X, Y, 8, .9); }
+  if (P.krok) glod(SPR.c, P.krok.x, P.krok.y, 26, .8);
+  for (const q of sveip) { const Y = (ARENA2.gulv - .55) * T;
+    if (q.varsel > 0) { ctx.globalAlpha = .3 + .3 * Math.sin(S.t * 30); ctx.fillStyle = 'rgba(120,220,255,1)'; ctx.fillRect(ARENA2.x0 * T, Y + 10, (ARENA2.x1 - ARENA2.x0 + 1) * T, 3); glod(SPR.c, q.x, Y, 40, .7); }
+    else { ctx.globalAlpha = 1; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(235,252,255,1)'; jagget(q.x, Y - 16, q.x - q.dir * 6, Y + 14, 7, 6, (S.t * 30 | 0)); glod(SPR.c, q.x, Y, 60, 1); } }
+  if (B2.aktiv) { const a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1, ned = B2.ned > 0;
+    glod(ned ? SPR.o : SPR.c, B2.x, B2.y, 150 + 20 * Math.sin(S.t * 5), (.5 + .15 * Math.sin(S.t * 6)) * a); glod(SPR.h, B2.x, B2.y, 18, .8 * a);
+    if (ned) { ctx.globalAlpha = .6 + .3 * Math.sin(S.t * 10); ctx.strokeStyle = 'rgba(255,255,255,1)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(B2.x, B2.y, 34 + 3 * Math.sin(S.t * 8), 0, 7); ctx.stroke(); }
+    else if (B2.stun <= 0 && B2.fase !== 'dod') { ctx.globalAlpha = .85; ctx.lineWidth = 1.3; ctx.strokeStyle = 'rgba(190,240,255,.95)';
+      for (let i = 0; i < 2 + (3 - B2.hp); i++) { const v = S.t * 3.3 + i * 2.4, r = 40 + 26 * Math.sin(v * 1.9); jagget(B2.x, B2.y, B2.x + Math.cos(v) * r, B2.y + Math.sin(v) * r, 5, 5, (S.t * 18 | 0) + i * 5); } } }
   for (const b of bolger) { const Y = b.row * T; ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(230,200,255,.95)';
     jagget(b.x, Y, b.x + b.dir * 4, Y - 26, 6, 5, (S.t * 25 | 0) + (b.dir > 0 ? 1 : 9)); glod(SPR.p, b.x, Y - 12, 44, .8); }
   for (const s of striker) { if (s.varsel > 0) { const a = .22 + .22 * Math.sin(S.t * 30); ctx.globalAlpha = a; ctx.fillStyle = 'rgba(255,110,200,1)';
@@ -324,15 +437,19 @@ function tegn() {
   const nx = (S.frame % 2 ? cx1 + 1 : cx0 - 1), ny = cy0 + (S.frame >> 1) % (cy1 - cy0 + 1);
   if (nx >= 0 && nx * CH < MW && ny >= 0 && ny * CH < MH && !chunks.has(nx + ',' + ny)) hentChunk(nx, ny);
   tegnDynamiskeFliser();
+  tegnLuke(); tegnDor(140, 54, 56); tegnDor(166, 52, 56);
   tegnLysbue();
   tegnKran();
   SJEKK.forEach((c, i) => { if (synlig(c.x * T, c.y * T, 100)) tegnLampe(c, i); });
   if (synlig(TAVLE.x * T, TAVLE.y * T, 200)) tegnTavle();
   if (B.aktiv || !S.bossDone) BRYTERE.forEach(b => { if (synlig(b.x * T, b.y * T, 100)) tegnBryter(b); });
-  for (const f of FUNN) if (!S.ev[f.id] && !(f.boss && !S.bossDone) && synlig(f.x * T, f.y * T, 100)) tegnFunn(f);
+  for (const f of FUNN) if (funnSynlig(f) && synlig(f.x * T, f.y * T, 100)) tegnFunn(f);
   for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) tegnFiende(e);
+  tegnKroker();
   tegnBoss();
+  tegnBoss2();
   tegnSpiller();
+  tegnVann();
   tegnStov();
   samleLys();
   tegnLys();

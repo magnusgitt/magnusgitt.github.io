@@ -169,7 +169,8 @@ const PAL = {
   kjeller: { c: ['#000', '#3a3542', '#2e2a35', '#24202b', '#1c1922', '#17141c', '#121016'], mose: '#57515f', stra: ['#6d6676', '#857c8e', '#5d5866'] },
   hall: { c: ['#000', '#30344a', '#26293c', '#1d1f2e', '#171824', '#12131c', '#0e0f16'], mose: '#4b516b', stra: ['#5c6380', '#6b7392', '#4f5670'] },
 };
-const palAt = (x, y) => erHall(x, y) ? PAL.hall : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
+PAL.kabel = { c: ['#000', '#2e3a3f', '#253035', '#1d272b', '#172024', '#12191c', '#0e1416'], mose: '#3f5559', stra: ['#56707a', '#68848d', '#4a6168'] };
+const palAt = (x, y) => erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
 const chunks = new Map();
@@ -187,6 +188,18 @@ function bakvegg(g, x, y) {
     if (y === 9 && x % 4 === 1) { g.strokeStyle = '#0d0f1a'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(X + 8, Y - 6); g.bezierCurveTo(X + 10, Y + 30, X + 2, Y + 60, X + 9, Y + 96); g.stroke(); }
     if (y === 11 && x % 6 === 0) { g.fillStyle = '#222538'; rr(g, X + 4, Y - 10, 24, 34, 3); g.fill(); g.fillStyle = 'rgba(255,200,80,.25)'; g.beginPath(); g.moveTo(X + 16, Y - 2); g.lineTo(X + 22, Y + 9); g.lineTo(X + 10, Y + 9); g.fill(); }
     if (y === 15 && x % 7 === 3) { g.fillStyle = '#1e2133'; rr(g, X + 2, Y - 4, 28, 40, 3); g.fill(); g.fillStyle = 'rgba(255,255,255,.05)'; for (let i = 0; i < 4; i++) g.fillRect(X + 6, Y + 2 + i * 8, 20, 3); }
+  } else if (iKjeller2(x, y)) {
+    // kabelkjelleren: betong med kabelbroer og rør
+    g.fillStyle = '#141d21'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
+    if (x % 4 === 0) { g.fillStyle = 'rgba(160,220,230,.035)'; g.fillRect(X, Y, 1.2, T); }
+    if (y % 3 === 0) { g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(X, Y, T, 1); }
+    if (y % 7 === 2) { g.fillStyle = '#223036'; g.fillRect(X, Y + 6, T, 5); g.fillStyle = 'rgba(170,220,230,.14)'; g.fillRect(X, Y + 6, T, 1.2);
+      g.strokeStyle = '#0b1114'; g.lineWidth = 2.2; for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(X, Y + 13 + k * 3); g.quadraticCurveTo(X + T / 2, Y + 16 + k * 3 + hs(x, y, k) * 3, X + T, Y + 13 + k * 3); g.stroke(); } }
+    if (x % 11 === 5) { g.fillStyle = '#1b282d'; g.fillRect(X + 10, Y, 9, T); g.fillStyle = 'rgba(170,220,230,.08)'; g.fillRect(X + 11, Y, 2, T);
+      if (y % 5 === 0) { g.fillStyle = '#2b3a40'; g.fillRect(X + 8, Y + 12, 13, 4); } }
+    if (y % 9 === 4 && x % 13 === 7) { g.fillStyle = '#1f2a2f'; rr(g, X + 3, Y - 4, 26, 30, 2); g.fill(); g.strokeStyle = 'rgba(140,200,210,.15)'; g.lineWidth = 1; g.stroke();
+      g.fillStyle = '#f2c23c'; g.beginPath(); g.moveTo(X + 16, Y + 2); g.lineTo(X + 22, Y + 12); g.lineTo(X + 10, Y + 12); g.closePath(); g.fill(); g.fillStyle = '#111'; g.fillRect(X + 15.3, Y + 5.5, 1.4, 4); }
+    if (hs(x, y, 93) < .08) { g.fillStyle = 'rgba(60,110,120,.12)'; g.beginPath(); g.ellipse(X + 16, Y + 10, 6, 14, 0, 0, 7); g.fill(); }
   } else {
     if (x % 3 === 0) { g.fillStyle = 'rgba(255,255,255,.035)'; g.fillRect(X, Y, 1.2, T); }
     if (y % 2 === 0) { g.fillStyle = 'rgba(255,255,255,.02)'; g.fillRect(X, Y, T, 1); }
@@ -284,8 +297,9 @@ function lagChunk(cx, cy) {
 }
 function hentChunk(cx, cy) {
   const key = cx + ',' + cy; let c = chunks.get(key);
-  if (!c) { c = { cv: lagChunk(cx, cy), brukt: 0 }; chunks.set(key, c);
-    if (chunks.size > 30) { let eldst = null, min = Infinity; for (const [k, v] of chunks) if (v.brukt < min) { min = v.brukt; eldst = k; } chunks.delete(eldst); } }
+  // den nye biten får dagens bildenummer før noe kastes, ellers ville den kastet seg selv når bufferen er full
+  if (!c) { c = { cv: lagChunk(cx, cy), brukt: S.frame }; chunks.set(key, c);
+    if (chunks.size > 32) { let eldst = null, min = Infinity; for (const [k, v] of chunks) if (v.brukt < min) { min = v.brukt; eldst = k; } chunks.delete(eldst); } }
   c.brukt = S.frame; return c.cv;
 }
 

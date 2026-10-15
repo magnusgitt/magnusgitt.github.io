@@ -21,7 +21,7 @@
   <button class="hudKnapp" id="menyKnapp" aria-label="Pause">❚❚</button>
 </div>
 <div id="maal"></div>
-<div id="boss"><div class="navn serif">Overspenningen</div><div class="sik" id="bossSik"><i></i><i></i><i></i></div></div>
+<div id="boss"><div class="navn serif" id="bossNavn">Overspenningen</div><div class="sik" id="bossSik"><i></i><i></i><i></i></div></div>
 <div id="hint" class="serif"></div>
 <div id="banner"><div class="stor serif" id="bannerStor"></div><div class="liten" id="bannerLiten"></div></div>
 <div id="toast"></div>
@@ -29,6 +29,7 @@
 <div id="touch">
   <div id="pad"><span class="v">◀</span><span class="h">▶</span></div>
   <div class="hoyreKnapper">
+    <button class="rund skjult" id="tKrok">Krok</button>
     <button class="rund skjult" id="tStot">Støt</button>
     <button class="rund" id="tHopp">Hopp</button>
   </div>
@@ -38,7 +39,7 @@
   <h1 class="serif">Gnist</h1>
   <div class="under">Montøren i mørket</div>
   <p>Strømmen har gått på byggeplassen. Følg gnisten, finn nye evner og få strømmen tilbake på hovedtavla.</p>
-  <div class="ctrl barePC"><b>← →</b> eller <b>A D</b>: gå &nbsp;·&nbsp; <b>Mellomrom</b>: hopp<br><b>Shift</b> eller <b>X</b>: støt &nbsp;·&nbsp; <b>↓</b>: ned gjennom planker &nbsp;·&nbsp; <b>Esc</b>: pause</div>
+  <div class="ctrl barePC"><b>← →</b> eller <b>A D</b>: gå &nbsp;·&nbsp; <b>Mellomrom</b>: hopp<br><b>Shift</b> eller <b>X</b>: støt &nbsp;·&nbsp; <b>C</b>: krok &nbsp;·&nbsp; <b>↓</b>: ned gjennom planker &nbsp;·&nbsp; <b>Esc</b>: pause</div>
   <div class="ctrl bareTouch"><b>Venstre tommel</b>: gå &nbsp;·&nbsp; <b>Høyre tommel</b>: hopp og støt<br>Hold inne Hopp for å hoppe høyere</div>
   <button class="knapp" id="bFortsett" style="display:none">Fortsett</button>
   <button class="knapp" id="bNy">Start</button>
@@ -77,11 +78,10 @@
 </div></div>
 
 <div class="lag" id="lagSlutt"><div class="kort">
-  <h2 class="serif">Strømmen er tilbake!</h2>
-  <p>Hele byggeplassen lyser igjen. Første område er fullført.</p>
+  <h2 class="serif" id="sluttTittel">Strømmen er tilbake!</h2>
+  <p id="sluttTekst">Hele byggeplassen lyser igjen. En luke har åpnet seg ved hovedtavla, ned mot kabelkjelleren.</p>
   <div class="stat" id="sluttStat"></div>
-  <p class="liten">Neste område kommer med flere evner: kabeltrommel, spenningstester og vinkelsliper.</p>
-  <button class="knapp" id="bVidere">Fortsett å utforske</button>
+  <button class="knapp" id="bVidere">Ned i kabelkjelleren</button>
   <button class="knapp sek" id="bIgjen">Spill igjen fra start</button>
   <a class="knapp sek" href="../">Tilbake til Voltbase</a>
 </div></div>
