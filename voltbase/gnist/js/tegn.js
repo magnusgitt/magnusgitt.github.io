@@ -236,6 +236,56 @@ function tegnBoss() {
   else for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 6, -10); ctx.lineTo(s * 18, -14 - raseri); ctx.lineTo(s * 17, -9); ctx.closePath(); ctx.fill(); }
   ctx.restore(); ctx.globalAlpha = 1; ctx.lineCap = 'butt';
 }
+function tegnSpesialFliser() {
+  // spøkelsesplattformer: tydelige med spenningstesteren, bare et svakt flimmer uten
+  for (const [x, y] of ghoListe) { const X = x * T, Y = y * T; if (!synlig(X, Y, T)) continue;
+    if (S.ev.tester) { ctx.fillStyle = 'rgba(255,210,90,.18)'; ctx.fillRect(X, Y, T, 10); ctx.strokeStyle = 'rgba(255,214,110,.9)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.strokeRect(X + .75, Y + .75, T - 1.5, 9); ctx.setLineDash([]); }
+    else if (Math.sin(S.t * 3 + x * 1.7) > .85) { ctx.fillStyle = 'rgba(255,220,140,.08)'; ctx.fillRect(X, Y, T, 10); } }
+  // svake vegger: murstein med sprekker
+  SVAKE.forEach((v, i) => { if (S.knust.has(i) || !synlig(v.x0 * T, v.y0 * T, 200)) return;
+    for (let y = v.y0; y <= v.y1; y++) for (let x = v.x0; x <= v.x1; x++) { if (tile(x, y) !== SVAK) continue; const X = x * T, Y = y * T;
+      ctx.fillStyle = '#4a3a34'; ctx.fillRect(X - .5, Y - .5, T + 1, T + 1); ctx.fillStyle = '#5d4840';
+      for (let r = 0; r < 4; r++) for (let k = -1; k < 2; k++) { const bx = X + k * 16 + (r % 2) * 8 + 1; ctx.fillRect(Math.max(X, bx), Y + r * 8 + 1, Math.min(14, X + T - Math.max(X, bx)), 6); }
+      ctx.strokeStyle = 'rgba(10,6,4,.8)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(X + 6 + hs(x, y, 1) * 10, Y); ctx.lineTo(X + 14, Y + 12); ctx.lineTo(X + 9 + hs(x, y, 2) * 12, Y + 22); ctx.lineTo(X + 18, Y + T); ctx.stroke(); } });
+  // transformatorer
+  for (const [x0, y0, x1, y1] of TRAFOER) { const X = x0 * T, Y = y0 * T, W = (x1 - x0 + 1) * T, H = (y1 - y0 + 1) * T; if (!synlig(X, Y, 200)) continue;
+    const gr = ctx.createLinearGradient(X, 0, X + W, 0); gr.addColorStop(0, '#4a5568'); gr.addColorStop(.5, '#5f6b80'); gr.addColorStop(1, '#3a4252');
+    ctx.fillStyle = gr; ctx.fillRect(X, Y, W, H); ctx.fillStyle = 'rgba(0,0,0,.28)'; for (let i = X + 8; i < X + W - 4; i += 9) ctx.fillRect(i, Y + 10, 4, H - 16);
+    for (let i = 0; i < 3; i++) { const ix = X + W * (.25 + i * .25); ctx.fillStyle = '#c9a77a'; for (let k = 0; k < 4; k++) rr(ctx, ix - 6 + k, Y - 8 - k * 6, 12 - k * 2, 5, 2), ctx.fill(); }
+    ctx.fillStyle = '#f2c23c'; ctx.beginPath(); ctx.moveTo(X + W / 2, Y + H / 2 - 10); ctx.lineTo(X + W / 2 + 10, Y + H / 2 + 7); ctx.lineTo(X + W / 2 - 10, Y + H / 2 + 7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#222'; ctx.fillRect(X + W / 2 - .8, Y + H / 2 - 5, 1.6, 7); }
+}
+function tegnBoss3() {
+  if (!B3.aktiv) return;
+  const a = B3.fase === 'dod' ? clamp(B3.dod / 3.2, 0, 1) : 1, f = B3.aktiv ? b3Fase() : 1, hev = B3.hev, flimmer = B3.stun > 0 && Math.sin(S.t * 40) > 0, kne = B3.ned > 0;
+  const [kx, ky] = b3Kjerne();
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(B3.x + (B3.fase === 'dod' ? (Math.random() - .5) * 10 : 0), B3.y);
+  const topp = -130 + (kne ? 40 : 0);
+  // ben
+  ctx.fillStyle = '#2a303e'; ctx.fillRect(-30, -40 + (kne ? 20 : 0), 18, 40 - (kne ? 20 : 0)); ctx.fillRect(12, -40 + (kne ? 20 : 0), 18, 40 - (kne ? 20 : 0));
+  // overkropp: en transformator med kjøleribber
+  const gr = ctx.createLinearGradient(-40, 0, 40, 0); gr.addColorStop(0, flimmer ? '#fff1d8' : '#4b5466'); gr.addColorStop(.5, flimmer ? '#ffe2a8' : '#66728a'); gr.addColorStop(1, flimmer ? '#e8c890' : '#363d4d');
+  ctx.fillStyle = gr; rr(ctx, -40, topp + 10, 80, -topp - 40 + (kne ? 20 : 0), 8); ctx.fill(); ctx.strokeStyle = '#7d89a3'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; for (let y = topp + 22; y < -44; y += 10) ctx.fillRect(-34, y, 68, 4);
+  // stang som løfter kjernen i siste fase
+  if (hev > .05) { const sy = ky - B3.y; ctx.fillStyle = '#39425a'; ctx.fillRect(-7, sy, 14, topp + 10 - sy); ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(-5, sy, 3, topp + 10 - sy);
+    ctx.strokeStyle = 'rgba(255,200,120,.5)'; ctx.lineWidth = 1; for (let y = sy + 12; y < topp; y += 16) { ctx.beginPath(); ctx.moveTo(-9, y); ctx.lineTo(9, y + 6); ctx.stroke(); } }
+  // armer med isolatorer
+  for (const s of [-1, 1]) { const sv = Math.sin(B3.t * 2 + s) * .2 + (B3.varsel * .8);
+    ctx.save(); ctx.translate(s * 40, topp + 30); ctx.rotate(s * (.35 + sv)); ctx.fillStyle = '#2f3646'; ctx.fillRect(-7, 0, 14, 62);
+    ctx.fillStyle = '#c9a77a'; for (let k = 0; k < 4; k++) rr(ctx, -9, 62 + k * 7, 18, 5, 2), ctx.fill(); ctx.restore(); }
+  // hode med øyne (sitter over kjernen når den løftes)
+  const hy = hev > .05 ? Math.min(topp, ky - B3.y - 30) : topp;
+  ctx.fillStyle = '#2a303e'; rr(ctx, -24, hy - 8, 48, 22, 6); ctx.fill();
+  ctx.fillStyle = B3.stun > 0 ? '#fff' : '#ffb347'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 6, hy + 2); ctx.lineTo(s * 18, hy - 2); ctx.lineTo(s * 17, hy + 6); ctx.closePath(); ctx.fill(); }
+  // brystplate (fase 1) eller kjerne
+  const aapen = (f === 1 && B3.sar > 0) || (f === 2 && kne) || (f === 3 && B3.sar > 0);
+  ctx.translate(kx - B3.x, ky - B3.y);
+  ctx.fillStyle = aapen ? '#fff6d8' : '#8a5a2a'; ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 2; rr(ctx, -16, -16, 32, 32, 6); ctx.fill(); ctx.stroke();
+  const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, 14); cg.addColorStop(0, '#fff'); cg.addColorStop(.5, aapen ? 'rgba(255,220,140,.95)' : 'rgba(255,140,60,.8)'); cg.addColorStop(1, 'rgba(255,120,40,0)');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, 14, 0, 7); ctx.fill();
+  ctx.restore(); ctx.globalAlpha = 1;
+}
 function tegnBoss2() {
   if (!B2.aktiv) return;
   const X = B2.x, Y = B2.y, a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1, rs = 3 - B2.hp, ned = B2.ned > 0;
@@ -331,7 +381,11 @@ function samleLys() {
   if (B.aktiv) { const a = B.fase === 'dod' ? clamp(B.dod / 2.4, 0, 1) : 1; L(B.x, B.y, 300 + B.lad * 60, .9 * a); }
   for (const q of prosj) L(q.x, q.y, 70, .7);
   for (const q of bolter) L(q.x, q.y, 70, .7);
-  for (const q of sveip) L(q.varsel > 0 ? q.x : q.x, (ARENA2.gulv - .55) * T, q.varsel > 0 ? 70 : 160, .8);
+  for (const q of sveip) L(q.x, ((q.rad || ARENA2.gulv) - .55) * T, q.varsel > 0 ? 70 : 160, .8);
+  if (B3.aktiv) { const a = B3.fase === 'dod' ? clamp(B3.dod / 3.2, 0, 1) : 1, [kx, ky] = b3Kjerne(); L(kx, ky, 300, .9 * a); L(B3.x, B3.y - 40, 200, .6 * a);
+    if (B3.golv === 2) for (let x = GARD.x0; x <= GARD.x1; x += 4) L(x * T, GARD.gulv * T, 140, .6); }
+  if (S.ev.tester) for (const [x, y] of ghoListe) if (x % 2 === 0 && synlig(x * T, y * T, 60)) L(x * T + T / 2, y * T + 4, 60, .45);
+  for (const [x0, y0] of TRAFOER) if (synlig(x0 * T, y0 * T, 200)) L((x0 + 2) * T, (y0 - .5) * T, 120, .5);
   if (B2.aktiv) { const a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1; L(B2.x, B2.y, 260, .9 * a); if (B2.golv === 2) for (let x = ARENA2.x0; x <= ARENA2.x1; x += 4) L(x * T, ARENA2.gulv * T, 140, .6); }
   for (const [x, y] of vannListe) if (tile(x, y) === VANN && x % 2 === 0 && synlig(x * T, y * T, 80)) L(x * T + T / 2, y * T + 12, 70, .35);
   if (S.ev.krok) for (const k of KROKER) if (synlig(k[0] * T, k[1] * T, 60)) L(k[0] * T + T / 2, k[1] * T, S.krokMaal === k ? 90 : 40, S.krokMaal === k ? .7 : .35);
@@ -390,10 +444,20 @@ function tegnGlod() {
     else if (B2.aktiv && B2.golv) { const Y = y * T - 2;
       if (B2.golv === 1) glod(SPR.o, X, Y, 26, .25 + .2 * Math.sin(S.t * 18));
       else { glod(SPR.c, X, Y, 40, .55); if (hs(x, (S.t * 12) | 0, 5) < .3) { ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(220,250,255,.95)'; jagget(X - 16, Y, X + 16, Y - 4, 6, 5, (S.t * 25 | 0) + x); } } } }
+  if (B3.aktiv) { const a = B3.fase === 'dod' ? clamp(B3.dod / 3.2, 0, 1) : 1, [kx, ky] = b3Kjerne(), f = b3Fase(), aapen = (f === 1 && B3.sar > 0) || (f === 2 && B3.ned > 0) || (f === 3 && B3.sar > 0);
+    glod(aapen ? SPR.w : SPR.o, kx, ky, (aapen ? 90 : 60) + 10 * Math.sin(S.t * 6), (.6 + .2 * Math.sin(S.t * 7)) * a); glod(SPR.h, kx, ky, aapen ? 18 : 10, a);
+    if (aapen) { ctx.globalAlpha = .6 + .3 * Math.sin(S.t * 10); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(kx, ky, 40 + 3 * Math.sin(S.t * 8), 0, 7); ctx.stroke(); }
+    if (B3.varsel > 0) { ctx.globalAlpha = B3.varsel * .7; ctx.fillStyle = 'rgba(255,170,80,1)'; ctx.fillRect(B3.x - 90, GARD.gulv * T - 3, 180, 3); }
+    if (B3.golv) for (let x = GARD.x0; x <= GARD.x1; x++) { const X = x * T + T / 2, Y = GARD.gulv * T - 2; if (!synlig(X, Y, 40)) continue;
+      if (B3.golv === 1) glod(SPR.o, X, Y, 24, .25 + .2 * Math.sin(S.t * 18));
+      else { glod(SPR.o, X, Y, 36, .5); if (hs(x, (S.t * 12) | 0, 7) < .3) { ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(255,235,200,.95)'; jagget(X - 16, Y, X + 16, Y - 5, 6, 5, (S.t * 25 | 0) + x); } } }
+    if (B3.stun <= 0 && B3.fase === 'kamp') { ctx.globalAlpha = .8; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(255,220,160,.9)';
+      for (let i = 0; i < 2 + (6 - B3.hp) / 2; i++) { const v = S.t * 3 + i * 2.2, r = 50 + 30 * Math.sin(v * 1.6); jagget(kx, ky, kx + Math.cos(v) * r, ky + Math.sin(v) * r, 6, 5, (S.t * 18 | 0) + i * 5); } } }
+  if (S.ev.tester) for (const [x, y] of ghoListe) { const X = x * T + T / 2; if (synlig(X, y * T, 40)) glod(SPR.o, X, y * T + 4, 18, .25 + .08 * Math.sin(S.t * 4 + x)); }
   if (S.krokMaal && !P.krok) { const X = S.krokMaal[0] * T + T / 2, Y = S.krokMaal[1] * T; glod(SPR.c, X, Y, 30 + 6 * Math.sin(S.t * 8), .9); glod(SPR.h, X, Y, 8, .9); }
   if (P.krok) glod(SPR.c, P.krok.x, P.krok.y, 26, .8);
-  for (const q of sveip) { const Y = (ARENA2.gulv - .55) * T;
-    if (q.varsel > 0) { ctx.globalAlpha = .3 + .3 * Math.sin(S.t * 30); ctx.fillStyle = 'rgba(120,220,255,1)'; ctx.fillRect(ARENA2.x0 * T, Y + 10, (ARENA2.x1 - ARENA2.x0 + 1) * T, 3); glod(SPR.c, q.x, Y, 40, .7); }
+  for (const q of sveip) { const Y = ((q.rad || ARENA2.gulv) - .55) * T, ax0 = q.x0 || ARENA2.x0, ax1 = q.x1 || ARENA2.x1;
+    if (q.varsel > 0) { ctx.globalAlpha = .3 + .3 * Math.sin(S.t * 30); ctx.fillStyle = 'rgba(120,220,255,1)'; ctx.fillRect(ax0 * T, Y + 10, (ax1 - ax0 + 1) * T, 3); glod(SPR.c, q.x, Y, 40, .7); }
     else { ctx.globalAlpha = 1; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(235,252,255,1)'; jagget(q.x, Y - 16, q.x - q.dir * 6, Y + 14, 7, 6, (S.t * 30 | 0)); glod(SPR.c, q.x, Y, 60, 1); } }
   if (B2.aktiv) { const a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1, ned = B2.ned > 0;
     glod(ned ? SPR.o : SPR.c, B2.x, B2.y, 150 + 20 * Math.sin(S.t * 5), (.5 + .15 * Math.sin(S.t * 6)) * a); glod(SPR.h, B2.x, B2.y, 18, .8 * a);
@@ -450,7 +514,8 @@ function tegn() {
   const nx = (S.frame % 2 ? cx1 + 1 : cx0 - 1), ny = cy0 + (S.frame >> 1) % (cy1 - cy0 + 1);
   if (nx >= 0 && nx * CH < MW && ny >= 0 && ny * CH < MH && !chunks.has(nx + ',' + ny)) hentChunk(nx, ny);
   tegnDynamiskeFliser();
-  tegnLuke(); tegnDor(140, 54, 56); tegnDor(166, 52, 56);
+  tegnLuke(); tegnDor(140, 54, 56); tegnDor(166, 52, 56); tegnDor(161, 19, 26); tegnDor(131, 15, 18);
+  tegnSpesialFliser();
   tegnLysbue();
   tegnKran();
   SJEKK.forEach((c, i) => { if (synlig(c.x * T, c.y * T, 100)) tegnLampe(c, i); });
@@ -463,6 +528,7 @@ function tegn() {
   tegnFagkort();
   tegnBoss();
   tegnBoss2();
+  tegnBoss3();
   tegnSpiller();
   tegnVann();
   tegnStov();

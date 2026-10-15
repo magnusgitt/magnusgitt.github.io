@@ -8,7 +8,8 @@ const $ = s => document.querySelector(s);
 const cv = $('#c'), ctx = cv.getContext('2d');
 const T = 32, MW = 200, MH = 64;
 // flistyper: VANN = strømførende vann, BVANN = vannet i koblingsrommet (farlig bare når bossen setter strøm på), LUKE = luka ved hovedtavla
-const AIR = 0, SOL = 1, ONE = 2, HAZ = 3, CUR = 4, DOOR = 5, VANN = 6, BVANN = 7, LUKE = 8;
+// GHO = spøkelsesplattform (fast bare med spenningstesteren), SVAK = svak vegg som vinkelsliperen skjærer gjennom
+const AIR = 0, SOL = 1, ONE = 2, HAZ = 3, CUR = 4, DOOR = 5, VANN = 6, BVANN = 7, LUKE = 8, GHO = 9, SVAK = 10;
 const NOKKEL = 'voltbase-gnist-v1';   // samme nøkkel som før, så gammel fremgang leses videre
 const LAGRE_VERSJON = 3;
 
@@ -25,11 +26,11 @@ function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w
   g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
 // ---------- tilstand ----------
-const EVNER = ['dobbel', 'hansker', 'stot', 'liv', 'hemmelig', 'krok', 'liv2'];
+const EVNER = ['dobbel', 'hansker', 'stot', 'liv', 'hemmelig', 'krok', 'liv2', 'tester', 'sliper', 'liv4'];
 function nyeEvner() { const e = {}; for (const k of EVNER) e[k] = false; return e; }
 // kartet deles i ruter på 4×4 fliser som fylles inn etter hvert som montøren har vært der
 const KC = 4, KW = Math.ceil(MW / KC), KH = Math.ceil(MH / KC);
-const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8Array(KW * KH), brukt: 0, kjop: {}, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
+const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8Array(KW * KH), brukt: 0, kjop: {}, knust: new Set(), boss3: false, helt: false, tidsmodus: false, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
   bossDone: false, boss2: false, tid: 0, ferdig: false, dodsfall: 0, shake: 0, flash: 0, flashF: '255,255,255', dod: 0, ending: 0, power: 0,
   hintSett: new Set(), mork: .55, frame: 0, panelT: 0, slow: 0, evneVent: 0, omr: '', hallLys: 0, hallFlimmer: 0, maal: '', idle: 0, laas: 0 };
 const P = { x: 0, y: 0, w: 18, h: 30, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buf: 0, air: 0, dashT: 0, dashCd: 0,
@@ -39,6 +40,8 @@ const GN = { x: 0, y: 0, vx: 0, vy: 0, flare: 0 };
 const B = { aktiv: false, fase: '', introT: 0, hp: 3, x: 87.5 * T, y: 7.4 * T, t: 0, stun: 0, skuddT: 2, slagT: 6, lynT: 4, dod: 0, varsel: 0, lad: 0 };
 // Kortslutningen: bossen i koblingsrommet
 const B2 = { aktiv: false, fase: '', introT: 0, hp: 3, x: 153 * T, y: 45 * T, t: 0, stun: 0, dod: 0, golv: 0, golvT: 0, skuddT: 2, sveipT: 0, ned: 0, nedX: 153 * T, vx: 1 };
+// Trafokjempen: sluttbossen i stasjonsgården
+const B3 = { aktiv: false, fase: '', introT: 0, hp: 6, x: 146.5 * T, y: 27 * T, t: 0, stun: 0, dod: 0, sar: 0, slagT: 3, slag: 0, varsel: 0, golv: 0, golvT: 3, skuddT: 2.5, sveipT: 4, ned: 0, kjerneT: 4, hev: 0 };
 const prosj = [], bolger = [], striker = [], partikler = [], lys = [], fiender = [], bolter = [], sveip = [];
 let lyn = null;
 const cam = { x: 0, y: 0, look: 0, anker: 0, zoom: 1 };

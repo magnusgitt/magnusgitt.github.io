@@ -18,14 +18,16 @@ function lagFiender() { fiender.length = 0; bolter.length = 0;
 const maksLiv = () => 4 + (S.ev.liv ? 1 : 0) + (S.ev.liv2 ? 1 : 0) + (S.kjop.liv3 ? 1 : 0);
 function nyttSpill(lagret) {
   byggKart();
-  S.ev = nyeEvner(); S.fag = new Set(); S.sett.fill(0); S.brukt = 0; S.kjop = {}; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
-  S.ending = 0; S.power = 0; S.dod = 0; S.hintSett = new Set(); S.dodsfall = 0; S.omr = ''; S.maal = ''; S.hallLys = 0; S.slow = 0; S.evneVent = 0; S.laas = 0;
+  S.ev = nyeEvner(); S.fag = new Set(); S.sett.fill(0); S.brukt = 0; S.kjop = {}; S.knust = new Set(); S.boss3 = false; S.helt = false; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
+  S.ending = 0; S.ending2 = 0; S.power = 0; S.dod = 0; S.hintSett = new Set(); S.dodsfall = 0; S.omr = ''; S.maal = ''; S.hallLys = 0; S.slow = 0; S.evneVent = 0; S.laas = 0;
   if (lagret) { Object.assign(S.ev, lagret.ev); S.cp = lagret.cp; S.cpLit = new Set([0, ...lagret.cpLit, lagret.cp]); S.orbTatt = new Set(lagret.orb);
-    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.fag = new Set(lagret.fag); S.sett.set(lagret.sett); S.brukt = lagret.brukt; Object.assign(S.kjop, lagret.kjop); S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
+    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.fag = new Set(lagret.fag); S.sett.set(lagret.sett); S.brukt = lagret.brukt; Object.assign(S.kjop, lagret.kjop); S.knust = new Set(lagret.knust); S.boss3 = lagret.boss3; S.helt = lagret.helt; S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
   BRYTERE.forEach(b => b.av = S.bossDone);
   if (S.bossDone) { rect(101, 13, 101, 18, AIR); S.hallLys = 1; }
   if (S.ferdig) { S.power = 1; if (!BG.midtLys) BG.midtLys = lagMidt(true); rect(125, 19, 128, 19, AIR); }
   if (S.boss2) rect(166, 52, 166, 56, AIR);
+  for (const i of S.knust) { const v = SVAKE[i]; if (v) rect(v.x0, v.y0, v.x1, v.y1, AIR); }
+  B3.aktiv = false; B3.fase = ''; B3.hp = S.boss3 ? 0 : 6;
   P.max = maksLiv();
   B2.aktiv = false; B2.fase = ''; B2.hp = S.boss2 ? 0 : 3; bolter.length = 0; sveip.length = 0;
   B.aktiv = false; B.fase = ''; B.hp = S.bossDone ? 0 : 3; B.dod = 0; prosj.length = 0; bolger.length = 0; striker.length = 0; partikler.length = 0;
@@ -39,6 +41,7 @@ function respawn(stille) {
   P.air = 0; P.spor.length = 0; P.onGround = true; P.canDash = true; P.paKran = false; P.krok = null; P.krokCd = 0;
   if (B.aktiv && !S.bossDone) resetBoss();
   if (B2.aktiv && !S.boss2) resetBoss2();
+  if (B3.aktiv && !S.boss3) resetBoss3();
   lagFiender();
   GN.x = P.x; GN.y = P.y - 30; GN.vx = GN.vy = 0;
   cam.anker = P.y; oppdaterKamera(0, true); hud();
@@ -248,6 +251,7 @@ function oppdaterVerden(dt) {
       hud(); } });
   oppdaterBoss(dt);
   oppdaterBoss2(dt);
+  oppdaterBoss3(dt);
   // område og hint
   const tx = Math.floor(pcx / T), ty = Math.floor(pcy / T);
   const omr = omraade(tx, ty); if (omr !== S.omr) { S.omr = omr; if (!S.hintSett.has('omr-' + omr)) { S.hintSett.add('omr-' + omr); if (omr !== 'Trafohallen') banner(omr, '', 2.2); } }
@@ -261,13 +265,18 @@ function oppdaterVerden(dt) {
   if (tx >= 111 && tx <= 113 && ty >= 38 && ty <= 41) hint('vann', 'Vannet står under spenning. Ikke gå i det!');
   if (!S.ev.krok && tx >= 97 && tx <= 101 && ty >= 50) hint('kanal', 'For langt å hoppe over kanalen. Noe glitrer på den andre siden av pumpehallen.');
   if (S.ev.krok && tx >= 97 && tx <= 104 && ty >= 47) hint('kanal2', erTouch ? 'Hold Krok når en krok lyser, og sving deg over.' : 'Hold C når en krok lyser, og sving deg over.');
-  if (S.boss2 && tx >= 167 && tx <= 170 && ty <= 33) hint('stengt', 'Luka over er sperret. Veien til trafostasjonen åpnes i neste oppdatering.', 5);
+  if (tx >= 186 && ty <= 26 && !S.ev.tester) hint('taarn', 'Det glimter i lufta ved tårnet, men du ser ingen vei opp. Kanskje et måleinstrument kan hjelpe?', 5);
+  if (S.ev.tester && !S.ev.sliper && tx >= 186) hint('taarn2', 'Spenningstesteren viser plattformer opp tårnet!', 4);
+  if (tx >= 132 && ty <= 26 && !S.hintSett.has('stasjon')) { hint('stasjon', 'Trafostasjonen. Bak muren venter det som har tatt strømmen.', 4.5); }
   // hovedtavla
   if (!S.ending && !S.ferdig && !B.aktiv && pcx > TAVLE.x * T - 6 && pcx < (TAVLE.x + 2) * T + 6 && pcy > (TAVLE.y - 1) * T) {
     S.ending = .001; lyd('slutt'); S.flash = 1; S.flashF = '255,245,220'; S.ferdig = true; lagre();
     for (let i = 0; i < 4; i++) S.cpLit.add(i); banner('Strømmen er tilbake', '', 3.5);
     setTimeout(() => { rect(125, 19, 128, 19, AIR); chunks.clear(); lyd('dor'); S.shake = .3; gnister(126.5 * T, 19 * T, 20, 'w'); }, 1800);
   }
+  if (S.ending2 > 0) { S.ending2 += dt; S.power = 1;
+    if (Math.random() < dt * 40) part(cam.x + Math.random() * cssW / skala, cam.y + cssH / skala + 10, (Math.random() - .5) * 20, -60 - Math.random() * 90, 3 + Math.random() * 2, 5 + Math.random() * 8, Math.random() < .5 ? 'w' : 'o', -5);
+    if (S.ending2 > 4.5 && S.mode === 'spill') { S.ending2 = 0; S.mode = 'slutt'; visRulle(); } }
   if (S.ending > 0) {
     S.ending += dt; S.power = clamp((S.ending - .4) / 2.5, 0, 1);
     if (!BG.midtLys) BG.midtLys = lagMidt(true);
@@ -320,6 +329,11 @@ function oppdaterBoss(dt) {
       xs.forEach(x => { if (x > 74.5 * T && x < 100.5 * T) striker.push({ x, varsel: .95, aktiv: 0 }); }); lyd('varsel'); B.lynT = B.hp === 1 ? 3.6 : 4.6; } }
 }
 // et funn vises når evnen ikke er tatt og eventuell boss er slått
+function knusVegg(i) { const v = SVAKE[i]; if (S.knust.has(i)) return;
+  S.knust.add(i); rect(v.x0, v.y0, v.x1, v.y1, AIR); beregnDyp(); chunks.clear(); lagre();
+  lyd('slipe'); S.shake = .45; vib([40, 30, 60]);
+  for (let y = v.y0; y <= v.y1; y++) { gnister((v.x0 + v.x1 + 1) / 2 * T, y * T + T / 2, 8, 'o'); stov((v.x0 + v.x1 + 1) / 2 * T, (y + 1) * T, 3, 1.2); }
+  toast('Veggen er skåret opp!'); }
 function funnSynlig(f) { return !S.ev[f.id] && !(f.boss && !S.bossDone) && !(f.boss2 && !S.boss2); }
 
 // ---------- Kortslutningen (bossen i koblingsrommet) ----------
@@ -388,6 +402,86 @@ function oppdaterBoss2(dt) {
     if (B2.sveipT <= 0) { const fra = pcx < ARENA2.midt * T ? 1 : -1; sveip.push({ x: fra > 0 ? (ARENA2.x1 + 1) * T : ARENA2.x0 * T, dir: -fra, varsel: .9 }); lyd('varsel'); B2.sveipT = raseri === 2 ? 5 : 6.5; } }
 }
 
+// ---------- Trafokjempen (sluttbossen i stasjonsgården) ----------
+const GARD = { x0: 133, x1: 159, gulv: 27, midt: 146.5 };
+const b3Fase = () => B3.hp > 4 ? 1 : B3.hp > 2 ? 2 : 3;
+// kjernen: der bossen kan treffes, ulikt i hver fase
+function b3Kjerne() { const f = b3Fase(); return f === 1 ? [B3.x, B3.y - 58] : f === 2 ? [B3.x, B3.y - (B3.ned > 0 ? 40 : 96)] : [B3.x, B3.y - 96 - B3.hev * 230]; }
+let b3Lagret = null;
+function resetBoss3() { B3.aktiv = false; B3.fase = ''; B3.hp = 6; B3.stun = 0; B3.dod = 0; B3.golv = 0; B3.ned = 0; B3.sar = 0; B3.hev = 0;
+  prosj.length = 0; sveip.length = 0; bolger.length = 0; S.laas = 0; aapneGard(); hud(); }
+function stengGard() { b3Lagret = [tile(161, 22), tile(131, 16)]; rect(161, 19, 161, 26, DOOR); if (tile(131, 16) === AIR) rect(131, 15, 131, 18, DOOR); chunks.clear(); }
+function aapneGard() { if (!b3Lagret) return; rect(161, 19, 161, 26, b3Lagret[0] === DOOR ? AIR : b3Lagret[0]); if (tile(131, 16) === DOOR) rect(131, 15, 131, 18, AIR); b3Lagret = null; chunks.clear(); }
+function startBoss3() {
+  Object.assign(B3, { aktiv: true, fase: 'intro', introT: 3, hp: 6, t: 0, stun: 0, golv: 0, golvT: 3, skuddT: 2.5, sveipT: 4, ned: 0, sar: 0, slag: 0, slagT: 2.4, varsel: 0, kjerneT: 3, hev: 0, x: GARD.midt * T, y: 27 * T });
+  stengGard(); lyd('dor'); S.shake = .5; P.vx = 0; P.krok = null;
+  setTimeout(() => { if (B3.fase === 'intro') { lyd('brol3'); S.shake = 1; banner('Trafokjempen', 'Stasjonsgården', 2.6); } }, 700);
+  hud();
+}
+const paaGulv3 = () => P.onGround && Math.floor((P.y + P.h + 1) / T) === GARD.gulv && P.x / T > GARD.x0 - 1 && P.x / T < GARD.x1 + 1;
+function b3Treff() {
+  const for_ = b3Fase(); B3.hp--; B3.sar = 0; B3.ned = 0; B3.stun = 1.2; lyd('b2treff'); vib(60); S.shake = .6; S.flash = .5; S.flashF = '255,220,150';
+  const [kx, ky] = b3Kjerne(); sprut(kx, ky, 34, 'o', 280);
+  P.vy = -560; P.vx = (P.x + P.w / 2 < kx ? -1 : 1) * 280; P.dashT = 0; P.canDash = true; P.air = S.ev.dobbel ? 1 : 0; P.inv = Math.max(P.inv, .6); P.krok = null;
+  if (B3.hp <= 0) { B3.fase = 'dod'; B3.dod = 3.2; S.slow = 1; lyd('bossdod'); prosj.length = 0; sveip.length = 0; bolger.length = 0; B3.golv = 0; }
+  else if (b3Fase() !== for_) { const f = b3Fase(); B3.golv = 0; B3.golvT = 2.5; B3.kjerneT = 3; banner(f === 2 ? 'Overbelastning' : 'Full spenning', f === 2 ? 'Gulvet får strøm. Stå på plattformene.' : 'Kjernen løftes. Bruk krokene.', 2.6); lyd('brol3'); }
+  else toast(`Treff ${6 - B3.hp} av 6`);
+  hud();
+}
+function oppdaterBoss3(dt) {
+  if (!B3.aktiv) { if (!S.boss3 && P.x / T >= 135 && P.x / T <= 158 && P.y / T > 8 && P.y / T < 27) startBoss3(); return; }
+  const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
+  if (B3.fase === 'intro') { B3.introT -= dt; S.laas = .1; B3.t += dt; if (Math.random() < .6) gnister(B3.x + (Math.random() - .5) * 80, B3.y - Math.random() * 110, 2, 'o');
+    if (B3.introT <= 0) { B3.fase = 'kamp'; S.laas = 0; hint(null, 'Vent til platen på brystet gløder, og støt rett inn i den!', 4.5); hud(); sjekkMaal(true); } return; }
+  if (B3.fase === 'dod') { B3.dod -= dt; S.shake = Math.max(S.shake, .3); B3.hev = Math.max(0, B3.hev - dt);
+    if (Math.random() < .8) sprut(B3.x + (Math.random() - .5) * 80, B3.y - Math.random() * 120, 3, Math.random() < .5 ? 'o' : 'w', 280);
+    if (B3.dod <= 0) sluttBoss3(); return; }
+  const f = b3Fase(); B3.t += dt * (1 + (6 - B3.hp) * .08);
+  if (B3.stun > 0) B3.stun -= dt;
+  B3.varsel = 0;
+  // går sakte mot montøren (ikke i siste fase)
+  const mx = f === 3 ? GARD.midt * T : clamp(pcx, 139 * T, 154 * T);
+  if (B3.sar <= 0 && B3.ned <= 0 && B3.stun <= 0) B3.x += clamp(mx - B3.x, -40 * dt, 40 * dt);
+  B3.hev += ((f === 3 ? 1 : 0) - B3.hev) * Math.min(1, dt * 1.5);
+  const [kx, ky] = b3Kjerne();
+  // treff: støt inn i kjernen når den er åpen, eller hopp ned på den
+  const aapen = (f === 1 && B3.sar > 0) || (f === 2 && B3.ned > 0) || (f === 3 && B3.sar > 0);
+  if (aapen && B3.stun <= 0 && Math.hypot(pcx - kx, pcy - ky) < 46 && (P.dashT > 0 || (P.vy > 0 && pcy < ky - 6))) { b3Treff(); return; }
+  // kroppen gjør vondt å ta på (ikke når den er nede eller åpen)
+  if (!aapen && Math.abs(pcx - B3.x) < 34 && pcy > B3.y - 125 && pcy < B3.y) skade(B3.x, false);
+  if (B3.sar > 0) { B3.sar -= dt; return; }
+  if (B3.ned > 0) { B3.ned -= dt; return; }
+  if (f === 1) {
+    // bakkeslag: to slag gir sjokkbølger, så åpner brystplaten seg
+    B3.slagT -= dt; B3.varsel = B3.slagT < .8 ? 1 - B3.slagT / .8 : 0;
+    if (B3.slagT <= 0) { lyd('slag'); S.shake = .5; bolger.push({ x: B3.x, dir: 1, row: GARD.gulv, liv: 4 }, { x: B3.x, dir: -1, row: GARD.gulv, liv: 4 }); stov(B3.x, B3.y, 12, 1.5);
+      B3.slag++; B3.slagT = 2.6; if (B3.slag % 2 === 0) { B3.sar = 2.8; lyd('utmattet'); hint('plate', 'Platen gløder! Støt inn i den nå.', 2.5); } }
+  } else if (f === 2) {
+    // strøm i gulvet, deretter kneler den og kjernen kommer ned
+    B3.golvT -= dt;
+    if (B3.golvT <= 0) {
+      if (B3.golv === 0) { B3.golv = 1; B3.golvT = 1.3; lyd('golvvarsel'); }
+      else if (B3.golv === 1) { B3.golv = 2; B3.golvT = 2.4; lyd('golv'); S.shake = .35; }
+      else { B3.golv = 0; B3.golvT = 4; B3.ned = 2.8; lyd('utmattet'); hint('kne', 'Den kneler! Hopp ned på kjernen.', 2.5); } }
+    if (B3.golv === 2) { if (paaGulv3()) skade(pcx, false); if (Math.random() < dt * 30) gnister(GARD.x0 * T + Math.random() * (GARD.x1 - GARD.x0 + 1) * T, GARD.gulv * T - 4, 2, 'o'); }
+    B3.skuddT -= dt; if (B3.skuddT <= 0 && B3.golv !== 2) { skudd3(3); B3.skuddT = 2.8; }
+  } else {
+    // kjernen løftes høyt og åpner seg i perioder; krokene tar deg opp
+    B3.kjerneT -= dt; if (B3.kjerneT <= 0) { B3.sar = 2.6; B3.kjerneT = 5; lyd('utmattet'); hint('hoy', 'Kjernen er åpen! Sving deg opp og støt inn i den.', 3); }
+    B3.sveipT -= dt; if (B3.sveipT <= 0) { const fra = pcx < GARD.midt * T ? 1 : -1; sveip.push({ x: fra > 0 ? (GARD.x1 + 1) * T : GARD.x0 * T, dir: -fra, varsel: .9, rad: GARD.gulv, x0: GARD.x0, x1: GARD.x1 }); lyd('varsel'); B3.sveipT = 4.2; }
+    B3.skuddT -= dt; if (B3.skuddT <= 0) { skudd3(4); B3.skuddT = 3.2; }
+  }
+}
+function skudd3(n) { const [kx, ky] = b3Kjerne(), pcx = P.x + P.w / 2, pcy = P.y + P.h / 2, tf = 1.2; lyd('skudd');
+  for (let i = 0; i < n; i++) prosj.push({ x: kx, y: ky, vx: (pcx - kx) / tf + (i - (n - 1) / 2) * 90, vy: (pcy - ky - .5 * 700 * tf * tf) / tf, liv: 4, f: 'o' }); }
+function sluttBoss3() {
+  S.boss3 = true; S.helt = true; B3.aktiv = false; B3.fase = ''; aapneGard(); S.flash = 1; S.flashF = '255,240,200';
+  sprut(B3.x, B3.y - 60, 120, 'o', 460); sprut(B3.x, B3.y - 60, 60, 'w', 320); ring(B3.x, B3.y - 60, 34, 'h', 420); lyd('slutt'); hud();
+  banner('Trafokjempen er slått ut', 'Strømmen er tilbake i hele byen', 3.5);
+  const tid = S.tid; let rekord = false;
+  if (S.tidsmodus) { try { const r = parseFloat(localStorage.getItem(NOKKEL + '-rekord')); if (!(r > 0) || tid < r) { localStorage.setItem(NOKKEL + '-rekord', String(Math.round(tid))); rekord = true; } } catch (e) {} }
+  lagre(); S.ending2 = .001; S.nyRekord = rekord;
+}
 function oppdaterProsj(dt) {
   const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
   for (let i = prosj.length - 1; i >= 0; i--) { const q = prosj[i]; q.vy += 700 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.liv -= dt;
@@ -407,10 +501,10 @@ function oppdaterProsj(dt) {
     if (Math.random() < .5) part(q.x, q.y, -q.vx * .1, 0, .25, 6, 'c', 0);
     if (fast(Math.floor(q.x / T), Math.floor(q.y / T)) || q.liv <= 0) { gnister(q.x, q.y, 6, 'c'); bolter.splice(i, 1); continue; }
     if (Math.abs(q.x - pcx) < 6 + P.w / 2 && Math.abs(q.y - pcy) < 6 + P.h / 2) { skade(q.x, false); gnister(q.x, q.y, 8, 'c'); bolter.splice(i, 1); } }
-  for (let i = sveip.length - 1; i >= 0; i--) { const q = sveip[i], y = (ARENA2.gulv - .55) * T;
+  for (let i = sveip.length - 1; i >= 0; i--) { const q = sveip[i], y = ((q.rad || ARENA2.gulv) - .55) * T, ax0 = q.x0 || ARENA2.x0, ax1 = q.x1 || ARENA2.x1;
     if (q.varsel > 0) { q.varsel -= dt; if (q.varsel <= 0) lyd('stot'); continue; }
     q.x += q.dir * 520 * dt; if (Math.random() < .8) part(q.x, y, -q.dir * 60, (Math.random() - .5) * 80, .3, 8, 'c', 0);
-    if (q.x < (ARENA2.x0 - 1) * T || q.x > (ARENA2.x1 + 2) * T) { sveip.splice(i, 1); continue; }
+    if (q.x < (ax0 - 1) * T || q.x > (ax1 + 2) * T) { sveip.splice(i, 1); continue; }
     if (Math.abs(q.x - pcx) < 14 + P.w / 2 && P.y + P.h > y - 14 && P.y < y + 14) skade(q.x, false); }
   if (lyn) { lyn.t -= dt; if (lyn.t <= 0) lyn = null; }
 }
@@ -438,9 +532,11 @@ function oppdaterKamera(dt, snap) {
   const iHall = B.aktiv || (erHall(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T)) && P.x / T > 74);
   // pumpehallen og kanalen: zoom litt ut og løft bildet, så krokene i taket synes
   const ptx = Math.floor((P.x + P.w / 2) / T), pty = Math.floor((P.y + P.h / 2) / T), iSal2 = iKjeller2(ptx, pty) && pty >= 43 && ptx <= 139;
+  const iGard = B3.aktiv || (erGard(ptx, pty) && ptx >= 133);
   const iArena2 = B2.aktiv || erArena2(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T));
   const zMaal = iHall ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 23 : 29) * T * grunnSkala), cssH / ((erTouch ? 19.5 : 15) * T * grunnSkala))
     : iArena2 ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 20 : 27) * T * grunnSkala), cssH / ((erTouch ? 20 : 16) * T * grunnSkala))
+    : iGard ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 29) * T * grunnSkala), cssH / ((erTouch ? 21 : 19) * T * grunnSkala))
     : iSal2 ? Math.min(1, cssH / (16 * T * grunnSkala)) : 1;
   cam.zoom = snap ? zMaal : cam.zoom + (zMaal - cam.zoom) * Math.min(1, dt * 2.5);
   skala = grunnSkala * cam.zoom;
@@ -456,6 +552,7 @@ function oppdaterKamera(dt, snap) {
   const gulvY = erTouch ? 57.4 * T - .78 * vh : 58.4 * T - vh;
   if (iSal2) ty = Math.min(ty, gulvY);
   if (B2.aktiv) { tx = lerp(tx, ARENA2.midt * T - vw / 2, B2.fase === 'intro' ? 1 : .7); ty = erTouch ? gulvY : Math.min(57.6 * T - vh, 50 * T - vh / 2); }
+  if (iGard) { tx = lerp(tx, GARD.midt * T - vw / 2, B3.aktiv ? (B3.fase === 'intro' ? 1 : .75) : .5); ty = erTouch ? 27.4 * T - .8 * vh : 28.3 * T - vh; }
   tx = clamp(tx, 0, MW * T - vw); ty = vh >= MH * T ? (MH * T - vh) / 2 : clamp(ty, 0, MH * T - vh);
   if (snap) { cam.x = tx; cam.y = ty; return; }
   cam.x += (tx - cam.x) * (1 - Math.exp(-dt * 6)); cam.y += (ty - cam.y) * (1 - Math.exp(-dt * 5));

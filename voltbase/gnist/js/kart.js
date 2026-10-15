@@ -62,13 +62,29 @@ const OMRAADER = [
     [141, 57, 165, 57, BVANN],
     [141, 50, 142, 50, ONE], [164, 50, 165, 50, ONE],      // små hyller over vannet
     [166, 52, 166, 56, DOOR],                              // døra ut åpnes når Kortslutningen er slått
-    [167, 30, 170, 56, AIR],                               // sjakt opp mot trafostasjonen
+    [167, 27, 170, 56, AIR],                               // sjakt opp til trafostasjonen
     [167, 52, 170, 52, ONE], [167, 48, 170, 48, ONE], [167, 44, 170, 44, ONE], [167, 40, 170, 40, ONE], [167, 36, 170, 36, ONE], [167, 32, 170, 32, ONE],
+  ] },
+  // ----- Område 3: Trafostasjonen -----
+  { navn: 'Trafostasjonen', kart: [
+    [132, 0, 198, 26, AIR],
+    [160, 0, 161, 18, SOL], [160, 19, 161, 26, SVAK],       // muren mot gården; nederst er den svak
+    [129, 15, 131, 18, SVAK], [132, 0, 132, 14, SOL], [132, 19, 135, 19, SOL],      // snarvei fra sjakten, stengt av en svak vegg
+    [172, 23, 175, 26, SOL], [182, 22, 186, 26, SOL],       // transformatorer
+    [163, 22, 166, 22, ONE], [177, 18, 180, 18, ONE],
+    // tårnet: spøkelsesplattformer opp til vinkelsliperen
+    [189, 23, 191, 23, GHO], [193, 19, 195, 19, GHO], [189, 15, 191, 15, GHO], [193, 11, 195, 11, GHO], [190, 7, 196, 7, SOL],
+    // gården (sluttbossen)
+    [136, 23, 139, 23, GHO], [153, 23, 156, 23, GHO],
   ] },
   // ----- hemmeligheter i område 1 -----
   { navn: 'Takterrassen', kart: [
     [73, 0, 99, 2, AIR],                                   // åpen terrasse oppå trafohallen
     [73, 3, 79, 3, AIR], [73, 4, 79, 4, HAZ],              // grop med strømførende kabler: sving over den med kroken
+  ] },
+  { navn: 'Gjemmesteder', kart: [
+    [124, 15, 126, 15, GHO], [121, 11, 123, 11, GHO], [124, 7, 126, 7, GHO], [127, 4, 128, 4, GHO], [129, 1, 131, 3, AIR],   // usynlig trapp i sjakten
+    [50, 20, 56, 23, AIR], [49, 20, 49, 23, SVAK],          // hule bak en svak vegg i sjakta ved stillaset
   ] },
 ];
 function byggKart() {
@@ -87,11 +103,13 @@ function beregnDyp() {
       if (nx < 0 || ny < 0 || nx >= MW || ny >= MH) continue; const j = ny * MW + nx; if (dyp[j] > d + 1) { dyp[j] = d + 1; q.push(j); } } }
 }
 const dypAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? 6 : Math.min(6, dyp[y * MW + x]);
-const iKjeller2 = (x, y) => y >= 20 && x >= 70 && x <= 171 && !(y < 36 && (x < 123 || x > 130));
-function inne(x, y) { return iKjeller2(x, y) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
+const iKjeller2 = (x, y) => y >= 20 && x >= 70 && x <= 171 && !(y < 36 && (x < 123 || x > 130)) && !(x >= 167 && y <= 27);
+function inne(x, y) { return iKjeller2(x, y) || (x >= 49 && x <= 56 && y >= 20 && y <= 23) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
 const erHall = (x, y) => x >= 73 && x <= 101 && y >= 5 && y <= 19;
+const erGard = (x, y) => x >= 132 && x <= 159 && y >= 4 && y <= 27;
 const erArena2 = (x, y) => x >= 140 && x <= 166 && y >= 42 && y <= 58;
 function omraade(tx, ty) {
+  if (tx >= 132 && ty <= 26) return erGard(tx, ty) ? 'Stasjonsgården' : 'Trafostasjonen';
   if (iKjeller2(tx, ty)) {
     if (tx >= 167) return 'Stigesjakten';
     if (erArena2(tx, ty) && tx >= 141) return 'Koblingsrommet';
@@ -110,18 +128,23 @@ function omraade(tx, ty) {
 // ---------- objekter ----------
 // nye sjekkpunkt legges alltid til bakerst, så indeksene i gamle lagringer stemmer
 const SJEKK = [{ x: 4, y: 23 }, { x: 40, y: 31 }, { x: 69, y: 18 }, { x: 103, y: 18 },
-  { x: 132, y: 41 }, { x: 99, y: 56 }, { x: 137, y: 56 }, { x: 168, y: 56 }];
+  { x: 132, y: 41 }, { x: 99, y: 56 }, { x: 137, y: 56 }, { x: 168, y: 56 },
+  { x: 164, y: 26 }, { x: 196, y: 26 }];
 // De 21 første ligger i samme rekkefølge som i første versjon, så lagrede lysorber stemmer fortsatt.
 const ORBER = [[8,22],[19,19],[27,22],[31,21],[17,29],[23,28],[33,28],[38,30],[46,25],[47,21],[43,16],[51,13],[57,9],[51,5],[60,1],[66,10],[70,16],[87,7],[110,12],[114,10],[124,9],
   [10,30],[4,29],[7,29],[67,6],[71,4],
   // område 2: kabelkjelleren
   [106,37],[121,40],[100,39],[116,41],[93,52],[88,48],[83,52],[75,46],[107,52],[117,50],[120,51],[128,50],[133,52],[153,53],[168,46],[168,38],
   // takterrassen
-  [84,1],[92,1],[98,1]];
+  [84,1],[92,1],[98,1],
+  // fase 5: gjemmesteder og trafostasjonen
+  [130,2],[51,22],[54,22],[56,21],[165,20],[178,16],[190,21],[194,17],[190,13],[194,9],[146,22],[176,10],[188,5]];
 const IKON = {
   dobbel: '<svg viewBox="0 0 24 24"><path d="M6 2h5v10l8 2c1.7.4 3 1.9 3 3.7V20H2v-3l4-1z"/></svg>',
   hansker: '<svg viewBox="0 0 24 24"><path d="M7 22v-5L4 12c-.8-1.2.9-2.6 2-1.6L8 12V4a1.4 1.4 0 012.8 0V10h.4V2.6a1.4 1.4 0 012.8 0V10h.4V3.6a1.4 1.4 0 012.8 0V11h.4V6a1.4 1.4 0 012.8 0v9c0 3-2 5-3 7z"/></svg>',
   stot: '<svg viewBox="0 0 24 24"><path d="M14 1L4 14h7l-2 9 11-14h-7z"/></svg>',
+  tester: '<svg viewBox="0 0 24 24"><path d="M9 1h6v8l-1 2v11h-4V11L9 9zM11 3v4h2V3zM3 13l3-2 1 2-3 2zm18 0l-3-2-1 2 3 2zM3 6l3 1-.5 2L2.5 8z"/></svg>',
+  sliper: '<svg viewBox="0 0 24 24"><path d="M2 14h11v4H2zM13 13h4v6h-4zM17 15h5v2h-5zM8 8a5 5 0 1110 0 5 5 0 01-10 0zm3 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>',
   krok: '<svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 014 4c0 1.5-.8 2.8-2 3.5V14a5 5 0 01-10 0v-2h3v2a2 2 0 004 0V8.5A4 4 0 0112 1zm0 2.6a1.4 1.4 0 100 2.8 1.4 1.4 0 000-2.8zM19 9h3v13h-3z"/></svg>',
 };
 const FUNN = [
@@ -132,13 +155,17 @@ const FUNN = [
   { id: 'krok', x: 74, y: 55, navn: 'Kabeltrommel', tekst: 'Kast kabelen opp i en krok og sving deg over vann og avgrunner.',
     pc: 'Hold <b>C</b> (eller <b>E</b>) nær en krok, slipp for å fly', mob: 'Hold <b>Krok</b> nær en krok, slipp for å fly' },
   { id: 'liv2', x: 153, y: 55, boss2: true, navn: 'Livsgnist', liten: true },
+  { id: 'tester', x: 178, y: 26, navn: 'Spenningstester', tekst: 'Viser deg plattformer og koblinger som ellers er usynlige.', pc: 'Virker av seg selv: se etter gule omriss', mob: 'Virker av seg selv: se etter gule omriss' },
+  { id: 'sliper', x: 193, y: 6, navn: 'Vinkelsliper', tekst: 'Skjær deg gjennom svake vegger med sprekker i.', pc: 'Bruk <b>Strømstøt</b> rett inn i en svak vegg', mob: 'Bruk <b>Støt</b> rett inn i en svak vegg' },
+  { id: 'liv4', x: 53, y: 23, navn: 'Livsgnist', liten: true },
 ];
 // krokene du kan svinge deg i med kabeltrommelen (rutekoordinater; kroken henger i overkanten av ruta)
 const KROKER = [[105, 47], [110, 47], [115, 47], [120, 47], [125, 47], [130, 47], [134, 47],
   [147, 46], [153, 46], [159, 46],
-  [76, 0]];                                                // over gropa på takterrassen
+  [76, 0],
+  [170, 10], [176, 9], [138, 11], [146.5, 10], [155, 11]];   // trafostasjonen og gården                                                // over gropa på takterrassen
 // verksteder ved noen sjekkpunkt (indekser i SJEKK): bruk lysorbene på oppgraderinger
-const VERKSTED = [0, 4];
+const VERKSTED = [0, 4, 8];
 const OPPGRADERINGER = [
   { id: 'stot2', navn: 'Lengre strømstøt', tekst: 'Støtet tar deg en god del lenger.', pris: 6 },
   { id: 'liv3', navn: 'Ekstra livsgnist', tekst: 'Du tåler ett treff mer.', pris: 8 },
@@ -160,21 +187,25 @@ const FAG = [
   { x: 127, y: 51, tittel: 'Arbeid under spenning', tekst: 'Arbeid under spenning (AUS) krever egen opplæring, egne rutiner og riktig utstyr. Ellers skal anlegget gjøres spenningsløst.' },
   { x: 168, y: 34, tittel: 'Strøm i vann', tekst: 'Vann og fukt leder strøm og gjør feil farligere. Derfor har utstyr i fuktige rom høyere kapslingsgrad (IP-klasse).' },
 ];
+// svake vegger som kan skjæres opp (id brukes i lagringen)
+const SVAKE = [{ x0: 160, y0: 19, x1: 161, y1: 26 }, { x0: 129, y0: 15, x1: 131, y1: 18 }, { x0: 49, y0: 20, x1: 49, y1: 23 }];
+const TRAFOER = [[172, 23, 175, 26], [182, 22, 186, 26]];
 const BRYTERE = [{ x: 78, y: 14, av: false }, { x: 87, y: 9, av: false }, { x: 96, y: 14, av: false }];
 const TAVLE = { x: 123, y: 17 };
 // fiender: gnistlus går fram og tilbake, svevegnist flyr i en bue, releet skyter gnister når du er nær
 const FIENDE_DEF = [{ x0: 22, x1: 31, y: 23 }, { x0: 36, x1: 43, y: 31 }, { x0: 55, x1: 67, y: 18 },
   { x0: 119, x1: 129, y: 41 }, { type: 'sveve', x: 109, y: 38.5, ax: 3, ay: 1 }, { type: 'sveve', x: 86, y: 46, ax: 4, ay: 1.2 },
-  { type: 'rele', x: 72, y: 56 }];
+  { type: 'rele', x: 72, y: 56 },
+  { x0: 162, x1: 171, y: 26 }, { x0: 187, x1: 197, y: 26 }, { type: 'sveve', x: 179, y: 14, ax: 3, ay: 1.5 }, { type: 'sveve', x: 192, y: 13, ax: 2, ay: 2 }, { type: 'rele', x: 176, y: 26 }];
 const LYSBUE = { x: 28, y0: 27, y1: 31, per: 3.2 };   // tidsstyrt lysbue i kjelleren
 const KRAN = { x0: 65 * T, x1: 69 * T, y: 8 * T, w: 3 * T, x: 65 * T, dx: 0, t: 0 };
 const hazListe = [];
 const KJELLERLYS = [[16, 27], [29, 27], [40, 27], [6, 28],   // svake taklamper i kjelleren
   [104, 36], [112, 36], [120, 36], [131, 36], [76, 43], [85, 43], [94, 43], [108, 47], [124, 47], [137, 47], [168, 31]];
-const vannListe = [];
+const vannListe = [], ghoListe = [];
 
 // ---------- kollisjon ----------
-function fast(tx, ty) { const t = tile(tx, ty); return t === SOL || t === DOOR || t === LUKE || t === BVANN || (t === CUR && !S.ev.hansker); }
+function fast(tx, ty) { const t = tile(tx, ty); return t === SOL || t === DOOR || t === LUKE || t === BVANN || t === SVAK || (t === CUR && !S.ev.hansker) || (t === GHO && S.ev.tester); }
 const erVann = t => t === VANN || t === BVANN;
 function overlapp(x, y, w, h) {
   const x0 = Math.floor(x / T), x1 = Math.floor((x + w - .01) / T), y0 = Math.floor(y / T), y1 = Math.floor((y + h - .01) / T);
@@ -210,6 +241,9 @@ function flyttY(p, dy) {
 }
 function traffVegg(tx, ty, retning) {
   const t = tile(tx, ty);
+  if (t === SVAK) { const i = SVAKE.findIndex(v => tx >= v.x0 && tx <= v.x1 && ty >= v.y0 && ty <= v.y1);
+    if (S.ev.sliper && P.dashT > 0 && i >= 0) knusVegg(i);
+    else hint('svak', S.ev.sliper ? 'Bruk støtet rett inn i den svake veggen.' : 'Veggen har sprekker. Med riktig verktøy kunne du skåret deg gjennom.'); return; }
   if (t === CUR && !S.ev.hansker) {
     hint('sperre', 'Strømførende sperre! Du trenger isolerte hansker.');
     gnister(tx * T + T / 2, P.y + P.h / 2, 5, 'c'); if (Math.random() < .3) lyd('bue');

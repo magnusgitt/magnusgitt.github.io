@@ -9,16 +9,19 @@ function pop(sel) { const e = $(sel); if (!e) return; e.classList.remove('pop');
 function hud() {
   $('#liv').innerHTML = Array.from({ length: P.max }, (_, i) => `<i class="${i < P.hp ? '' : 'tom'}"></i>`).join('');
   $('#orbtall').textContent = '✦ ' + S.orbTatt.size + ' / ' + ORBER.length;
-  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']);
+  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']); if (S.ev.tester) e.push(['tester', 'Spenningstester']); if (S.ev.sliper) e.push(['sliper', 'Vinkelsliper']);
   $('#evner').innerHTML = e.map(([id, n]) => `<div class="ev" id="ev-${id}" title="${n}">${IKON[id]}</div>`).join('');
   sistKlar = null;
   $('#tStot').classList.toggle('skjult', !S.ev.stot);
   $('#tKrok').classList.toggle('skjult', !S.ev.krok);
   $('#bFag').textContent = `Fagkort: ${S.fag.size} av ${FAG.length}`;
-  const b2 = B2.aktiv && B2.fase !== 'intro';
-  $('#boss').classList.toggle('vis', (B.aktiv && B.fase === 'kamp') || b2);
-  $('#bossNavn').textContent = b2 ? 'Kortslutningen' : 'Overspenningen'; $('#boss').classList.toggle('b2', b2);
-  [...$('#bossSik').children].forEach((el, i) => el.classList.toggle('av', i >= (b2 ? B2.hp : B.hp)));
+  const b2 = B2.aktiv && B2.fase !== 'intro', b3 = B3.aktiv && B3.fase !== 'intro';
+  $('#boss').classList.toggle('vis', (B.aktiv && B.fase === 'kamp') || b2 || b3);
+  $('#bossNavn').textContent = b3 ? 'Trafokjempen' : b2 ? 'Kortslutningen' : 'Overspenningen'; $('#boss').classList.toggle('b2', b2); $('#boss').classList.toggle('b3', b3);
+  const n = b3 ? 6 : 3, hp = b3 ? B3.hp : b2 ? B2.hp : B.hp;
+  if ($('#bossSik').children.length !== n) $('#bossSik').innerHTML = '<i></i>'.repeat(n);
+  [...$('#bossSik').children].forEach((el, i) => el.classList.toggle('av', i >= hp));
+  $('#tidtaker').classList.toggle('vis', S.tidsmodus);
 }
 let sistKlar = null;
 function hudEvneTilstand() {
@@ -42,7 +45,10 @@ function maalTekst() {
   if (!S.ev.krok) return iKjeller2(tx, ty) ? 'Finn noe som kan få deg over kanalen' : 'Hopp ned gjennom luka ved hovedtavla';
   if (!S.boss2) return B2.aktiv ? 'Vent til Kortslutningen er utmattet, og slå til' : 'Sving deg over kanalen til koblingsrommet';
   if (!S.ev.liv2) return 'Ta livsgnisten i koblingsrommet';
-  return 'Klatre opp stigesjakten';
+  if (!S.ev.tester) return ty <= 27 && tx >= 132 ? 'Finn et måleinstrument i trafostasjonen' : 'Klatre opp stigesjakten';
+  if (!S.ev.sliper) return 'Klatre opp transformatortårnet';
+  if (!S.boss3) return B3.aktiv ? 'Slå ut Trafokjempen' : 'Skjær deg gjennom muren til stasjonsgården';
+  return 'Finn alle lysorber, fagkort og gjemmesteder';
 }
 function maalPunkt() {
   if (!S.ev.dobbel) return [44.5, 31.5];
@@ -54,10 +60,13 @@ function maalPunkt() {
   if (!S.ev.krok) return iKjeller2(tx, ty) ? [74.5, 55.5] : [126.5, 19];
   if (!S.boss2) return B2.aktiv ? null : [150, 54];
   if (!S.ev.liv2) return [153.5, 55.5];
-  return [168.5, 31];
+  if (!S.ev.tester) return ty <= 27 && tx >= 132 ? [178.5, 26.5] : [168.5, 28];
+  if (!S.ev.sliper) return [193.5, 6.5];
+  if (!S.boss3) return B3.aktiv ? null : [161, 23];
+  return null;
 }
 function sjekkMaal(tving) { const m = maalTekst(); if (m !== S.maal || tving) { S.maal = m; $('#maal').innerHTML = '<b>Mål:</b> ' + m; $('#maal').classList.add('vis'); maalTid = 5; } }
-function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt', '#lagSnu', '#lagKart', '#lagVerk', '#lagFag'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
+function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt', '#lagSnu', '#lagKart', '#lagVerk', '#lagFag', '#lagRull'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
   $('#hud').classList.toggle('vis', id === null || id === '#lagPause' || id === '#lagEvne'); $('#touch').classList.toggle('vis', id === null);
   if (id && id !== '#lagEvne') { const k = $(id + ' .knapp'); if (k) setTimeout(() => k.focus({ preventScroll: true }), 50); } }
 function primar() { if (performance.now() - S.panelT < 350) return; const l = document.querySelector('.lag.vis'); if (!l) return;
@@ -71,8 +80,8 @@ function primar() { if (performance.now() - S.panelT < 350) return; const l = do
 function settTilHex(a) { let h = ''; for (let i = 0; i < a.length; i += 4) h += ((a[i] | 0) | (a[i + 1] | 0) << 1 | (a[i + 2] | 0) << 2 | (a[i + 3] | 0) << 3).toString(16); return h; }
 function hexTilSett(h) { const a = new Uint8Array(KW * KH); if (typeof h !== 'string') return a;
   for (let j = 0; j < h.length && j * 4 < a.length; j++) { const n = parseInt(h[j], 16) || 0; for (let b = 0; b < 4; b++) if (j * 4 + b < a.length) a[j * 4 + b] = (n >> b) & 1; } return a; }
-function lagre() { try { localStorage.setItem(NOKKEL, JSON.stringify({ v: LAGRE_VERSJON, ev: S.ev, cp: S.cp, cpLit: [...S.cpLit], orb: [...S.orbTatt],
-  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop,
+function lagre() { if (S.tidsmodus) return; try { localStorage.setItem(NOKKEL, JSON.stringify({ v: LAGRE_VERSJON, ev: S.ev, cp: S.cp, cpLit: [...S.cpLit], orb: [...S.orbTatt],
+  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop, knust: [...S.knust], boss3: S.boss3, helt: S.helt,
   boss: S.bossDone, boss2: S.boss2, tid: Math.round(S.tid), ferdig: S.ferdig, dod: S.dodsfall })); } catch (e) {} }
 function hentLagret() {
   try { const d = JSON.parse(localStorage.getItem(NOKKEL) || 'null'); if (!d || typeof d !== 'object' || !d.ev || typeof d.ev !== 'object') return null;
@@ -81,6 +90,7 @@ function hentLagret() {
     return { ev, cp: Number.isInteger(d.cp) && d.cp >= 0 && d.cp < SJEKK.length ? d.cp : 0, cpLit: heltall(d.cpLit, SJEKK.length), orb: heltall(d.orb, ORBER.length),
       fag: heltall(d.fag, FAG.length), sett: hexTilSett(d.sett), brukt: Number.isInteger(d.brukt) && d.brukt >= 0 ? d.brukt : 0,
       kjop: Object.fromEntries(OPPGRADERINGER.map(o => [o.id, !!(d.kjop && d.kjop[o.id] === true)])),
+      knust: heltall(d.knust, SVAKE.length), boss3: d.boss3 === true, helt: d.helt === true,
       boss: d.boss === true, boss2: d.boss2 === true, tid: typeof d.tid === 'number' && d.tid > 0 ? d.tid : 0, ferdig: d.ferdig === true, dod: Number.isInteger(d.dod) ? d.dod : 0 };
   } catch (e) { return null; }
 }
@@ -99,6 +109,7 @@ function loop(n) {
       oppdaterVerden(dt); oppdaterProsj(dt); hudEvneTilstand(); hudKrok(); }
     else if (S.mode === 'slutt' || S.mode === 'meny') { KRAN.t += dt; KRAN.x = KRAN.x0 + (.5 - .5 * Math.cos(KRAN.t * .55)) * (KRAN.x1 - KRAN.x0); }
     hudVerk(); oppdaterMusikk();
+    if (S.tidsmodus && S.mode === 'spill') { const m = Math.floor(S.tid / 60), sk = S.tid % 60; $('#tidtaker').textContent = `${m}:${sk < 10 ? '0' : ''}${sk.toFixed(1)}`; }
     oppdaterPartikler(dt); oppdaterKamera(rdt);
     S.shake = Math.max(0, S.shake - rdt); S.flash = Math.max(0, S.flash - rdt * 1.4);
     if (S.hallFlimmer > 0) S.hallFlimmer -= rdt;
@@ -123,7 +134,7 @@ function oppdaterSurr() {
   if (tile(73, 13) === CUR) d = Math.min(d, Math.hypot(73.5 * T - pcx, 16 * T - pcy));
   if (lysbueFase() === 2) d = Math.min(d, Math.hypot((LYSBUE.x + .5) * T - pcx, 29.5 * T - pcy) * .7);
   for (const [x, y] of vannListe) if (tile(x, y) === VANN && Math.abs(x * T - pcx) < 300) d = Math.min(d, Math.hypot(x * T + T / 2 - pcx, y * T + 8 - pcy) * 1.4);
-  let v = clamp(1 - d / 260, 0, 1) * .05; if (B.aktiv || B2.aktiv) v = Math.max(v, B2.golv === 2 ? .06 : .03);
+  let v = clamp(1 - d / 260, 0, 1) * .05; if (B.aktiv || B2.aktiv || B3.aktiv) v = Math.max(v, B2.golv === 2 || B3.golv === 2 ? .06 : .03);
   if (S.mode !== 'spill') v = 0;
   try { A.surr.gain.setTargetAtTime(v, A.c.currentTime, .15); } catch (e) {}
 }
@@ -132,6 +143,18 @@ function visSlutt() {
   $('#sluttStat').innerHTML = `<div><b>${m}:${String(s).padStart(2, '0')}</b>Tid</div><div><b>${S.orbTatt.size}/${ORBER.length}</b>Lysorber</div><div><b>${S.ev.hemmelig ? 1 : 0}/1</b>Hemmelig rom</div><div><b>${S.dodsfall}</b>Ganger slått ut</div>`;
   visLag('#lagSlutt');
 }
+
+const tidTekst = t => { const m = Math.floor(t / 60), s = Math.floor(t % 60); return `${m}:${String(s).padStart(2, '0')}`; };
+function hentRekord() { try { const r = parseFloat(localStorage.getItem(NOKKEL + '-rekord')); return r > 0 ? r : 0; } catch (e) { return 0; } }
+function visRulle() {
+  const rek = hentRekord();
+  $('#rulleStat').innerHTML = `<div><b>${tidTekst(S.tid)}</b>Tid</div><div><b>${S.orbTatt.size}/${ORBER.length}</b>Lysorber</div><div><b>${S.fag.size}/${FAG.length}</b>Fagkort</div><div><b>${S.dodsfall}</b>Ganger slått ut</div>`;
+  $('#rulleRekord').textContent = S.tidsmodus ? (S.nyRekord ? 'Ny rekord i tidsmodus!' : `Rekord i tidsmodus: ${tidTekst(rek)}`) : rek ? `Rekord i tidsmodus: ${tidTekst(rek)}` : 'Tidsmodus er låst opp: spill hele eventyret på tid.';
+  $('#bRulleVidere').style.display = S.tidsmodus ? 'none' : '';
+  visLag('#lagRull'); const r = $('#rulle'); r.classList.remove('kjor'); void r.offsetWidth; r.classList.add('kjor');
+}
+function startTidsmodus() { lydInit(); S.tidsmodus = true; nyttSpill(null); S.mode = 'spill'; sist = performance.now(); visLag(null); hud();
+  banner('Tidsmodus', 'Klokka går!', 2.2); S.hintSett.add('omr-Byggeplassen'); setTimeout(() => sjekkMaal(true), 1500); }
 
 // ---------- input ----------
 let erTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
@@ -247,6 +270,7 @@ $('#bLyd').addEventListener('click', () => settLyd(!lydPa));
 $('#bSjekk').addEventListener('click', () => { S.mode = 'spill'; sist = performance.now(); visLag(null); respawn(); });
 $('#bOmstart').addEventListener('click', () => {
   if (performance.now() - bekreftOmstart > 3000) { bekreftOmstart = performance.now(); $('#bOmstart').textContent = 'Trykk igjen for å slette fremgangen'; return; }
+  if (S.tidsmodus) { BG.midtLys = null; startTidsmodus(); return; }
   try { localStorage.removeItem(NOKKEL); } catch (e) {} BG.midtLys = null; start(null);
 });
 $('#lagEvne').addEventListener('pointerdown', e => { e.preventDefault(); primar(); });
@@ -256,7 +280,7 @@ $('#bRist').addEventListener('click', () => { INNST.rist = !INNST.rist; lagreInn
 settLyd(lydPa); visInnst();
 let snuVist = false;
 function lukkSnu() { if (S.mode !== 'snu') return; S.mode = 'spill'; sist = performance.now(); visLag(null); }
-function start(lagret) { lydInit(); nyttSpill(lagret); S.mode = 'spill'; sist = performance.now(); visLag(null); setTimeout(() => sjekkMaal(true), 1500);
+function start(lagret) { lydInit(); S.tidsmodus = false; nyttSpill(lagret); S.mode = 'spill'; sist = performance.now(); visLag(null); setTimeout(() => sjekkMaal(true), 1500);
   if (erTouch && cssH > cssW && !snuVist) { snuVist = true; S.mode = 'snu'; visLag('#lagSnu'); }
   if (!lagret) { banner('Gnist', 'Byggeplassen'); S.hintSett.add('omr-Byggeplassen'); setTimeout(() => hint(null, erTouch ? 'Gå med venstre tommel. Hopp med høyre. Hold inne for høyere hopp.' : 'Gå med piltastene. Hopp med mellomrom. Hold inne for høyere hopp.', 5), 2600); }
   else S.hintSett.add('omr-' + omraade(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T))); }
@@ -265,16 +289,20 @@ $('#bNy').addEventListener('click', () => {
   try { localStorage.removeItem(NOKKEL); } catch (e) {} BG.midtLys = null; start(null); });
 $('#bFortsett').addEventListener('click', () => start(hentLagret()));
 $('#bIgjen').addEventListener('click', () => { try { localStorage.removeItem(NOKKEL); } catch (e) {} BG.midtLys = null; start(null); });
+$('#bTid').addEventListener('click', startTidsmodus);
+$('#bRulleTid').addEventListener('click', startTidsmodus);
+$('#bRulleVidere').addEventListener('click', () => { S.mode = 'spill'; sist = performance.now(); visLag(null); sjekkMaal(true); });
 $('#bVidere').addEventListener('click', () => { S.mode = 'spill'; sist = performance.now(); visLag(null); sjekkMaal(true); });
 
 // ---------- oppstart ----------
 lagBakgrunn();
 byggKart();
-for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { const t = tile(x, y); if (t === HAZ) hazListe.push([x, y]); else if (t === VANN || t === BVANN) vannListe.push([x, y]); }
+for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { const t = tile(x, y); if (t === HAZ) hazListe.push([x, y]); else if (t === VANN || t === BVANN) vannListe.push([x, y]); else if (t === GHO) ghoListe.push([x, y]); }
+{ const l = hentLagret(); if ((l && l.helt) || hentRekord()) $('#bTid').style.display = ''; }
 if (hentLagret()) { $('#bFortsett').style.display = ''; $('#bNy').textContent = 'Nytt spill'; $('#bNy').classList.add('sek'); }
 nyttSpill(null);
 resize(); addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 150));
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 visLag('#lagMeny');
 requestAnimationFrame(loop);
-window.__gnist = { S, P, B, B2, FAG, reiseTil, kjop, orbIgjen, visKart, lukkPanel, visVerk, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };
+window.__gnist = { S, P, B, B2, B3, SVAKE, knusVegg, startTidsmodus, FAG, reiseTil, kjop, orbIgjen, visKart, lukkPanel, visVerk, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };

@@ -213,6 +213,77 @@ async function fase4(b) {
   await ctx.close();
 }
 
+async function fase5(b) {
+  console.log('Område 3: trafostasjonen, sluttboss og tidsmodus');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 3, ev: { dobbel: true, hansker: true, stot: true, krok: true, liv2: true }, cp: 7, cpLit: [0, 1, 2, 3, 4, 5, 6, 7], orb: [], boss: true, boss2: true, ferdig: true, tid: 600 })), KEY);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 800);
+  // opp av stigesjakten med ekte tastetrykk
+  let oppe = false;
+  for (let i = 0; i < 3 && !oppe; i++) { await pos(page, 168, 31); await vent(page, 400);
+    await page.keyboard.down('ArrowRight'); await page.keyboard.down('Space'); await vent(page, 250); await page.keyboard.up('Space');
+    await page.waitForFunction(() => __gnist.P.vy > 100, null, { timeout: 2000 }).catch(() => {});
+    await page.keyboard.down('Space'); await vent(page, 250); await page.keyboard.up('Space'); await vent(page, 800); await page.keyboard.up('ArrowRight');
+    const t = await tilstand(page); oppe = t.y <= 27.1 && t.x > 170; }
+  sjekk('opp av stigesjakten til stasjonen', oppe);
+  sjekk('spøkelsesplattform er luft uten tester', await page.evaluate(() => !fast(190, 23)));
+  await pos(page, 178, 26); await vent(page, 600); sjekk('spenningstester plukket opp', (await tilstand(page)).ev.tester); await lukkKort(page);
+  sjekk('spøkelsesplattform er fast med tester', await page.evaluate(() => fast(190, 23)));
+  await pos(page, 190, 22); await vent(page, 600); sjekk('kan stå på spøkelsesplattform', Math.abs((await tilstand(page)).y - 23) < .1);
+  await pos(page, 193, 6); await vent(page, 600); sjekk('vinkelsliper plukket opp', (await tilstand(page)).ev.sliper); await lukkKort(page);
+  // skjær opp muren med et ekte strømstøt
+  let knust = false;
+  for (let i = 0; i < 3 && !knust; i++) { await pos(page, 163, 26); await vent(page, 300); await page.keyboard.down('ArrowLeft'); await vent(page, 60); await page.keyboard.press('ShiftLeft'); await vent(page, 500); await page.keyboard.up('ArrowLeft');
+    knust = await page.evaluate(() => __gnist.S.knust.has(0) && __gnist.tile(160, 24) === 0); }
+  sjekk('vinkelsliperen skjærer opp muren', knust);
+  // sluttbossen
+  await page.evaluate(() => { __gnist.P.inv = 9999; }); await pos(page, 152, 26); await vent(page, 500);
+  sjekk('Trafokjempen våkner', await page.evaluate(() => __gnist.B3.aktiv));
+  sjekk('gården stenges', await page.evaluate(() => __gnist.tile(161, 22) === 5));
+  sjekk('kamp mot Trafokjempen', await page.waitForFunction(() => __gnist.B3.fase === 'kamp', null, { timeout: 8000 }).then(() => true, () => false));
+  const faser = new Set(); let golv3 = false, stotTreff = false; const tB = Date.now();
+  while (Date.now() - tB < 120000) {
+    const s = await page.evaluate(() => { const B3 = __gnist.B3, f = B3.hp > 4 ? 1 : B3.hp > 2 ? 2 : 3; return { f, hp: B3.hp, fase: B3.fase, aapen: (f === 1 && B3.sar > 0) || (f === 2 && B3.ned > 0) || (f === 3 && B3.sar > 0), stun: B3.stun, k: b3Kjerne(), golv: B3.golv }; });
+    if (s.fase !== 'kamp') break; faser.add(s.f); if (s.golv === 2) golv3 = true;
+    if (s.aapen && s.stun <= 0) {
+      if (s.f === 1) { const hp0 = s.hp; await page.evaluate(([kx, ky]) => { const P = __gnist.P; P.x = kx - 110; P.y = __gnist.B3.y - P.h; P.vy = 0; P.vx = 0; P.face = 1; }, s.k); await page.keyboard.press('ShiftLeft'); await vent(page, 400);
+        if ((await page.evaluate(() => __gnist.B3.hp)) < hp0) stotTreff = true; }
+      else { await page.evaluate(([kx, ky]) => { const P = __gnist.P; P.x = kx - P.w / 2; P.y = ky - 80; P.vy = 300; P.vx = 0; }, s.k); await vent(page, 400); }
+      continue; }
+    await vent(page, 60);
+  }
+  sjekk('alle tre fasene', faser.size === 3, [...faser]);
+  sjekk('strømstøt fra bakken treffer brystplaten', stotTreff);
+  sjekk('gulvet får strøm i fase 2', golv3);
+  sjekk('rulletekst etter sluttbossen', await page.waitForFunction(() => document.querySelector('#lagRull').classList.contains('vis'), null, { timeout: 15000 }).then(() => true, () => false));
+  sjekk('spillet er fullført og lagret', await page.evaluate(() => { const l = hentLagret(); return l.helt && l.boss3 && l.knust.includes(0) && l.ev.sliper; }));
+  // tidsmodus
+  await page.reload(); await vent(page, 400);
+  sjekk('tidsmodus i menyen', await page.locator('#bTid').isVisible());
+  const for_ = await page.evaluate(k => localStorage.getItem(k), KEY);
+  await page.click('#bTid'); await vent(page, 1500);
+  sjekk('tidsmodus starter fra begynnelsen med klokke', await page.evaluate(() => __gnist.S.tidsmodus && !__gnist.S.ev.dobbel && document.querySelector('#tidtaker').classList.contains('vis') && document.querySelector('#tidtaker').textContent !== '0:00.0'));
+  await pos(page, 41, 31); await page.keyboard.down('ArrowRight'); await page.waitForFunction(() => __gnist.S.ev.dobbel, null, { timeout: 3000 }).catch(() => {}); await page.keyboard.up('ArrowRight'); await lukkKort(page);
+  sjekk('tidsmodus rører ikke lagringen', (await page.evaluate(k => localStorage.getItem(k), KEY)) === for_);
+  sjekk('ingen JS-feil (område 3)', errs.length === 0, errs);
+  await ctx.close();
+}
+
+async function hemmeligheter(b) {
+  console.log('Gjemmesteder i område 1');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 3, ev: { dobbel: true, hansker: true, stot: true, krok: true, tester: true, sliper: true }, cp: 1, cpLit: [0, 1, 2, 3], orb: [], boss: true, ferdig: true, tid: 600 })), KEY);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
+  let hule = false;
+  for (let i = 0; i < 3 && !hule; i++) { await pos(page, 46, 22); await vent(page, 300); await page.keyboard.down('ArrowRight'); await vent(page, 60); await page.keyboard.press('ShiftLeft'); await vent(page, 500); await page.keyboard.up('ArrowRight');
+    hule = await page.evaluate(() => __gnist.S.knust.has(2)); }
+  sjekk('hulen bak den svake veggen åpnes', hule);
+  await pos(page, 53, 23); await vent(page, 600); sjekk('livsgnist i hulen', await page.evaluate(() => __gnist.S.ev.liv4));
+  sjekk('usynlig trapp i sjakten', await page.evaluate(() => fast(124, 15) && fast(127, 4)));
+  sjekk('ingen JS-feil (gjemmesteder)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
   const { ctx, page, errs } = await nySide(b, opts);
@@ -259,6 +330,8 @@ async function touch(b, navn, opts) {
     if (med('lagring')) await lagring(b);
     if (med('omr2')) await omraade2(b);
     if (med('fase4')) await fase4(b);
+    if (med('fase5')) await fase5(b);
+    if (med('hemmelig')) await hemmeligheter(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

@@ -151,5 +151,21 @@ a.knapp { text-decoration:none; text-align:center; }
   #maal { top:calc(96px + env(safe-area-inset-top)); }
   #boss { top:calc(136px + env(safe-area-inset-top)); }
   .touch #toast { top:calc(180px + env(safe-area-inset-top)); }
+  /* stående: tips over bossnavnet, ikke over knappene */
+  .touch #hint.lav { bottom:auto; top:calc(196px + env(safe-area-inset-top)); }
 }
+@media (max-height:440px) and (min-width:521px) { #boss { top:calc(60px + env(safe-area-inset-top)); } #boss .navn { font-size:17px; } }
 @media (max-height:440px) { #lagKart h2 { display:none; } #lagKart .kort { padding:10px 14px; } #lagKart .knapp { padding:10px; } #lagKart .liten { margin-top:6px; } }
+
+/* fase 5 */
+#boss.b3 .navn { color:#ffe6c2; text-shadow:0 0 14px rgba(255,170,80,.8); }
+#boss.b3 .sik i { background:#ffb347; box-shadow:0 0 10px #ff9020; width:20px; }
+#tidtaker { position:fixed; right:calc(16px + env(safe-area-inset-right)); top:calc(60px + env(safe-area-inset-top)); font:600 18px ui-monospace,Menlo,monospace;
+  color:#fff4dc; background:rgba(9,17,36,.6); border:1px solid rgba(255,197,107,.45); padding:4px 10px; border-radius:10px; pointer-events:none; display:none; }
+#tidtaker.vis { display:block; }
+.rulleVindu { height:150px; overflow:hidden; position:relative; margin:8px 0;
+  -webkit-mask-image:linear-gradient(transparent, #000 20%, #000 80%, transparent); mask-image:linear-gradient(transparent, #000 20%, #000 80%, transparent); }
+#rulle { text-align:center; } #rulle p { margin:0 0 18px; font-size:14px; } #rulle .stor { font-size:26px; color:#fff6e4; }
+#rulle.kjor { animation:rull 16s linear forwards; }
+@keyframes rull { from { transform:translateY(90px); } to { transform:translateY(-100%); } }
+@media (max-width:520px) { #tidtaker { top:calc(96px + env(safe-area-inset-top)); } }

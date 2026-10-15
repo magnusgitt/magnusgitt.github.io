@@ -74,6 +74,8 @@ function lyd(n) {
     case 'utmattet': tone(400, 90, .9, 'triangle', .05); break;
     case 'b2treff': sus(.12, 2000, 300, .12); tone(600, 120, .5, 'square', .04); tone(150, 40, .8, 'sawtooth', .05, .08); break;
     case 'fag': [587, 740, 880].forEach((f, i) => tone(f, f, .35, 'sine', .035, i * .07)); tone(1175, 1175, .5, 'triangle', .02, .22); break;
+    case 'slipe': sus(.6, 9000, 3000, .1, 0, 'highpass'); tone(2400, 1800, .5, 'sawtooth', .02); sus(.3, 600, 80, .12, .3); break;
+    case 'brol3': tone(55, 30, 1.6, 'sawtooth', .09); tone(82, 41, 1.4, 'square', .04, .1); sus(1.4, 3000, 120, .09); break;
     case 'slutt': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 1.6, 'triangle', .04, i * .16)); break;
   }
 }
@@ -85,6 +87,8 @@ const TEMA = {
   kjeller:{ bpm: 70, rot: 50, skala: [0, 2, 3, 5, 7, 9, 10], akk: [0, 3, 0, 6], arp: .35, lys: .6 },
   hall:   { bpm: 108, rot: 52, skala: [0, 1, 3, 5, 7, 8, 10], akk: [0, 1, 0, 6], arp: .8, lys: .8, puls: true },
   kabel:  { bpm: 76, rot: 54, skala: [0, 2, 3, 5, 7, 8, 10], akk: [0, 5, 3, 4], arp: .45, lys: .7 },
+  stasjon:{ bpm: 92, rot: 55, skala: [0, 2, 4, 5, 7, 9, 10], akk: [0, 3, 4, 0], arp: .6, lys: .9 },
+  boss3:  { bpm: 132, rot: 50, skala: [0, 1, 3, 5, 7, 8, 10], akk: [0, 5, 1, 4], arp: 1, lys: .9, puls: true },
   boss2:  { bpm: 120, rot: 54, skala: [0, 1, 3, 5, 6, 8, 10], akk: [0, 1, 4, 1], arp: .9, lys: .8, puls: true },
 };
 const MUS = { gain: null, tema: null, neste: 0, steg: 0, takt: 0 };
@@ -93,9 +97,9 @@ function musTone(f, t, dur, type, vol) { const o = A.c.createOscillator(), g = A
   g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(.4, dur * .3)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(MUS.gain); o.start(t); o.stop(t + dur + .05); }
 function velgTema() {
-  if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
+  if (B3.aktiv && B3.fase !== 'dod') return 'boss3'; if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
   const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
-  if (iKjeller2(tx, ty)) return 'kabel'; if (erHall(tx, ty)) return S.bossDone ? 'ute' : 'kjeller'; if (inne(tx, ty)) return 'kjeller'; return 'ute';
+  if (tx >= 132 && ty <= 27) return 'stasjon'; if (iKjeller2(tx, ty)) return 'kabel'; if (erHall(tx, ty)) return S.bossDone ? 'ute' : 'kjeller'; if (inne(tx, ty)) return 'kjeller'; return 'ute';
 }
 function oppdaterMusikk() {
   if (!A.c) return;
