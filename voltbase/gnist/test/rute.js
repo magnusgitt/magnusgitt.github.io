@@ -314,6 +314,27 @@ async function touch(b, navn, opts) {
   if (krokK) { await page.evaluate(() => { const P = __gnist.P; P.x = 105 * 32; P.y = 50 * 32; P.vy = -200; P.vx = 0; P.onGround = false; });
     await berør('touchStart', [{ x: krokK.x, y: krokK.y, id: 3 }]); await vent(page, 250);
     sjekk('krok-knappen fester kabelen', await page.evaluate(() => !!__gnist.P.krok), await page.evaluate(() => ({ m: __gnist.S.mode, h: __gnist.I.krokHeld, maal: __gnist.S.krokMaal, x: __gnist.P.x / 32, y: __gnist.P.y / 32, dod: __gnist.S.dod, laas: __gnist.S.laas, ts: __gnist.TS }))); await berør('touchEnd', []); }
+  // tilpass knapper: flytt og forstørr Hopp, lagres og virker etterpå
+  await page.evaluate(() => { __gnist.P.krok = null; __gnist.P.inv = 999; }); await pos(page, 50, 18); await vent(page, 300);
+  await page.tap('#menyKnapp'); await vent(page, 300); await page.tap('#bTilpass'); await vent(page, 300);
+  sjekk('tilpass-modus åpnes', await page.evaluate(() => __gnist.S.mode === 'tilpass' && document.documentElement.classList.contains('tilpasser')));
+  { const h0 = await boks('#tHopp');
+    await berør('touchStart', [{ x: h0.x, y: h0.y, id: 5 }]); for (let i = 1; i <= 6; i++) { await berør('touchMove', [{ x: h0.x - 20 * i, y: h0.y - 10 * i, id: 5 }]); await vent(page, 30); } await berør('touchEnd', []);
+    await page.tap('#bStorre'); await page.tap('#bStorre'); await vent(page, 100);
+    const h1 = await boks('#tHopp'); sjekk('knappen flyttes og blir større', h1.x < h0.x - 80 && h1.w > h0.w * 1.1, { h0, h1 });
+    await page.tap('#bFerdig'); await vent(page, 300);
+    const lagret = await page.evaluate(k => JSON.parse(localStorage.getItem(k + '-innst')).knapper, KEY);
+    sjekk('plasseringen lagres', !!lagret && Object.values(lagret).some(o => o.tHopp && o.tHopp.s > 1), lagret);
+    await page.tap('#bPauseFortsett'); await vent(page, 300);
+    const h2 = await boks('#tHopp'); await pos(page, 50, 18); await vent(page, 300);
+    await berør('touchStart', [{ x: h2.x, y: h2.y, id: 6 }]); await vent(page, 120); await berør('touchEnd', []); await vent(page, 120);
+    { const t = await tilstand(page); sjekk('flyttet hoppknapp virker', t.y < 18.9 && Math.abs(h2.x - h1.x) < 2, t); }
+    await page.reload(); await vent(page, 500);
+    await page.tap('#bFortsett'); await vent(page, 500); if (await page.locator('#lagSnu').isVisible()) { await page.tap('#bSnuOk'); await vent(page, 300); }
+    const h3 = await boks('#tHopp'); sjekk('plasseringen huskes etter omlasting', Math.abs(h3.x - h1.x) < 2, { h1, h3 });
+    await page.tap('#menyKnapp'); await vent(page, 300); await page.tap('#bTilpass'); await vent(page, 200); await page.tap('#bTilbake'); await page.tap('#bFerdig'); await vent(page, 200);
+    await page.tap('#bPauseFortsett'); await vent(page, 200);
+    const h4 = await boks('#tHopp'); sjekk('tilbakestill gir standard plassering', Math.abs(h4.x - h0.x) < 2 && Math.abs(h4.w - h0.w) < 2, { h0, h4 }); }
   const sz = navn === 'liggende' ? { width: 390, height: 844 } : { width: 844, height: 390 };
   await page.setViewportSize(sz); await vent(page, 600);
   sjekk('rotasjon tilpasser lerretet', (await page.evaluate(() => document.querySelector('#c').getBoundingClientRect().width)) === sz.width);

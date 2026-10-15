@@ -49,8 +49,11 @@ const I = { left: false, right: false, down: false, jumpHeld: false, jumpP: fals
 const K = {}, TS = { left: false, right: false, jump: false, dash: false, krok: false };
 
 // ---------- innstillinger (egen nøkkel, påvirker ikke lagret fremgang) ----------
-const INNST = { vib: true, rist: true, mus: true };
-try { const d = JSON.parse(localStorage.getItem(NOKKEL + '-innst') || 'null'); if (d && typeof d === 'object') for (const k of ['vib', 'rist', 'mus']) if (typeof d[k] === 'boolean') INNST[k] = d[k]; } catch (e) {}
+const INNST = { vib: true, rist: true, mus: true, knapper: {} };
+try { const d = JSON.parse(localStorage.getItem(NOKKEL + '-innst') || 'null'); if (d && typeof d === 'object') for (const k of ['vib', 'rist', 'mus']) if (typeof d[k] === 'boolean') INNST[k] = d[k];
+  // egne knappeplasseringer per retning: { ligg|staa: { id: { x, y, s } } }
+  if (d && d.knapper && typeof d.knapper === 'object') for (const r of ['ligg', 'staa']) { const o = d.knapper[r]; if (!o || typeof o !== 'object') continue; INNST.knapper[r] = {};
+    for (const id of ['pad', 'tHopp', 'tStot', 'tKrok']) { const v = o[id]; if (v && isFinite(v.x) && isFinite(v.y) && isFinite(v.s)) INNST.knapper[r][id] = { x: +v.x, y: +v.y, s: Math.min(1.6, Math.max(.6, +v.s)) }; } } } catch (e) {}
 function lagreInnst() { try { localStorage.setItem(NOKKEL + '-innst', JSON.stringify(INNST)); } catch (e) {} visInnst(); }
 function visInnst() { $('#bVib').textContent = 'Vibrasjon: ' + (INNST.vib ? 'på' : 'av'); $('#bRist').textContent = 'Risting: ' + (INNST.rist ? 'full' : 'redusert');
   $('#bMus').textContent = 'Musikk: ' + (INNST.mus ? 'på' : 'av'); }

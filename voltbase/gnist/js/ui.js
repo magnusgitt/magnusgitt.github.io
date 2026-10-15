@@ -67,6 +67,7 @@ function maalPunkt() {
 }
 function sjekkMaal(tving) { const m = maalTekst(); if (m !== S.maal || tving) { S.maal = m; $('#maal').innerHTML = '<b>Mål:</b> ' + m; $('#maal').classList.add('vis'); maalTid = 5; } }
 function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt', '#lagSnu', '#lagKart', '#lagVerk', '#lagFag', '#lagRull'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
+  if (id) { $('#verkKnapp').classList.add('skjult'); sistVerk = false; }
   $('#hud').classList.toggle('vis', id === null || id === '#lagPause' || id === '#lagEvne'); $('#touch').classList.toggle('vis', id === null);
   if (id && id !== '#lagEvne') { const k = $(id + ' .knapp'); if (k) setTimeout(() => k.focus({ preventScroll: true }), 50); } }
 function primar() { if (performance.now() - S.panelT < 350) return; const l = document.querySelector('.lag.vis'); if (!l) return;
@@ -169,7 +170,7 @@ addEventListener('keydown', e => {
   const c = e.code;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
   lydInit();
-  if (c === 'Escape' || c === 'KeyP') { if (!e.repeat) { if (S.mode === 'evne') lukkEvne(); else if (S.mode === 'kart' || S.mode === 'verk') lukkPanel();
+  if (c === 'Escape' || c === 'KeyP') { if (!e.repeat) { if (S.mode === 'tilpass') sluttTilpass(); else if (S.mode === 'evne') lukkEvne(); else if (S.mode === 'kart' || S.mode === 'verk') lukkPanel();
     else if ($('#lagFag').classList.contains('vis')) visLag('#lagPause'); else pauseBytt(); } return; }
   if (c === 'KeyM' && !e.repeat) { settLyd(!lydPa); return; }
   if ((c === 'Tab' || c === 'KeyQ')) { e.preventDefault(); if (!e.repeat) { if (S.mode === 'kart') lukkPanel(); else if (S.mode === 'spill') visKart(); } return; }
@@ -278,6 +279,49 @@ $('#bSnuOk').addEventListener('click', lukkSnu);
 $('#bVib').addEventListener('click', () => { INNST.vib = !INNST.vib; lagreInnst(); vib(30); });
 $('#bRist').addEventListener('click', () => { INNST.rist = !INNST.rist; lagreInnst(); });
 settLyd(lydPa); visInnst();
+
+// egne knappeplasseringer: flyttes med translate/scale, så treffområdet følger knappen
+const KNAPPER = ['pad', 'tHopp', 'tStot', 'tKrok'];
+function knappRetning() { return innerWidth > innerHeight ? 'ligg' : 'staa'; }
+function knappOppsett() { const r = knappRetning(); return INNST.knapper[r] || (INNST.knapper[r] = {}); }
+function brukKnapper() {
+  const o = INNST.knapper[knappRetning()] || {};
+  for (const id of KNAPPER) { const el = $('#' + id), v = o[id] || { x: 0, y: 0, s: 1 }; el.style.translate = v.x + 'px ' + v.y + 'px'; el.style.scale = v.s; }
+}
+function holdInne(id) {
+  // knappen skal alltid være innenfor skjermen
+  const el = $('#' + id), r = el.getBoundingClientRect(); if (!r.width) return;
+  const v = knappOppsett()[id]; if (!v) return;
+  let dx = 0, dy = 0;
+  if (r.left < 4) dx = 4 - r.left; else if (r.right > innerWidth - 4) dx = innerWidth - 4 - r.right;
+  if (r.top < 4) dy = 4 - r.top; else if (r.bottom > innerHeight - 4) dy = innerHeight - 4 - r.bottom;
+  if (dx || dy) { v.x += dx; v.y += dy; brukKnapper(); }
+}
+let tilpassValgt = 'tHopp', tilpassDra = null;
+function velgKnapp(id) { tilpassValgt = id; KNAPPER.forEach(k => $('#' + k).classList.toggle('valgt', k === id)); }
+function startTilpass() { if (S.mode !== 'pause') return; S.mode = 'tilpass'; document.documentElement.classList.add('tilpasser'); visLag(null); velgKnapp(tilpassValgt); }
+function sluttTilpass() { if (S.mode !== 'tilpass') return; tilpassDra = null; document.documentElement.classList.remove('tilpasser'); KNAPPER.forEach(k => $('#' + k).classList.remove('valgt', 'trykk'));
+  lagreInnst(); S.mode = 'pause'; visLag('#lagPause'); hud(); }
+function endreStr(d) { const o = knappOppsett(), v = o[tilpassValgt] || (o[tilpassValgt] = { x: 0, y: 0, s: 1 });
+  v.s = Math.round(Math.min(1.6, Math.max(.6, v.s + d)) * 10) / 10; brukKnapper(); holdInne(tilpassValgt); }
+$('#touch').addEventListener('pointerdown', e => {
+  if (S.mode !== 'tilpass') return;
+  e.stopPropagation(); e.preventDefault();
+  const el = e.target.closest('#pad, .rund'); if (!el) return;
+  velgKnapp(el.id); const o = knappOppsett(), v = o[el.id] || (o[el.id] = { x: 0, y: 0, s: 1 });
+  tilpassDra = { id: el.id, px: e.clientX, py: e.clientY, x: v.x, y: v.y, pid: e.pointerId };
+}, { capture: true });
+addEventListener('pointermove', e => { if (!tilpassDra || e.pointerId !== tilpassDra.pid) return; const v = knappOppsett()[tilpassDra.id];
+  v.x = Math.round(tilpassDra.x + e.clientX - tilpassDra.px); v.y = Math.round(tilpassDra.y + e.clientY - tilpassDra.py); brukKnapper(); });
+addEventListener('pointerup', e => { if (!tilpassDra || e.pointerId !== tilpassDra.pid) return; holdInne(tilpassDra.id); tilpassDra = null; });
+addEventListener('pointercancel', () => { tilpassDra = null; });
+$('#bTilpass').addEventListener('click', startTilpass);
+$('#bFerdig').addEventListener('click', sluttTilpass);
+$('#bMindre').addEventListener('click', () => endreStr(-.1));
+$('#bStorre').addEventListener('click', () => endreStr(.1));
+$('#bTilbake').addEventListener('click', () => { delete INNST.knapper[knappRetning()]; brukKnapper(); });
+addEventListener('resize', () => requestAnimationFrame(() => { brukKnapper(); if (INNST.knapper[knappRetning()]) KNAPPER.forEach(holdInne); }));
+brukKnapper();
 let snuVist = false;
 function lukkSnu() { if (S.mode !== 'snu') return; S.mode = 'spill'; sist = performance.now(); visLag(null); }
 function start(lagret) { lydInit(); S.tidsmodus = false; nyttSpill(lagret); S.mode = 'spill'; sist = performance.now(); visLag(null); setTimeout(() => sjekkMaal(true), 1500);
@@ -305,4 +349,4 @@ resize(); addEventListener('resize', resize); addEventListener('orientationchang
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 visLag('#lagMeny');
 requestAnimationFrame(loop);
-window.__gnist = { S, P, B, B2, B3, SVAKE, knusVegg, startTidsmodus, FAG, reiseTil, kjop, orbIgjen, visKart, lukkPanel, visVerk, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };
+window.__gnist = { INNST, brukKnapper, startTilpass, sluttTilpass, S, P, B, B2, B3, SVAKE, knusVegg, startTidsmodus, FAG, reiseTil, kjop, orbIgjen, visKart, lukkPanel, visVerk, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };

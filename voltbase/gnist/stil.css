@@ -169,3 +169,16 @@ a.knapp { text-decoration:none; text-align:center; }
 #rulle.kjor { animation:rull 16s linear forwards; }
 @keyframes rull { from { transform:translateY(90px); } to { transform:translateY(-100%); } }
 @media (max-width:520px) { #tidtaker { top:calc(96px + env(safe-area-inset-top)); } }
+
+/* tilpass knapper */
+#tilpassBar { position:fixed; left:50%; top:calc(10px + env(safe-area-inset-top)); transform:translateX(-50%); width:min(94vw,520px); display:none;
+  padding:10px 12px; border-radius:14px; background:rgba(10,18,32,.88); border:1px solid rgba(255,255,255,.18); text-align:center; z-index:30; }
+.tilpasser #tilpassBar { display:block; }
+#tilpassBar .liten { margin:0 0 8px; color:var(--dempet); font-size:14px; }
+#tilpassBar .rad { display:flex; gap:8px; justify-content:center; }
+#tilpassBar button { min-width:48px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; font-size:16px; font-weight:600; }
+#tilpassBar button.hoved { background:var(--glod); color:#06121f; border-color:transparent; }
+.tilpasser #hud, .tilpasser #maal, .tilpasser #boss, .tilpasser #hint, .tilpasser #toast, .tilpasser #verkKnapp, .tilpasser #tidtaker { display:none !important; }
+.tilpasser #touch #tStot.skjult, .tilpasser #touch #tKrok.skjult { display:flex; }
+.tilpasser #touch #pad, .tilpasser #touch .rund { outline:2px dashed rgba(143,227,255,.45); outline-offset:4px; cursor:grab; }
+.tilpasser #touch .valgt { outline:3px solid var(--glod); }
