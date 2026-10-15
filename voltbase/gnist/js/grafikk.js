@@ -171,15 +171,18 @@ const PAL = {
 };
 PAL.kabel = { c: ['#000', '#2e3a3f', '#253035', '#1d272b', '#172024', '#12191c', '#0e1416'], mose: '#3f5559', stra: ['#56707a', '#68848d', '#4a6168'] };
 PAL.kraft = { c: ['#000', '#33402f', '#293427', '#202a1f', '#192119', '#141a14', '#0f140f'], mose: '#4d6340', stra: ['#6f8a5c', '#86a26f', '#5b7349'] };
+PAL.ute.rim = 'rgba(190,255,225,.4)'; PAL.kjeller.rim = 'rgba(255,215,170,.3)'; PAL.hall.rim = 'rgba(205,190,255,.32)'; PAL.kabel.rim = 'rgba(150,240,250,.3)'; PAL.kraft.rim = 'rgba(190,255,170,.32)';
 const palAt = (x, y) => iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
 const chunks = new Map();
 
+// grunnfargen på bakveggen (halvgjennomsiktig, så den innendørs parallaksen synes bak)
+function bakveggFarge(x, y) { return erHall(x, y) ? '20,22,40' : iKraft(x, y) ? '22,29,24' : iKjeller2(x, y) ? '20,29,33' : '24,32,48'; }
+const SKILT = ['FARE', '400 V', '230 V', 'K-12', 'K-7', 'T3', 'NØD', 'IP44'];
 function bakvegg(g, x, y) {
   const X = x * T, Y = y * T;
   const hall = erHall(x, y);
-  g.fillStyle = hall ? '#141628' : '#182030'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
   if (hall) {
     if (x % 2 === 0) { g.fillStyle = 'rgba(150,160,230,.06)'; g.fillRect(X, Y, 1.5, T); }
     if (y === 18) { g.save(); g.beginPath(); g.rect(X, Y + 18, T, 14); g.clip();
@@ -191,7 +194,6 @@ function bakvegg(g, x, y) {
     if (y === 15 && x % 7 === 3) { g.fillStyle = '#1e2133'; rr(g, X + 2, Y - 4, 28, 40, 3); g.fill(); g.fillStyle = 'rgba(255,255,255,.05)'; for (let i = 0; i < 4; i++) g.fillRect(X + 6, Y + 2 + i * 8, 20, 3); }
   } else if (iKraft(x, y)) {
     // det gamle kraftverket: flislagte vegger, store rør og nagler
-    g.fillStyle = '#161d18'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
     g.fillStyle = 'rgba(170,210,160,.04)'; g.fillRect(X, Y, T, 1); g.fillRect(X, Y, 1, T);
     if (y % 2 === 0) { g.fillStyle = 'rgba(170,210,160,.03)'; g.fillRect(X + 16, Y, 1, T); }
     if (y % 8 === 3) { g.fillStyle = '#25302a'; g.fillRect(X, Y + 4, T, 16); g.fillStyle = 'rgba(190,220,180,.12)'; g.fillRect(X, Y + 6, T, 2);
@@ -203,7 +205,6 @@ function bakvegg(g, x, y) {
       g.fillStyle = 'rgba(240,200,90,.35)'; g.beginPath(); g.arc(X + 16, Y + 6, 7, Math.PI, 0); g.fill(); g.fillStyle = '#111'; g.fillRect(X + 15.3, Y - 1, 1.4, 7); }
   } else if (iKjeller2(x, y)) {
     // kabelkjelleren: betong med kabelbroer og rør
-    g.fillStyle = '#141d21'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
     if (x % 4 === 0) { g.fillStyle = 'rgba(160,220,230,.035)'; g.fillRect(X, Y, 1.2, T); }
     if (y % 3 === 0) { g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(X, Y, T, 1); }
     if (y % 7 === 2) { g.fillStyle = '#223036'; g.fillRect(X, Y + 6, T, 5); g.fillStyle = 'rgba(170,220,230,.14)'; g.fillRect(X, Y + 6, T, 1.2);
@@ -223,6 +224,11 @@ function bakvegg(g, x, y) {
       g.fillStyle = '#f2c23c'; g.beginPath(); g.moveTo(X + 16, Y); g.lineTo(X + 22, Y + 10); g.lineTo(X + 10, Y + 10); g.closePath(); g.fill(); g.fillStyle = '#111'; g.fillRect(X + 15.3, Y + 3.5, 1.4, 4); }
     if (hs(x, y, 91) < .12) { g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(X + 16, Y + 22, 10, 18, 0, 0, 7); g.fill(); }
   }
+  // skilt med sjablongtekst her og der på veggen
+  if (erSol(x, y + 1) && x % 5 === 2 && !erSol(x + 1, y) && !erSol(x - 1, y) && !erSol(x, y - 1) && hs(x, y, 310) < .12) {
+    const tekst = SKILT[(hs(x, y, 311) * SKILT.length) | 0], gul = hs(x, y, 312) < .5;
+    g.fillStyle = gul ? 'rgba(200,160,50,.55)' : 'rgba(170,180,195,.32)'; rr(g, X + 1, Y + 2, T - 2, 13, 2); g.fill();
+    g.fillStyle = 'rgba(10,12,16,.75)'; g.font = 'bold 7px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tekst, X + T / 2, Y + 9); }
   if (erSol(x, y - 1)) { const gr = g.createLinearGradient(0, Y, 0, Y + 14); gr.addColorStop(0, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(X, Y, T, 14); }
   if (erSol(x - 1, y)) { const gr = g.createLinearGradient(X, 0, X + 12, 0); gr.addColorStop(0, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(X, Y, 12, T); }
   if (erSol(x + 1, y)) { const gr = g.createLinearGradient(X + T, 0, X + T - 12, 0); gr.addColorStop(0, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(X + T - 12, Y, 12, T); }
@@ -250,7 +256,8 @@ function topp(g, x, y, pal) {
       g.fillStyle = gb; g.beginPath(); g.arc(px, Y - ph, 8, 0, 7); g.fill(); }
   } else {
     g.fillStyle = pal.mose; g.fillRect(X - .5, Y - 1, T + 1, 4);
-    g.fillStyle = 'rgba(220,225,255,.2)'; g.fillRect(X - .5, Y - 1, T + 1, 1);
+    g.fillStyle = pal.rim; g.fillRect(X - .5, Y - 1, T + 1, 1.2);
+    const rg = g.createLinearGradient(0, Y - 7, 0, Y - 1); rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(1, pal.rim.replace(/[\d.]+\)$/, '.08)')); g.fillStyle = rg; g.fillRect(X - .5, Y - 7, T + 1, 6);
     if (pal === PAL.hall) { g.fillStyle = 'rgba(0,0,0,.3)'; for (let i = 3; i < T; i += 6) g.fillRect(X + i, Y + 3, 2, 5); }
     else { if (hv(3) < .3) { g.fillStyle = '#4a4552'; g.beginPath(); g.ellipse(X + 8 + hv(4) * 16, Y - 1, 3 + hv(5) * 4, 2.5, 0, Math.PI, 0); g.fill(); }
       if (hv(6) < .12) { g.fillStyle = 'rgba(120,170,230,.22)'; g.beginPath(); g.ellipse(X + 16, Y + 1, 14, 2, 0, 0, 7); g.fill(); } }
@@ -263,6 +270,10 @@ function heng(g, x, y, pal) {
       g.lineWidth = 1 + hv(88 + i) * 1.5; g.beginPath(); g.moveTo(bx, Y - 2); g.quadraticCurveTo(bx + 4, Y + l * .5, bx - 2, Y + l); g.stroke(); } }
   } else {
     if (hv(80) < .28 && !erSol(x + 1, y + 1)) { g.strokeStyle = '#0f1118'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(X + 4, Y); g.quadraticCurveTo(X + T, Y + 14, X + T * 2 - 4, Y); g.stroke(); }
+    // lange rørløp under taket
+    if (hs(Math.floor(x / 7), y, 300) < .32 && !erSol(x, y + 2)) { const ry = Y + 6, kant = pal.rim;
+      g.fillStyle = '#1a1e26'; g.fillRect(X - .5, ry, T + 1, 7); g.fillStyle = kant; g.fillRect(X - .5, ry, T + 1, 1); g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(X - .5, ry + 5, T + 1, 2);
+      if (x % 3 === 0) { g.fillStyle = '#262c36'; g.fillRect(X + 12, Y, 4, ry - Y + 1); g.fillRect(X + 9, ry - 1, 10, 9); } }
     if (hv(83) < .07) { g.strokeStyle = '#0f1118'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X + 16, Y); g.lineTo(X + 16, Y + 16); g.stroke();
       g.fillStyle = '#3a3e4a'; g.beginPath(); g.arc(X + 16, Y + 19, 4, 0, 7); g.fill(); }
   }
@@ -289,6 +300,9 @@ function lagChunk(cx, cy) {
   g.scale(r, r); g.translate(-cx * CPX + pad, -cy * CPX + pad);
   const xa = cx * CH - 1, xb = cx * CH + CH, ya = cy * CH - 1, yb = cy * CH + CH;
   const alle = f => { for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) f(x, y); };
+  { const a = bakveggAlfa(), stier = new Map();
+    alle((x, y) => { if (erSol(x, y) || !inne(x, y)) return; const f = bakveggFarge(x, y); let p = stier.get(f); if (!p) stier.set(f, p = new Path2D()); p.rect(x * T, y * T, T, T); });
+    for (const [f, p] of stier) { g.fillStyle = `rgba(${f},${a})`; g.fill(p); } }
   alle((x, y) => { if (!erSol(x, y) && inne(x, y)) bakvegg(g, x, y); });
   alle((x, y) => { if (!erSol(x, y)) return; const pal = palAt(x, y); g.fillStyle = pal.c[1]; g.fillRect(x * T - .5, y * T - .5, T + 1, T + 1);
     for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) if (!erSol(x + dx, y + dy)) { const rad = T * (.44 + hs(x, y, dx * 3 + dy + 5) * .12);

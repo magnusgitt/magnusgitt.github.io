@@ -5,7 +5,7 @@ let hintTid = 0, toastTid = 0, maalTid = 0, bannerTid = 0;
 // tekster underveis: korte, én om gangen, og kan skrus av i pausemenyen (bosshint uten nøkkel vises alltid)
 let hintVent = null;
 function hint(key, tekst, varighet) { if (key && S.hintSett.has(key)) return; if (key) S.hintSett.add(key); if (key && !INNST.tips) return;
-  if (key && bannerTid > 0) { hintVent = [tekst, varighet]; return; }
+  if (bannerTid > 0) { hintVent = [tekst, varighet]; return; }
   const h = $('#hint'); h.textContent = tekst; h.classList.toggle('lav', B.aktiv || B2.aktiv || B3.aktiv || B4.aktiv); h.classList.add('vis'); hintTid = Math.min(varighet || 3.5, 4); }
 function banner(stor, liten, tid, rolig) { $('#bannerStor').textContent = stor; $('#bannerLiten').textContent = liten || ''; $('#banner').classList.toggle('rolig', !!rolig); $('#banner').classList.add('vis');
   if (hintTid > 0) $('#hint').classList.add('lav'); bannerTid = tid || 3; }
@@ -124,7 +124,7 @@ function loop(n) {
     else if (S.mode === 'slutt' || S.mode === 'meny') { KRAN.t += dt; KRAN.x = KRAN.x0 + (.5 - .5 * Math.cos(KRAN.t * .55)) * (KRAN.x1 - KRAN.x0); }
     hudVerk(); oppdaterMusikk();
     if (S.tidsmodus && S.mode === 'spill') { const m = Math.floor(S.tid / 60), sk = S.tid % 60; $('#tidtaker').textContent = `${m}:${sk < 10 ? '0' : ''}${sk.toFixed(1)}`; }
-    oppdaterPartikler(dt); oppdaterKamera(rdt);
+    oppdaterPartikler(dt); oppdaterKamera(rdt); oppdaterStemning(rdt); maalYtelse(rdt);
     S.shake = Math.max(0, S.shake - rdt); S.flash = Math.max(0, S.flash - rdt * 1.4);
     if (S.hallFlimmer > 0) S.hallFlimmer -= rdt;
     if (S.bossDone && S.hallLys < 1) S.hallLys = Math.min(1, S.hallLys + rdt * .5);

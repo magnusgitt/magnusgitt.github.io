@@ -14,10 +14,10 @@ function sjekk(navn, betingelse, info) {
 }
 const vent = (page, ms) => page.waitForTimeout(ms);
 
-async function nySide(b, opts) {
+async function nySide(b, opts, sok) {
   const ctx = await b.newContext(opts); const page = await ctx.newPage();
   const errs = []; page.on('pageerror', e => errs.push(e.message));
-  await page.goto(URL); await vent(page, 400);
+  await page.goto(URL + (sok || '')); await vent(page, 400);
   return { ctx, page, errs };
 }
 // flytter montøren til en rute (fot på toppen av raden under)
@@ -464,6 +464,40 @@ async function touch(b, navn, opts) {
   await ctx.close();
 }
 
+// Fase 1 av Gnist 2.0: stemning, innendørs bakgrunn, detaljer, dødsanimasjon og automatisk kvalitet
+async function grafikk(b) {
+  console.log('Grafikk: stemning, detaljer og kvalitet');
+  for (const kval of [2, 1, 0]) {
+    const { ctx, page, errs } = await nySide(b, { viewport: { width: 960, height: 540 } }, '?kval=' + kval);
+    await page.click('#bNy'); await vent(page, 500);
+    const steder = [[10, 23, 'ute'], [20, 31, 'kjeller'], [86, 18, 'hall'], [110, 41, 'kabel'], [74, 56, 'pumpe'], [176, 26, 'stasjon'], [35, 44, 'kraft'], [36, 60, 'turbin']];
+    const sett = [];
+    for (const [x, y] of steder) { await page.evaluate(([x, y]) => { const g = __gnist; g.S.bossDone = true; g.S.boss2 = true; g.S.boss3 = true; g.S.boss4 = true; g.P.inv = 99; }, [x, y]);
+      await pos(page, x, y); await vent(page, 350); sett.push(await page.evaluate(() => ST.navn)); }
+    if (kval === 2) {
+      sjekk('stemningen følger området', JSON.stringify(sett) === JSON.stringify(steder.map(s => s[2])), sett);
+      const info = await page.evaluate(() => ({ aap: AAPNINGER.length, det: [...DETALJ.values()].reduce((s, a) => s + a.length, 0), mf: ST.mf.map(v => Math.round(v)), kval: S.kval }));
+      sjekk('lysåpninger og detaljer er funnet', info.aap > 3 && info.det > 30, info);
+      sjekk('kvalitet fra adressen brukes', info.kval === 2, info);
+      await pos(page, 20, 31); await vent(page, 300);
+      const d = await page.evaluate(() => { const e = __gnist.fiender.find(e => e.liv); drepFiende(e); return { liv: e.liv, dode: DODE.length }; });
+      sjekk('fiende får dødsanimasjon', !d.liv && d.dode > 0, d);
+      await vent(page, 700); sjekk('dødsanimasjonen blir borte', (await page.evaluate(() => DODE.length)) === 0);
+      const h = await page.evaluate(() => { const [ax, ay] = haleAnker(); return Math.hypot(HALE[0].x - ax, HALE[0].y - ay) + Math.hypot(HALE[8].x - ax, HALE[8].y - ay); });
+      sjekk('skjerfet henger etter montøren', h < 60, h);
+    }
+    sjekk('ingen JS-feil med kvalitet ' + kval, errs.length === 0, errs);
+    await ctx.close();
+  }
+  // automatisk kvalitet: går ned når bildet er tregt
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 800, height: 450 } });
+  await page.click('#bNy'); await vent(page, 300);
+  const k = await page.evaluate(() => { S.kval = 2; MAAL.spilt = 0; for (let i = 0; i < 400; i++) maalYtelse(1 / 25); const a = S.kval; for (let i = 0; i < 400; i++) maalYtelse(1 / 60); return [a, S.kval]; });
+  sjekk('kvaliteten går ned når bildet er tregt', k[0] < 2, k);
+  sjekk('ingen JS-feil (automatisk kvalitet)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 (async () => {
   const b = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
   try {
@@ -477,6 +511,7 @@ async function touch(b, navn, opts) {
     if (med('hemmelig')) await hemmeligheter(b);
     if (med('fase6')) await fase6(b);
     if (med('fase7')) await fase7(b);
+    if (med('grafikk')) await grafikk(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

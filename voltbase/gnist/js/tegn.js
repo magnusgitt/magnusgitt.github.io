@@ -98,28 +98,28 @@ function tegnFiende(e) {
   if (e.type === 'sveve') return tegnSveve(e);
   if (e.type === 'rele') return tegnRele(e);
   // gnistlus: varme farger og lysende øyne, så den skiller seg fra bakgrunnen
-  const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t;
-  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25);
+  const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t, v = e.varsel || 0;
+  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25); ctx.rotate(-v * .14 + (v > .5 ? Math.sin(t * 40) * .03 : 0));
   ctx.strokeStyle = '#1a0c06'; ctx.lineWidth = 1.8;
   for (let i = -1; i <= 1; i++) { const s = Math.sin(t * 14 + i * 2) * 2.5; ctx.beginPath(); ctx.moveTo(i * 5, -5); ctx.lineTo(i * 5 + 3 + s, -2); ctx.lineTo(i * 5 + 1 + s, 0); ctx.stroke(); }
   const gr = ctx.createLinearGradient(0, -14, 0, -3); gr.addColorStop(0, '#a8482a'); gr.addColorStop(1, '#3a160c');
   ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, -7, 11, 7, 0, Math.PI, 0); ctx.lineTo(11, -4); ctx.lineTo(-11, -4); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(0, -7, 11, 7, 0, Math.PI, 0); ctx.stroke();
-  ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(7, -8, 2.2, 0, 7); ctx.arc(3, -9, 1.6, 0, 7); ctx.fill();
+  ctx.fillStyle = v > .5 ? '#ff5a3c' : '#ffe36b'; ctx.beginPath(); ctx.arc(7, -8, 2.2 + v * .6, 0, 7); ctx.arc(3, -9, 1.6 + v * .4, 0, 7); ctx.fill();
   ctx.strokeStyle = 'rgba(255,230,140,.95)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-7, -12); ctx.lineTo(-4, -9); ctx.lineTo(-1, -14); ctx.lineTo(2, -10); ctx.stroke();
   ctx.restore();
 }
 // svevegnist: en liten flygende isolator med summende vinger
 function tegnSveve(e) {
-  const X = e.x + e.w / 2, Y = e.y + e.h / 2, t = e.t;
-  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25);
+  const X = e.x + e.w / 2, Y = e.y + e.h / 2, t = e.t, va = e.varsel || 0;
+  ctx.save(); ctx.translate(X + (va > .5 ? Math.sin(t * 50) * 1.2 : 0), Y); ctx.scale(e.dir * 1.25, 1.25);
   ctx.fillStyle = 'rgba(255,220,180,.4)'; const v = Math.sin(t * 40) * 3;
   ctx.beginPath(); ctx.ellipse(-3, -7 + v * .3, 8, 3 + v * .5, -.4, 0, 7); ctx.ellipse(4, -7 - v * .3, 8, 3 - v * .4, .4, 0, 7); ctx.fill();
   const gr = ctx.createLinearGradient(0, -8, 0, 8); gr.addColorStop(0, '#b0503a'); gr.addColorStop(1, '#3a1810');
   ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, 9, 7, 0, 0, 7); ctx.fill();
   ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.1; ctx.stroke();
   ctx.fillStyle = '#f2c23c'; ctx.fillRect(-6, 4, 12, 2.5);
-  ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(5, -1, 2.4, 0, 7); ctx.fill();
+  ctx.fillStyle = va > .5 ? '#ff5a3c' : '#ffe36b'; ctx.beginPath(); ctx.arc(5, -1, 2.4 + va * .6, 0, 7); ctx.fill();
   ctx.restore();
 }
 // releet står på gulvet og blinker mens det lader
@@ -188,8 +188,13 @@ function figur(lean, pose) {
 }
 function poseFor(p) {
   const fart = Math.min(1, Math.abs(p.vx) / RUN), ph = p.anim;
+  if (p.inv > .95 && S.dod <= 0) { const r = Math.sin(S.t * 30) * .15; return { b1: [-.6, .7], b2: [.5, 1.0], a1: [-2.5 + r, .5], a2: [-2.1 - r, .6], bob: -1, hode: .6 }; }
   if (p.dashT > 0) return { b1: [-.9, .5], b2: [-.4, 1.1], a1: [-1.3, .3], a2: [-1.6, .2], bob: 0, hode: 0 };
-  if (p.krok) { const sv = Math.sin(S.t * 6) * .15; return { b1: [-.3 + sv, .6], b2: [.25 - sv, .8], a1: [3.0, .1], a2: [2.9, .15], bob: 0, hode: 0 }; }
+  if (p.piskT > -.06) { const k = clamp(1 - p.piskT / .2, 0, 1), sl = 2.7 - k * 1.6;
+    const ben = p.onGround ? { b1: [-.35, .25], b2: [.45, .35] } : { b1: [-.3, .6], b2: [.4, .9] };
+    return { ...ben, a1: [-.9, .4], a2: [sl, .15], bob: p.onGround ? 1 : 0, hode: -.3 }; }
+  if (p.krok) { const sv = Math.sin(S.t * 6) * .12, sl = clamp(p.vx / 700, -1, 1) * p.face * .7;
+    return { b1: [-.3 + sv - sl, .5 + Math.abs(sl) * .4], b2: [.25 - sv - sl, .8], a1: [3.0, .1], a2: [2.9, .15], bob: 0, hode: 0 }; }
   if (!p.onGround && p.vegg) return { b1: [.5, .9], b2: [-.2, .5], a1: [2.6, .3], a2: [2.2, .6], bob: 0, hode: .2 };
   if (!p.onGround) {
     if (p.vy < -80) return { b1: [-.35, 1.0], b2: [.75, 1.4], a1: [-2.5, .5], a2: [2.3, .4], bob: 0, hode: -.5 };
@@ -210,6 +215,7 @@ function tegnSpiller() {
   ctx.globalCompositeOperation = 'lighter';
   for (const s of p.spor) { ctx.globalAlpha = s.t / .28 * .5; ctx.fillStyle = '#5fd8ff'; rr(ctx, s.x - 1, s.y + 2, p.w + 2, p.h - 2, 7); ctx.fill(); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  if (!(p.inv > 0 && Math.floor(p.inv * 18) % 2)) tegnHale();
   ctx.save(); ctx.translate(p.x + p.w / 2, p.y + p.h); ctx.scale(p.face * p.sx, p.sy);
   if (p.inv > 0 && Math.floor(p.inv * 18) % 2) ctx.globalAlpha = .45;
   figur(p.lean * p.face, poseFor(p));
@@ -426,11 +432,13 @@ function samleLys() {
   { const fa = lysbueFase(); if (fa && synlig(LYSBUE.x * T, LYSBUE.y0 * T, 120)) L((LYSBUE.x + .5) * T, 29.5 * T, fa === 2 ? 170 : 60, fa === 2 ? .85 : .4); }
   for (const [x, y] of KJELLERLYS) if (synlig(x * T, y * T, 200)) L(x * T + T / 2, y * T + 8, 150, .45);
   if (lyn) L((lyn.x1 + lyn.x2) / 2, (lyn.y1 + lyn.y2) / 2, 260, .8);
+  detaljLys(L);
   if (S.power > 0) { const vw = cssW / skala; for (let x = 0; x < MW * T; x += 260) if (x > cam.x - 300 && x < cam.x + vw + 300) L(x, 10 * T, 600, S.power * .6); }
   if (S.hallLys > 0 && synlig(87 * T, 12 * T, 600)) for (let x = 76; x <= 99; x += 6) L(x * T, 9 * T, 300, .55 * S.hallLys);
 }
 function tegnGlod() {
   ctx.globalCompositeOperation = 'lighter';
+  tegnStraler(); tegnDetaljGlod(); tegnFotsporGlod(); tegnDodeGlod();
   SJEKK.forEach((c, i) => { const X = c.x * T + T / 2, Y = (c.y + 1) * T - 30; if (!synlig(X, Y, 200)) return;
     if (S.cpLit.has(i)) { glod(SPR.w, X, Y, 90, .55 + .05 * Math.sin(S.t * 3 + i)); glod(SPR.h, X, Y, 14, .6);
       ctx.save(); ctx.translate(X, Y); ctx.rotate(-.5 + Math.sin(S.t * .3 + i) * .05); ctx.globalAlpha = .1; ctx.drawImage(KJEGLE, -60, 0, 120, 200); ctx.restore(); }
@@ -455,7 +463,7 @@ function tegnGlod() {
         for (let y = LYSBUE.y0; y <= LYSBUE.y1; y++) glod(SPR.c, X, y * T + T / 2, 40, .4); }
       else { if (Math.sin(S.t * 40) > .3) { ctx.globalAlpha = .7; ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,200,120,.9)'; jagget(X, LYSBUE.y0 * T + 8, X + 4, LYSBUE.y0 * T + 26, 4, 3, (S.t * 30 | 0)); jagget(X, (LYSBUE.y1 + 1) * T - 8, X - 4, (LYSBUE.y1 + 1) * T - 26, 4, 3, (S.t * 31 | 0)); }
         glod(SPR.o, X, LYSBUE.y0 * T + 8, 22, .5); glod(SPR.o, X, (LYSBUE.y1 + 1) * T - 8, 22, .5); } } }
-  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) { glod(SPR.o, e.x + e.w / 2, e.y + e.h / 2, 30 + Math.sin(e.t * 9) * 4, .75); glod(SPR.r, e.x + e.w / 2, e.y + e.h / 2, 14, .5);
+  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) { const v = e.varsel || 0; glod(SPR.o, e.x + e.w / 2, e.y + e.h / 2, 30 + Math.sin(e.t * 9) * 4, .75 - v * .3); glod(SPR.r, e.x + e.w / 2, e.y + e.h / 2, 14 + v * 24, .5 + v * .35);
     if (Math.sin(e.t * 23) > .7) { ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(190,245,255,.9)'; jagget(e.x + 4, e.y + 2, e.x + e.w - 4, e.y - 3, 3, 4, (e.t * 30 | 0)); } }
   if (!S.ev.hemmelig && synlig(10 * T, 29 * T, 100)) glod(SPR.c, 10 * T - 6, 29.5 * T, 14 + 4 * Math.sin(S.t * 2), .35);
   for (const [x, y] of KJELLERLYS) { if (x === 6 && !S.ev.hemmelig) continue; if (synlig(x * T, y * T, 120)) glod(SPR.w, x * T + T / 2, y * T + 8, 34, .35); }
@@ -537,11 +545,12 @@ function tegnLys() {
   const g = lysG, k = lysC.width / cv.width, s = skala * dpr * k;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, lysC.width, lysC.height);
   const mork = S.mork * (1 - S.power * .75);
-  g.fillStyle = `rgba(3,7,20,${mork})`; g.fillRect(0, 0, lysC.width, lysC.height);
+  g.fillStyle = `rgba(${ST.mf[0] | 0},${ST.mf[1] | 0},${ST.mf[2] | 0},${mork})`; g.fillRect(0, 0, lysC.width, lysC.height);
   g.globalCompositeOperation = 'destination-out';
   for (const l of lys) { const r = l.r * s, x = (l.x - camX) * s, y = (l.y - camY) * s; if (x < -r || y < -r || x > lysC.width + r || y > lysC.height + r) continue;
     g.globalAlpha = clamp(l.i, 0, 1); g.drawImage(HULL, x - r, y - r, r * 2, r * 2); }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  tegnDis(g, lysC.width, lysC.height);
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(lysC, 0, 0, cv.width, cv.height);
 }
 let camX = 0, camY = 0;
@@ -550,14 +559,21 @@ function tegn() {
   const sh = S.shake > 0 ? Math.min(1, S.shake) * (INNST.rist ? 10 : 2.5) : 0;
   camX = cam.x + (Math.random() - .5) * sh; camY = cam.y + (Math.random() - .5) * sh;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  tegnBakgrunn(camX, camY);
+  if (!maskeKlar || chunks.size === 0) lagInneMaske();
+  maalSynlig(camX, camY);
+  if (SYN.ute || S.kval < 1) tegnBakgrunn(camX, camY); else { ctx.fillStyle = '#080b12'; ctx.fillRect(0, 0, cv.width, cv.height); }
   tegnMotes(false);
   const m = skala * dpr;
-  ctx.setTransform(m, 0, 0, m, -camX * m, -camY * m);
-  const vw = cssW / skala, vh = cssH / skala;
+  tegnInneBg(camX, camY);
+  // bitene tegnes på hele skjermpiksler uten overlapp, så den halvgjennomsiktige bakveggen ikke får striper
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const vw = cssW / skala, vh = cssH / skala, pad = 2 * chunkRes;
   const cx0 = Math.floor(camX / CPX), cx1 = Math.floor((camX + vw) / CPX), cy0 = Math.floor(camY / CPX), cy1 = Math.floor((camY + vh) / CPX);
   for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) { if (cx < 0 || cy < 0 || cx * CH >= MW || cy * CH >= MH) continue;
-    ctx.drawImage(hentChunk(cx, cy), cx * CPX - 2, cy * CPX - 2, CPX + 4, CPX + 4); }
+    const X0 = Math.round((cx * CPX - camX) * m), X1 = Math.round(((cx + 1) * CPX - camX) * m), Y0 = Math.round((cy * CPX - camY) * m), Y1 = Math.round(((cy + 1) * CPX - camY) * m);
+    ctx.drawImage(hentChunk(cx, cy), pad, pad, CPX * chunkRes, CPX * chunkRes, X0, Y0, X1 - X0, Y1 - Y0); }
+  ctx.setTransform(m, 0, 0, m, -camX * m, -camY * m);
+  tegnDetaljer();
   // forhåndslag én bit utenfor skjermen per bilde
   const nx = (S.frame % 2 ? cx1 + 1 : cx0 - 1), ny = cy0 + (S.frame >> 1) % (cy1 - cy0 + 1);
   if (nx >= 0 && nx * CH < MW && ny >= 0 && ny * CH < MH && !chunks.has(nx + ',' + ny)) hentChunk(nx, ny);
@@ -570,7 +586,8 @@ function tegn() {
   if (synlig(TAVLE.x * T, TAVLE.y * T, 200)) tegnTavle();
   if (B.aktiv || !S.bossDone) BRYTERE.forEach(b => { if (synlig(b.x * T, b.y * T, 100)) tegnBryter(b); });
   for (const f of FUNN) if (funnSynlig(f) && synlig(f.x * T, f.y * T, 100)) tegnFunn(f);
-  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) tegnFiende(e);
+  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) { tegnSkygge(e.x + e.w / 2, e.y + e.h, e.w); tegnFiende(e); }
+  tegnDode();
   tegnKroker();
   for (const i of VERKSTED) tegnVerksted(i);
   tegnFagkort();
@@ -578,6 +595,7 @@ function tegn() {
   tegnBoss2();
   tegnBoss3();
   tegnBoss4();
+  if (S.dod <= 0 && !P.krok) tegnSkygge(P.x + P.w / 2, P.y + P.h, P.w);
   tegnSpiller();
   tegnVann();
   tegnStov();
@@ -588,6 +606,7 @@ function tegn() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   tegnForgrunn();
   tegnMotes(true);
+  tegnBloom();
   if (vign) ctx.drawImage(vign, 0, 0, cv.width, cv.height);
   if (S.flash > 0) { ctx.fillStyle = `rgba(${S.flashF},${Math.min(1, S.flash) * (INNST.rist ? .55 : .2)})`; ctx.fillRect(0, 0, cv.width, cv.height); }
   if (S.dod > 0) { ctx.fillStyle = `rgba(2,4,12,${clamp((1.2 - S.dod) / .6, 0, 1) * .85})`; ctx.fillRect(0, 0, cv.width, cv.height); }

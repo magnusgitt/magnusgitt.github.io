@@ -47,7 +47,7 @@ function respawn(stille) {
   if (B4.aktiv && !S.boss4) resetBoss4();
   lagFiender();
   GN.x = P.x; GN.y = P.y - 30; GN.vx = GN.vy = 0;
-  cam.anker = P.y; oppdaterKamera(0, true); hud();
+  cam.anker = P.y; oppdaterKamera(0, true); oppdaterStemning(0, true); hud();
   if (!stille) { lagre(); lyd('gjenoppstaa'); ring(P.x + P.w / 2, P.y + P.h / 2, 18, 'c', 160); }
 }
 function resetBoss() { B.aktiv = false; B.fase = ''; B.hp = 3; B.stun = 0; B.dod = 0; B.t = 0; B.x = 87.5 * T; B.y = 7.4 * T; BRYTERE.forEach(b => b.av = false);
@@ -208,7 +208,7 @@ function oppdaterSpiller(dt) {
     if (!varBakke && vyFor > 250) { const k = clamp(vyFor / 820, .3, 1); p.sx = 1 + .32 * k; p.sy = 1 - .3 * k; p.landT = .12 * k; stov(p.x + p.w / 2, p.y + p.h, 4 + (8 * k | 0), k); lyd('land'); if (k > .7) vib(12); } }
   if (!p.onGround && p.vy > 0) p.fallT += dt; else p.fallT = 0;
   p.sx += (1 - p.sx) * Math.min(1, dt * 13); p.sy += (1 - p.sy) * Math.min(1, dt * 13);
-  if (p.onGround && Math.abs(p.vx) > 20) { const for_ = Math.sin(p.anim); p.anim += dt * Math.abs(p.vx) * .052; if (Math.sign(for_) !== Math.sign(Math.sin(p.anim))) { lyd('steg'); if (Math.random() < .5) stov(p.x + p.w / 2, p.y + p.h, 1, .3); } }
+  if (p.onGround && Math.abs(p.vx) > 20) { const for_ = Math.sin(p.anim); p.anim += dt * Math.abs(p.vx) * .052; if (Math.sign(for_) !== Math.sign(Math.sin(p.anim))) { lyd('steg'); fotspor(p.x + p.w / 2 + p.face * 3, p.y + p.h); if (Math.random() < .5) stov(p.x + p.w / 2, p.y + p.h, 1, .3); } }
   const maalLean = p.krok ? clamp((p.x + p.w / 2 - p.krok.x) / (p.krok.len || 1), -1, 1) * -.9 * p.face : p.dashT > 0 ? .55 * p.face : p.onGround ? clamp(p.vx / RUN, -1, 1) * .13 : clamp(p.vx / RUN, -1, 1) * .08;
   p.lean += (maalLean - p.lean) * Math.min(1, dt * 14);
   // feller (strømførende kabler)
@@ -258,6 +258,8 @@ function oppdaterVerden(dt) {
     for (let i = prosj.length - 1; i >= 0; i--) if (inn(prosj[i].x, prosj[i].y, 6)) { gnister(prosj[i].x, prosj[i].y, 8, 'w'); prosj.splice(i, 1); } }
   // fiender: hopp på dem eller bruk støtet
   for (const e of fiender) { if (!e.liv) continue; e.t += dt;
+    // varsel: fienden merker montøren og gløder rødt
+    { const n = Math.abs(e.x + e.w / 2 - pcx) < 4.5 * T && Math.abs(e.y + e.h / 2 - pcy) < 3 * T; e.varsel = mot(e.varsel || 0, n ? 1 : 0, dt * 3); }
     if (e.type === 'sveve') { const nx = e.cx + Math.sin(e.t * .9) * e.ax, ny = e.cy + Math.sin(e.t * 1.7) * e.ay; e.dir = nx >= e.x + e.w / 2 ? 1 : -1; e.x = nx - e.w / 2; e.y = ny - e.h / 2; }
     else if (e.type === 'rele') {
       // releet lader opp (blinker) før det skyter en gnist langs gulvet mot montøren
@@ -268,9 +270,9 @@ function oppdaterVerden(dt) {
       else e.lad = Math.max(0, e.lad - dt); }
     else { e.x += e.dir * 46 * dt; if (e.x < e.x0) { e.x = e.x0; e.dir = 1; } if (e.x + e.w > e.x1) { e.x = e.x1 - e.w; e.dir = -1; } }
     if (pisk && e.x + e.w > pisk.x0 && e.x < pisk.x1 && e.y + e.h > pisk.y0 && e.y < pisk.y1) {
-      e.liv = false; P.piskTraff = true; lyd('piskTreff'); vib(20); S.shake = Math.max(S.shake, .15); sprut(e.x + e.w / 2, e.y + e.h / 2, 22, 'c', 240); gnister(e.x + e.w / 2, e.y + e.h / 2, 10, 'w'); continue; }
+      drepFiende(e); P.piskTraff = true; lyd('piskTreff'); vib(20); S.shake = Math.max(S.shake, .15); sprut(e.x + e.w / 2, e.y + e.h / 2, 22, 'c', 240); gnister(e.x + e.w / 2, e.y + e.h / 2, 10, 'w'); continue; }
     if (P.x + P.w > e.x && P.x < e.x + e.w && P.y + P.h > e.y && P.y < e.y + e.h) {
-      if (P.dashT > 0 || (P.vy > 0 && P.y + P.h - e.y < 14)) { e.liv = false; lyd('trakk'); vib(15); sprut(e.x + e.w / 2, e.y + e.h / 2, 18, 'c', 200); S.shake = .15;
+      if (P.dashT > 0 || (P.vy > 0 && P.y + P.h - e.y < 14)) { drepFiende(e); lyd('trakk'); vib(15); sprut(e.x + e.w / 2, e.y + e.h / 2, 18, 'c', 200); S.shake = .15;
         if (P.dashT <= 0) { P.vy = -470; P.air = S.ev.dobbel ? 1 : 0; P.canDash = true; P.sy = 1.2; P.sx = .85; } }
       else skade(e.x + e.w / 2, false); } }
   if (!S.hintSett.has('pisk') && !S.tidsmodus && fiender.some(e => e.liv && Math.abs(e.x - pcx) < 6 * T && Math.abs(e.y - pcy) < 3 * T))
@@ -624,6 +626,7 @@ function oppdaterPartikler(dt) {
   for (let i = partikler.length - 1; i >= 0; i--) { const q = partikler[i]; q.liv -= dt; if (q.liv <= 0) { partikler.splice(i, 1); continue; }
     q.vy += q.grav * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= (1 - dt * 1.5); }
   for (let i = P.spor.length - 1; i >= 0; i--) { P.spor[i].t -= dt; if (P.spor[i].t <= 0) P.spor.splice(i, 1); }
+  oppdaterHale(dt);
   // gnisten følger montøren, med litt eget liv. Står du stille en stund, peker den mot neste mål.
   S.idle = (P.onGround && Math.abs(P.vx) < 10 && S.mode === 'spill') ? S.idle + dt : 0;
   let tx = P.x + P.w / 2 - P.face * 20 + Math.sin(S.t * 1.3) * 7 + Math.sin(S.t * 3.1) * 2, ty = P.y - 14 + Math.sin(S.t * 2.1) * 6;
