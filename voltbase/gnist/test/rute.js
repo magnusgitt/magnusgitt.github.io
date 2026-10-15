@@ -135,6 +135,9 @@ async function omraade2(b) {
   }
   sjekk('kroken fester seg', festet);
   sjekk('over kanalen med kabeltrommelen', over);
+  // slipp ved en treg sving gir likevel fart fremover og litt opp
+  { const r = await page.evaluate(() => { const P = __gnist.P; P.krok = { k: [110, 47], x: 110.5 * 32, y: 47 * 32, len: 3 * 32 }; P.vx = 120; P.vy = 40; slippKrok(false); return { vx: P.vx, vy: P.vy }; });
+    sjekk('tilgivende slipp av kroken', r.vx >= 380 && r.vy <= -280, r); }
   // bossen i koblingsrommet
   await page.evaluate(() => { __gnist.P.inv = 999; }); await pos(page, 146, 56); await vent(page, 500);
   sjekk('Kortslutningen våkner', await page.evaluate(() => __gnist.B2.aktiv && __gnist.B2.fase === 'intro'));
@@ -308,7 +311,13 @@ async function fase6(b) {
   sjekk('sklir langsomt nedover veggen', gl.vegg === 1 && gl.vy <= 161, gl);
   await page.evaluate(() => { __gnist.I.jumpP = true; TS.jump = true; oppdaterTaster(); }); await vent(page, 50);
   const vh = await page.evaluate(() => ({ vx: __gnist.P.vx, vy: __gnist.P.vy })); await page.evaluate(() => { TS.right = TS.jump = false; oppdaterTaster(); });
-  sjekk('veggsprett skyver ut fra veggen og opp', vh.vx < -150 && vh.vy < -300, vh);
+  sjekk('veggsprett skyver ut fra veggen og opp', vh.vx < -50 && vh.vy < -300, vh);
+  // tilgivende timing: hoppet virker et lite øyeblikk etter at montøren har sluppet veggen
+  await page.evaluate(() => { const P = __gnist.P; P.x = 50 * 32 - P.w - .5; P.y = 38 * 32; P.vx = 0; P.vy = 300; TS.right = true; oppdaterTaster(); }); await vent(page, 250);
+  await page.evaluate(() => { const P = __gnist.P; TS.right = false; oppdaterTaster(); P.x -= 12; }); await vent(page, 40);
+  await page.evaluate(() => { __gnist.I.jumpP = true; TS.jump = true; oppdaterTaster(); }); await vent(page, 50);
+  const ko = await page.evaluate(() => ({ vx: __gnist.P.vx, vy: __gnist.P.vy })); await page.evaluate(() => { TS.jump = false; oppdaterTaster(); });
+  sjekk('veggsprett rett etter at veggen er sluppet', ko.vx < -150 && ko.vy < -300, ko);
   // klatre opp pipa med veggsprett (styrt av en enkel «spiller» i siden)
   await pos(page, 49, 44); await vent(page, 300);
   await page.evaluate(() => { let side = 1, t = 0; TS.right = true; __gnist.I.jumpP = true; oppdaterTaster();

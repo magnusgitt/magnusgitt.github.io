@@ -35,7 +35,7 @@ const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8A
   hintSett: new Set(), mork: .55, frame: 0, panelT: 0, slow: 0, evneVent: 0, omr: '', hallLys: 0, hallFlimmer: 0, maal: '', idle: 0, laas: 0 };
 const P = { x: 0, y: 0, w: 18, h: 30, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buf: 0, air: 0, dashT: 0, dashCd: 0,
   canDash: true, inv: 0, hp: 4, max: 4, sx: 1, sy: 1, anim: 0, safeX: 0, safeY: 0, paKran: false, lean: 0, landT: 0, spor: [], sporT: 0, fallT: 0,
-  krok: null, krokCd: 0, sistKrok: null, sistKrokT: 0, vegg: 0, veggT: 0 };
+  krok: null, krokCd: 0, sistKrok: null, sistKrokT: 0, vegg: 0, veggT: 0, sistVegg: 0, veggKoy: 0 };
 const GN = { x: 0, y: 0, vx: 0, vy: 0, flare: 0 };
 const B = { aktiv: false, fase: '', introT: 0, hp: 3, x: 87.5 * T, y: 7.4 * T, t: 0, stun: 0, skuddT: 2, slagT: 6, lynT: 4, dod: 0, varsel: 0, lad: 0 };
 // Kortslutningen: bossen i koblingsrommet

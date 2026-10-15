@@ -117,6 +117,9 @@ function festKrok(k) {
 }
 function slippKrok(hopp) {
   if (!P.krok) return; P.sistKrok = P.krok.k; P.sistKrokT = .35; P.krok = null; P.krokCd = .15;
+  // tilgivende slipp: litt ekstra fart fremover og opp, så timingen ikke må være perfekt
+  if (Math.abs(P.vx) > 60) P.vx = Math.sign(P.vx) * Math.max(Math.abs(P.vx), 380);
+  if (P.vy < 150) P.vy = Math.min(P.vy, -280);
   if (hopp) { P.vy = Math.min(P.vy - 160, -500); lyd('hopp'); } else lyd('slipp');
 }
 
@@ -150,13 +153,16 @@ function oppdaterSpiller(dt) {
   } else if (p.krok) {
     // svinger i kabelen: tyngdekraft og pilene gir fart langs buen, lengden holdes under
     const dir = (R ? 1 : 0) - (L ? 1 : 0); if (dir) p.face = dir;
-    p.vx += dir * 1250 * dt; p.vx *= 1 - .1 * dt;
+    p.vx += dir * 1600 * dt; p.vx *= 1 - .1 * dt;
     p.vy = Math.min(p.vy + 2000 * dt, 1100);
   } else {
     const dir = (R ? 1 : 0) - (L ? 1 : 0);
     // klatrejern: kjenner etter vegg på sidene når montøren er i lufta
     let vegg = 0;
-    if (S.ev.klatre && !p.onGround) { if (overlapp(p.x - 3, p.y + 6, p.w, p.h - 12)) vegg = -1; else if (overlapp(p.x + 3, p.y + 6, p.w, p.h - 12)) vegg = 1; }
+    if (S.ev.klatre && !p.onGround) { if (overlapp(p.x - 6, p.y + 6, p.w, p.h - 12)) vegg = -1; else if (overlapp(p.x + 6, p.y + 6, p.w, p.h - 12)) vegg = 1; }
+    // «vegg-coyote»: et kort øyeblikk etter at montøren slipper veggen, går det fortsatt an å sprette
+    if (vegg) { p.sistVegg = vegg; p.veggKoy = .14; } else p.veggKoy -= dt;
+    const sprettVegg = vegg || (p.veggKoy > 0 && !p.onGround ? p.sistVegg : 0);
     const glir = vegg !== 0 && dir === vegg && p.vy > 0;
     p.vegg = glir ? vegg : 0; p.veggT -= dt;
     if (dir && dir !== p.face && p.onGround && Math.abs(p.vx) > 150) stov(p.x + p.w / 2, p.y + p.h, 3, .6);
@@ -174,7 +180,8 @@ function oppdaterSpiller(dt) {
     if (glir) { p.vy = Math.min(p.vy, I.down ? 420 : 160); if (Math.random() < dt * 25) part(p.x + p.w / 2 + vegg * p.w / 2, p.y + p.h - 4, -vegg * 30, -20, .3, 3, 'd', 60); }
     if (p.buf > 0) {
       if (p.coyote > 0) { p.vy = -640; p.coyote = 0; p.buf = 0; p.onGround = false; p.sy = 1.28; p.sx = .78; lyd('hopp'); stov(p.x + p.w / 2, p.y + p.h, 5, .8); GN.vy += 140; p.paKran = false; }
-      else if (vegg) { p.vy = -620; p.vx = -vegg * 300; p.face = -vegg; p.veggT = .12; p.buf = 0; p.air = S.ev.dobbel ? 1 : 0; p.canDash = true; p.sy = 1.2; p.sx = .82;
+      else if (sprettVegg) { const vegg = sprettVegg, mot = dir === vegg;   // holder du mot veggen, klatrer du oppover samme vegg
+        p.vy = -640; p.vx = -vegg * (mot ? 190 : 300); p.face = -vegg; p.veggT = mot ? .05 : .08; p.veggKoy = 0; p.buf = 0; p.air = S.ev.dobbel ? 1 : 0; p.canDash = true; p.sy = 1.2; p.sx = .82;
         lyd('hopp'); vib(10); stov(p.x + p.w / 2 + vegg * p.w / 2, p.y + p.h / 2, 5, .7); gnister(p.x + p.w / 2 + vegg * p.w / 2, p.y + p.h / 2, 4, 'w'); }
       else if (p.air > 0) { p.vy = -600; p.air--; p.buf = 0; p.sy = 1.22; p.sx = .82; lyd('dobbel'); GN.flare = .7;
         ring(p.x + p.w / 2, p.y + p.h, 16, 'w', 150, .35); part(p.x + p.w / 2, p.y + p.h, 0, 30, .35, 26, 'c', 0); }
