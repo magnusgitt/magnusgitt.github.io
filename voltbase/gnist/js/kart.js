@@ -227,6 +227,10 @@ const FIENDE_DEF = [{ x0: 22, x1: 31, y: 23 }, { x0: 36, x1: 41, y: 31 }, { x0: 
   { x0: 119, x1: 129, y: 41 }, { type: 'sveve', x: 109, y: 38.5, ax: 3, ay: 1 }, { type: 'sveve', x: 86, y: 46, ax: 4, ay: 1.2 },
   { type: 'rele', x: 72, y: 56 },
   { x0: 162, x1: 171, y: 26 }, { x0: 187, x1: 197, y: 26 }, { type: 'sveve', x: 179, y: 14, ax: 3, ay: 1.5 }, { type: 'sveve', x: 192, y: 13, ax: 2, ay: 2 }, { type: 'rele', x: 176, y: 26 },
+  // flere fiender
+  { type: 'sveve', x: 33, y: 15, ax: 2, ay: 1 }, { type: 'sveve', x: 60, y: 8, ax: 3, ay: 1 }, { x0: 10, x1: 20, y: 31 }, { type: 'sveve', x: 114, y: 6, ax: 3, ay: 1.5 },
+  { x0: 102, x1: 112, y: 41 }, { type: 'sveve', x: 80, y: 50, ax: 2, ay: 2 }, { type: 'sveve', x: 127, y: 50, ax: 2, ay: 1 }, { type: 'sveve', x: 168, y: 18, ax: 3, ay: 1 },
+  { type: 'sveve', x: 38, y: 40, ax: 4, ay: 1 },
   { x0: 29, x1: 40, y: 44 }, { x0: 19, x1: 27, y: 44 }, { type: 'rele', x: 9, y: 44 }, { type: 'sveve', x: 60.5, y: 46, ax: 1, ay: 4 }, { x0: 63, x1: 69, y: 54 }];
 const LYSBUE = { x: 28, y0: 27, y1: 31, per: 3.2 };   // tidsstyrt lysbue i kjelleren
 const KRAN = { x0: 65 * T, x1: 69 * T, y: 8 * T, w: 3 * T, x: 65 * T, dx: 0, t: 0 };
@@ -275,6 +279,7 @@ function traffVegg(tx, ty, retning) {
   const t = tile(tx, ty);
   if (t === SVAK) { const i = SVAKE.findIndex(v => tx >= v.x0 && tx <= v.x1 && ty >= v.y0 && ty <= v.y1);
     if (i >= 0 && SVAKE[i].fraVest && retning > 0) { hint('tykk', 'Veggen er for tykk fra denne siden.'); return; }
+    if (B3.aktiv || B4.aktiv) return;   // ingen veier ut av arenaen midt i en bosskamp
     if (S.ev.sliper && P.dashT > 0 && i >= 0) knusVegg(i);
     else hint('svak', S.ev.sliper ? 'Bruk støtet rett inn i den svake veggen.' : 'Veggen har sprekker. Med riktig verktøy kunne du skåret deg gjennom.'); return; }
   if (t === CUR && !S.ev.hansker) {

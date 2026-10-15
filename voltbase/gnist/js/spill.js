@@ -95,8 +95,13 @@ function kjop(id) { const o = OPPGRADERINGER.find(o => o.id === id); if (!o || S
 const orbIgjen = () => S.orbTatt.size - S.brukt;
 function lukkEvne() { if (S.mode !== 'evne') return; S.mode = 'spill'; sist = performance.now(); nullInput(); visLag(null); sjekkMaal(true);
   if (S.ev.stot && !S.hintSett.has('stotbruk')) hint('stotbruk', 'Hovedtavla er på andre siden av sjakten.'); }
-function nullInput() { I.jumpP = I.dashP = false; for (const k in K) K[k] = false; TS.left = TS.right = TS.jump = TS.dash = TS.krok = false; oppdaterTaster();
+function nullInput() { I.jumpP = I.dashP = I.piskP = false; for (const k in K) K[k] = false; TS.left = TS.right = TS.jump = TS.dash = TS.krok = false; oppdaterTaster();
   $('#pad').dataset.dir = ''; document.querySelectorAll('.rund').forEach(b => b.classList.remove('trykk')); }
+
+// ---------- lynpisken ----------
+const PISK_LENGDE = 92;
+function piskOmraade() { const cx = P.x + P.w / 2, cy = P.y + P.h / 2;
+  return P.face > 0 ? { x0: cx - 8, x1: cx + PISK_LENGDE, y0: cy - 34, y1: cy + 24 } : { x0: cx - PISK_LENGDE, x1: cx + 8, y0: cy - 34, y1: cy + 24 }; }
 
 // ---------- kabeltrommelen ----------
 const krokRekkevidde = () => S.kjop.kabel ? 9.5 : 7.5;
@@ -139,6 +144,9 @@ function oppdaterSpiller(dt) {
     if (p.krok) slippKrok(false);
     p.dashT = S.kjop.stot2 ? .22 : .16; p.canDash = false; p.dashCd = .3; p.vy = 0; lyd('stot'); S.shake = .12; GN.flare = .8; vib(18);
     ring(p.x + p.w / 2, p.y + p.h / 2, 10, 'c', 140, .6); } }
+  // lynpisken: et kort piskeslag foran montøren
+  if (I.piskP) { I.piskP = false; if (!laast && p.piskCd <= 0) { p.piskT = .2; p.piskCd = .36; p.piskTraff = false; lyd('pisk'); vib(10); GN.flare = .4; } }
+  p.piskT -= dt; p.piskCd -= dt;
   p.buf -= dt; p.dashCd -= dt; p.inv -= dt; p.landT -= dt; p.krokCd -= dt; p.sistKrokT -= dt;
   // kabeltrommelen: hold krok-knappen nær en krok for å henge, slipp for å fly videre
   if (p.krok && (!I.krokHeld || laast)) slippKrok(false);
@@ -243,6 +251,11 @@ function oppdaterVerden(dt) {
   // funn
   for (const f of FUNN) { if (!funnSynlig(f)) continue; const fx = f.x * T + T / 2, fy = f.y * T + T / 2;
     if (Math.abs(pcx - fx) < 22 && Math.abs(pcy - fy) < 26) { faaEvne(f); return; } }
+  // lynpisken treffer fiender og slår gnister ut av lufta
+  const pisk = P.piskT > 0 ? piskOmraade() : null;
+  if (pisk) { const inn = (x, y, m) => x > pisk.x0 - m && x < pisk.x1 + m && y > pisk.y0 - m && y < pisk.y1 + m;
+    for (let i = bolter.length - 1; i >= 0; i--) if (inn(bolter[i].x, bolter[i].y, 6)) { gnister(bolter[i].x, bolter[i].y, 8, 'c'); bolter.splice(i, 1); }
+    for (let i = prosj.length - 1; i >= 0; i--) if (inn(prosj[i].x, prosj[i].y, 6)) { gnister(prosj[i].x, prosj[i].y, 8, 'w'); prosj.splice(i, 1); } }
   // fiender: hopp på dem eller bruk støtet
   for (const e of fiender) { if (!e.liv) continue; e.t += dt;
     if (e.type === 'sveve') { const nx = e.cx + Math.sin(e.t * .9) * e.ax, ny = e.cy + Math.sin(e.t * 1.7) * e.ay; e.dir = nx >= e.x + e.w / 2 ? 1 : -1; e.x = nx - e.w / 2; e.y = ny - e.h / 2; }
@@ -254,10 +267,14 @@ function oppdaterVerden(dt) {
         if (e.lad > .75) { e.lad = 0; e.pause = 1.7; lyd('releskudd'); bolter.push({ x: e.x + e.w / 2 + e.dir * 12, y: e.y + 9, vx: e.dir * 270, liv: 5 }); } }
       else e.lad = Math.max(0, e.lad - dt); }
     else { e.x += e.dir * 46 * dt; if (e.x < e.x0) { e.x = e.x0; e.dir = 1; } if (e.x + e.w > e.x1) { e.x = e.x1 - e.w; e.dir = -1; } }
+    if (pisk && e.x + e.w > pisk.x0 && e.x < pisk.x1 && e.y + e.h > pisk.y0 && e.y < pisk.y1) {
+      e.liv = false; P.piskTraff = true; lyd('piskTreff'); vib(20); S.shake = Math.max(S.shake, .15); sprut(e.x + e.w / 2, e.y + e.h / 2, 22, 'c', 240); gnister(e.x + e.w / 2, e.y + e.h / 2, 10, 'w'); continue; }
     if (P.x + P.w > e.x && P.x < e.x + e.w && P.y + P.h > e.y && P.y < e.y + e.h) {
       if (P.dashT > 0 || (P.vy > 0 && P.y + P.h - e.y < 14)) { e.liv = false; lyd('trakk'); vib(15); sprut(e.x + e.w / 2, e.y + e.h / 2, 18, 'c', 200); S.shake = .15;
         if (P.dashT <= 0) { P.vy = -470; P.air = S.ev.dobbel ? 1 : 0; P.canDash = true; P.sy = 1.2; P.sx = .85; } }
       else skade(e.x + e.w / 2, false); } }
+  if (!S.hintSett.has('pisk') && !S.tidsmodus && fiender.some(e => e.liv && Math.abs(e.x - pcx) < 6 * T && Math.abs(e.y - pcy) < 3 * T))
+    hint('pisk', erTouch ? 'Trykk Pisk for å slå med lynpisken.' : 'Trykk F for å slå med lynpisken.', 3.5);
   // lysbue i kjelleren
   { const fa = lysbueFase(); if (fa === 2 && sistBue !== 2 && Math.abs(pcx - (LYSBUE.x + .5) * T) < 600) lyd('bue'); sistBue = fa;
     if (fa === 2 && Math.abs(pcx - (LYSBUE.x + .5) * T) < 10 + P.w / 2 && P.y + P.h > LYSBUE.y0 * T && P.y < (LYSBUE.y1 + 1) * T) skade((LYSBUE.x + .5) * T, false); }
@@ -274,7 +291,7 @@ function oppdaterVerden(dt) {
   oppdaterBoss4(dt);
   // område og hint
   const tx = Math.floor(pcx / T), ty = Math.floor(pcy / T);
-  const omr = omraade(tx, ty); if (omr !== S.omr) { S.omr = omr; if (!S.hintSett.has('omr-' + omr)) { S.hintSett.add('omr-' + omr); if (omr !== 'Trafohallen') banner(omr, '', 2.2); } }
+  const omr = omraade(tx, ty); if (omr !== S.omr) { S.omr = omr; if (!S.hintSett.has('omr-' + omr)) { S.hintSett.add('omr-' + omr); if (omr !== 'Trafohallen') banner(omr, '', 1.8, true); } }
   sjekkMaal(false);
   if (!S.ev.dobbel && tx >= 30 && tx <= 34 && ty >= 20 && ty <= 23) hint('vegg', 'For høyt å hoppe. Kanskje noe nede i kjelleren kan hjelpe?');
   if (!S.ev.dobbel && tx >= 25 && tx <= 27 && ty >= 27) hint('bue', 'Vent til lysbuen slukner før du går forbi.');
@@ -460,6 +477,8 @@ function oppdaterBoss3(dt) {
   if (B3.fase === 'dod') { B3.dod -= dt; S.shake = Math.max(S.shake, .3); B3.hev = Math.max(0, B3.hev - dt);
     if (Math.random() < .8) sprut(B3.x + (Math.random() - .5) * 80, B3.y - Math.random() * 120, 3, Math.random() < .5 ? 'o' : 'w', 280);
     if (B3.dod <= 0) sluttBoss3(); return; }
+  // havner montøren utenfor gården (for eksempel ned i sjakten), startes kampen på nytt
+  if (pcx < 131 * T || pcx > 162 * T || pcy > 28 * T) { resetBoss3(); return; }
   const f = b3Fase(); B3.t += dt * (1 + (6 - B3.hp) * .08);
   if (B3.stun > 0) B3.stun -= dt;
   B3.varsel = 0;
@@ -548,6 +567,7 @@ function oppdaterBoss4(dt) {
   if (B4.fase === 'dod') { B4.dod -= dt; S.shake = Math.max(S.shake, .3); B4.R = Math.max(0, B4.R - dt * .5); B4.vinkel += dt * B4.dod;
     if (Math.random() < .8) sprut(hx + (Math.random() - .5) * 90, hy + (Math.random() - .5) * 90, 3, Math.random() < .5 ? 'c' : 'w', 280);
     if (B4.dod <= 0) sluttBoss4(); return; }
+  if (pcx < 19 * T || pcx > 54 * T || pcy < 47 * T) { resetBoss4(); return; }
   const f = b4Fase(); B4.t += dt;
   if (B4.stun > 0) B4.stun -= dt;
   B4.R = Math.min(1, B4.R + dt);

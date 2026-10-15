@@ -97,37 +97,40 @@ function tegnFunn(f) {
 function tegnFiende(e) {
   if (e.type === 'sveve') return tegnSveve(e);
   if (e.type === 'rele') return tegnRele(e);
+  // gnistlus: varme farger og lysende øyne, så den skiller seg fra bakgrunnen
   const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t;
-  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir, 1);
-  ctx.strokeStyle = '#0b0f18'; ctx.lineWidth = 1.6;
+  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25);
+  ctx.strokeStyle = '#1a0c06'; ctx.lineWidth = 1.8;
   for (let i = -1; i <= 1; i++) { const s = Math.sin(t * 14 + i * 2) * 2.5; ctx.beginPath(); ctx.moveTo(i * 5, -5); ctx.lineTo(i * 5 + 3 + s, -2); ctx.lineTo(i * 5 + 1 + s, 0); ctx.stroke(); }
-  const gr = ctx.createLinearGradient(0, -14, 0, -3); gr.addColorStop(0, '#2d3a55'); gr.addColorStop(1, '#141a28');
+  const gr = ctx.createLinearGradient(0, -14, 0, -3); gr.addColorStop(0, '#a8482a'); gr.addColorStop(1, '#3a160c');
   ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, -7, 11, 7, 0, Math.PI, 0); ctx.lineTo(11, -4); ctx.lineTo(-11, -4); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = 'rgba(140,230,255,.9)'; ctx.beginPath(); ctx.arc(8, -7, 1.6, 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(160,240,255,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-6, -12); ctx.lineTo(-3, -9); ctx.lineTo(0, -13); ctx.lineTo(3, -9); ctx.lineTo(6, -12); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(0, -7, 11, 7, 0, Math.PI, 0); ctx.stroke();
+  ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(7, -8, 2.2, 0, 7); ctx.arc(3, -9, 1.6, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,230,140,.95)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-7, -12); ctx.lineTo(-4, -9); ctx.lineTo(-1, -14); ctx.lineTo(2, -10); ctx.stroke();
   ctx.restore();
 }
 // svevegnist: en liten flygende isolator med summende vinger
 function tegnSveve(e) {
   const X = e.x + e.w / 2, Y = e.y + e.h / 2, t = e.t;
-  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir, 1);
-  ctx.fillStyle = 'rgba(170,230,255,.35)'; const v = Math.sin(t * 40) * 3;
+  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25);
+  ctx.fillStyle = 'rgba(255,220,180,.4)'; const v = Math.sin(t * 40) * 3;
   ctx.beginPath(); ctx.ellipse(-3, -7 + v * .3, 8, 3 + v * .5, -.4, 0, 7); ctx.ellipse(4, -7 - v * .3, 8, 3 - v * .4, .4, 0, 7); ctx.fill();
-  const gr = ctx.createLinearGradient(0, -8, 0, 8); gr.addColorStop(0, '#3b4b68'); gr.addColorStop(1, '#151b2a');
+  const gr = ctx.createLinearGradient(0, -8, 0, 8); gr.addColorStop(0, '#b0503a'); gr.addColorStop(1, '#3a1810');
   ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, 9, 7, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = '#c9a23a'; ctx.fillRect(-6, 4, 12, 2.5);
-  ctx.fillStyle = 'rgba(160,240,255,.95)'; ctx.beginPath(); ctx.arc(5, -1, 2, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.1; ctx.stroke();
+  ctx.fillStyle = '#f2c23c'; ctx.fillRect(-6, 4, 12, 2.5);
+  ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(5, -1, 2.4, 0, 7); ctx.fill();
   ctx.restore();
 }
 // releet står på gulvet og blinker mens det lader
 function tegnRele(e) {
   const X = e.x + e.w / 2, Y = e.y + e.h;
-  ctx.save(); ctx.translate(X, Y);
-  ctx.fillStyle = '#2a3245'; rr(ctx, -11, -20, 22, 20, 3); ctx.fill(); ctx.strokeStyle = '#4a5574'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = '#b8641f'; for (let k = 0; k < 3; k++) ctx.fillRect(-7, -16 + k * 4, 14, 2.2);
+  ctx.save(); ctx.translate(X, Y); ctx.scale(1.15, 1.15);
+  ctx.fillStyle = '#4a2a22'; rr(ctx, -11, -20, 22, 20, 3); ctx.fill(); ctx.strokeStyle = 'rgba(255,170,110,.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = '#e07a2a'; for (let k = 0; k < 3; k++) ctx.fillRect(-7, -16 + k * 4, 14, 2.2);
   const lad = e.lad > 0 && Math.sin(S.t * (14 + e.lad * 30)) > 0;
-  ctx.fillStyle = lad ? '#ffffff' : '#7fe6ff'; ctx.beginPath(); ctx.arc(e.dir * 8, -9, 2.6, 0, 7); ctx.fill();
-  ctx.fillStyle = '#151a26'; ctx.fillRect(-12, -2, 24, 2);
+  ctx.fillStyle = lad ? '#ffffff' : '#ffe36b'; ctx.beginPath(); ctx.arc(e.dir * 8, -9, 2.8, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1a0c06'; ctx.fillRect(-12, -2, 24, 2);
   ctx.restore();
 }
 // fagkort: et lite gult kort som svever
@@ -419,7 +422,7 @@ function samleLys() {
   if (S.ev.krok) for (const k of KROKER) if (synlig(k[0] * T, k[1] * T, 60)) L(k[0] * T + T / 2, k[1] * T, S.krokMaal === k ? 90 : 40, S.krokMaal === k ? .7 : .35);
   for (const b of bolger) L(b.x, b.row * T - 12, 80, .7);
   for (const s of striker) L(s.x, 15 * T, s.aktiv > 0 ? 260 : 90, s.aktiv > 0 ? .9 : .35);
-  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 80)) L(e.x + e.w / 2, e.y + 4, 50, .5);
+  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 80)) L(e.x + e.w / 2, e.y + 4, 95, .7);
   { const fa = lysbueFase(); if (fa && synlig(LYSBUE.x * T, LYSBUE.y0 * T, 120)) L((LYSBUE.x + .5) * T, 29.5 * T, fa === 2 ? 170 : 60, fa === 2 ? .85 : .4); }
   for (const [x, y] of KJELLERLYS) if (synlig(x * T, y * T, 200)) L(x * T + T / 2, y * T + 8, 150, .45);
   if (lyn) L((lyn.x1 + lyn.x2) / 2, (lyn.y1 + lyn.y2) / 2, 260, .8);
@@ -452,7 +455,7 @@ function tegnGlod() {
         for (let y = LYSBUE.y0; y <= LYSBUE.y1; y++) glod(SPR.c, X, y * T + T / 2, 40, .4); }
       else { if (Math.sin(S.t * 40) > .3) { ctx.globalAlpha = .7; ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,200,120,.9)'; jagget(X, LYSBUE.y0 * T + 8, X + 4, LYSBUE.y0 * T + 26, 4, 3, (S.t * 30 | 0)); jagget(X, (LYSBUE.y1 + 1) * T - 8, X - 4, (LYSBUE.y1 + 1) * T - 26, 4, 3, (S.t * 31 | 0)); }
         glod(SPR.o, X, LYSBUE.y0 * T + 8, 22, .5); glod(SPR.o, X, (LYSBUE.y1 + 1) * T - 8, 22, .5); } } }
-  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) { glod(SPR.c, e.x + e.w / 2, e.y + 4, 18 + Math.sin(e.t * 9) * 3, .6);
+  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) { glod(SPR.o, e.x + e.w / 2, e.y + e.h / 2, 30 + Math.sin(e.t * 9) * 4, .75); glod(SPR.r, e.x + e.w / 2, e.y + e.h / 2, 14, .5);
     if (Math.sin(e.t * 23) > .7) { ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(190,245,255,.9)'; jagget(e.x + 4, e.y + 2, e.x + e.w - 4, e.y - 3, 3, 4, (e.t * 30 | 0)); } }
   if (!S.ev.hemmelig && synlig(10 * T, 29 * T, 100)) glod(SPR.c, 10 * T - 6, 29.5 * T, 14 + 4 * Math.sin(S.t * 2), .35);
   for (const [x, y] of KJELLERLYS) { if (x === 6 && !S.ev.hemmelig) continue; if (synlig(x * T, y * T, 120)) glod(SPR.w, x * T + T / 2, y * T + 8, 34, .35); }
@@ -492,6 +495,13 @@ function tegnGlod() {
       if (B4.golv === 1) glod(SPR.o, X, Y, 24, .25 + .2 * Math.sin(S.t * 18));
       else { glod(SPR.c, X, Y, 36, .5); if (hs(x, (S.t * 12) | 0, 9) < .3) { ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(220,250,255,.95)'; jagget(X - 16, Y, X + 16, Y - 5, 6, 5, (S.t * 25 | 0) + x); } } } }
   if (S.ev.tester) for (const [x, y] of ghoListe) { const X = x * T + T / 2; if (synlig(X, y * T, 40)) glod(SPR.o, X, y * T + 4, 18, .25 + .08 * Math.sin(S.t * 4 + x)); }
+  // lynpisken: en buet lynstripe som sveiper foran montøren
+  if (P.piskT > -.12 && S.dod <= 0) { const k = Math.min(1, 1 - P.piskT / .2), fa = P.piskT > 0 ? 1 : (P.piskT + .12) / .12, hx = P.x + P.w / 2 + P.face * 6, hy = P.y + 10, a = -1.2 + k * 1.9, sd = (S.t * 40) | 0;
+    const tx = hx + Math.cos(a) * PISK_LENGDE * P.face, ty = hy + Math.sin(a) * PISK_LENGDE * .75, mx = hx + Math.cos(a - .5) * PISK_LENGDE * .55 * P.face, my = hy + Math.sin(a - .5) * PISK_LENGDE * .5;
+    ctx.globalAlpha = fa; ctx.lineCap = 'round';
+    ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(170,140,255,.4)'; jagget(hx, hy, mx, my, 5, 4, sd); jagget(mx, my, tx, ty, 6, 5, sd + 3);
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(245,240,255,.98)'; jagget(hx, hy, mx, my, 5, 4, sd); jagget(mx, my, tx, ty, 6, 5, sd + 3);
+    glod(SPR.p, tx, ty, 40, .9 * fa); glod(SPR.h, tx, ty, 10, fa); ctx.lineCap = 'butt'; }
   if (S.krokMaal && !P.krok) { const X = S.krokMaal[0] * T + T / 2, Y = S.krokMaal[1] * T; glod(SPR.c, X, Y, 30 + 6 * Math.sin(S.t * 8), .9); glod(SPR.h, X, Y, 8, .9); }
   if (P.krok) glod(SPR.c, P.krok.x, P.krok.y, 26, .8);
   for (const q of sveip) { const Y = ((q.rad || ARENA2.gulv) - .55) * T, ax0 = q.x0 || ARENA2.x0, ax1 = q.x1 || ARENA2.x1;

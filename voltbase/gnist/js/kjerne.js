@@ -35,7 +35,7 @@ const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8A
   hintSett: new Set(), mork: .55, frame: 0, panelT: 0, slow: 0, evneVent: 0, omr: '', hallLys: 0, hallFlimmer: 0, maal: '', idle: 0, laas: 0 };
 const P = { x: 0, y: 0, w: 18, h: 30, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buf: 0, air: 0, dashT: 0, dashCd: 0,
   canDash: true, inv: 0, hp: 4, max: 4, sx: 1, sy: 1, anim: 0, safeX: 0, safeY: 0, paKran: false, lean: 0, landT: 0, spor: [], sporT: 0, fallT: 0,
-  krok: null, krokCd: 0, sistKrok: null, sistKrokT: 0, vegg: 0, veggT: 0, sistVegg: 0, veggKoy: 0 };
+  krok: null, krokCd: 0, sistKrok: null, sistKrokT: 0, vegg: 0, veggT: 0, sistVegg: 0, veggKoy: 0, piskT: 0, piskCd: 0 };
 const GN = { x: 0, y: 0, vx: 0, vy: 0, flare: 0 };
 const B = { aktiv: false, fase: '', introT: 0, hp: 3, x: 87.5 * T, y: 7.4 * T, t: 0, stun: 0, skuddT: 2, slagT: 6, lynT: 4, dod: 0, varsel: 0, lad: 0 };
 // Kortslutningen: bossen i koblingsrommet
@@ -47,17 +47,17 @@ const B4 = { aktiv: false, fase: '', introT: 0, hp: 4, t: 0, stun: 0, dod: 0, vi
 const prosj = [], bolger = [], striker = [], partikler = [], lys = [], fiender = [], bolter = [], sveip = [];
 let lyn = null;
 const cam = { x: 0, y: 0, look: 0, anker: 0, zoom: 1 };
-const I = { left: false, right: false, down: false, jumpHeld: false, jumpP: false, dashP: false, krokHeld: false };
+const I = { left: false, right: false, down: false, jumpHeld: false, jumpP: false, dashP: false, krokHeld: false, piskP: false };
 const K = {}, TS = { left: false, right: false, jump: false, dash: false, krok: false };
 
 // ---------- innstillinger (egen nøkkel, påvirker ikke lagret fremgang) ----------
-const INNST = { vib: true, rist: true, mus: true, knapper: {} };
-try { const d = JSON.parse(localStorage.getItem(NOKKEL + '-innst') || 'null'); if (d && typeof d === 'object') for (const k of ['vib', 'rist', 'mus']) if (typeof d[k] === 'boolean') INNST[k] = d[k];
+const INNST = { vib: true, rist: true, mus: true, tips: true, knapper: {} };
+try { const d = JSON.parse(localStorage.getItem(NOKKEL + '-innst') || 'null'); if (d && typeof d === 'object') for (const k of ['vib', 'rist', 'mus', 'tips']) if (typeof d[k] === 'boolean') INNST[k] = d[k];
   // egne knappeplasseringer per retning: { ligg|staa: { id: { x, y, s } } }
   if (d && d.knapper && typeof d.knapper === 'object') for (const r of ['ligg', 'staa']) { const o = d.knapper[r]; if (!o || typeof o !== 'object') continue; INNST.knapper[r] = {};
-    for (const id of ['pad', 'tHopp', 'tStot', 'tKrok']) { const v = o[id]; if (v && isFinite(v.x) && isFinite(v.y) && isFinite(v.s)) INNST.knapper[r][id] = { x: +v.x, y: +v.y, s: Math.min(1.6, Math.max(.6, +v.s)) }; } } } catch (e) {}
+    for (const id of ['pad', 'tHopp', 'tStot', 'tKrok', 'tPisk']) { const v = o[id]; if (v && isFinite(v.x) && isFinite(v.y) && isFinite(v.s)) INNST.knapper[r][id] = { x: +v.x, y: +v.y, s: Math.min(1.6, Math.max(.6, +v.s)) }; } } } catch (e) {}
 function lagreInnst() { try { localStorage.setItem(NOKKEL + '-innst', JSON.stringify(INNST)); } catch (e) {} visInnst(); }
 function visInnst() { $('#bVib').textContent = 'Vibrasjon: ' + (INNST.vib ? 'på' : 'av'); $('#bRist').textContent = 'Risting: ' + (INNST.rist ? 'full' : 'redusert');
-  $('#bMus').textContent = 'Musikk: ' + (INNST.mus ? 'på' : 'av'); }
+  $('#bMus').textContent = 'Musikk: ' + (INNST.mus ? 'på' : 'av'); $('#bTips').textContent = 'Hjelpetekst: ' + (INNST.tips ? 'på' : 'av'); }
 // kort vibrasjon på mobil (støttes ikke på alle telefoner, f.eks. iPhone)
 function vib(m) { if (!INNST.vib || !erTouch || !navigator.vibrate) return; try { navigator.vibrate(m); } catch (e) {} }

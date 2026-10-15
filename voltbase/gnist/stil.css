@@ -46,7 +46,7 @@ button { font-family:inherit; touch-action:manipulation; }
 #boss .sik i.av { background:rgba(255,255,255,.12); box-shadow:none; }
 
 #hint { position:fixed; left:50%; top:24%; transform:translateX(-50%); width:min(92vw,560px); text-align:center;
-  font-size:clamp(19px,2.6vw,25px); line-height:1.25; color:#f1f8ff; text-shadow:0 0 18px rgba(120,210,255,.75), 0 2px 6px rgba(0,0,0,.85);
+  font-size:clamp(16px,2.1vw,21px); line-height:1.25; color:#f1f8ff; text-shadow:0 0 18px rgba(120,210,255,.75), 0 2px 6px rgba(0,0,0,.85);
   pointer-events:none; opacity:0; transition:opacity .6s; }
 #hint.vis { opacity:1; }
 #hint.lav { top:auto; bottom:max(20%, 138px); }
@@ -54,6 +54,8 @@ button { font-family:inherit; touch-action:manipulation; }
   opacity:0; transition:opacity 1s; white-space:nowrap; }
 #banner.vis { opacity:1; }
 #banner .stor { font-size:clamp(32px,6vw,62px); letter-spacing:.08em; color:#fff; text-shadow:0 0 30px rgba(143,227,255,.9); }
+#banner.rolig { top:20%; }
+#banner.rolig .stor { font-size:clamp(22px,3.6vw,36px); opacity:.85; }
 #banner .liten { font-size:clamp(13px,1.8vw,17px); color:var(--dempet); letter-spacing:.22em; text-transform:uppercase; }
 #toast { position:fixed; left:50%; bottom:calc(26px + env(safe-area-inset-bottom)); transform:translate(-50%,10px); pointer-events:none;
   background:rgba(9,17,36,.8); border:1px solid rgba(255,197,107,.45); color:#fff4dc; padding:8px 16px; border-radius:999px;
@@ -79,10 +81,12 @@ button { font-family:inherit; touch-action:manipulation; }
 #tStot.skjult { display:none; }
 #tKrok { width:72px; height:72px; margin-bottom:12px; border-color:rgba(143,227,255,.55); color:#bfefff; }
 #tKrok.skjult { display:none; }
+#tPisk { width:64px; height:64px; margin-bottom:24px; border-color:rgba(190,170,255,.55); color:#ddd2ff; }
 #tKrok.klar { background:rgba(143,227,255,.2); box-shadow:0 0 16px rgba(143,227,255,.45); }
 @media (max-width:520px) {
-  .hoyreKnapper { flex-direction:column; align-items:center; gap:14px; }
-  #tStot, #tKrok { margin-bottom:0; }
+  .hoyreKnapper { display:grid; grid-template-columns:auto auto; grid-template-areas:". krok" "pisk stot" ". hopp"; align-items:center; justify-items:center; gap:14px 12px; }
+  #tKrok { grid-area:krok; } #tStot { grid-area:stot; } #tHopp { grid-area:hopp; } #tPisk { grid-area:pisk; }
+  #tStot, #tKrok, #tPisk { margin-bottom:0; }
   #boss { top:calc(100px + env(safe-area-inset-top)); }
   .touch #toast { top:calc(152px + env(safe-area-inset-top)); }
 }

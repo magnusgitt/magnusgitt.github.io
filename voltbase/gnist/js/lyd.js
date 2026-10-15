@@ -57,6 +57,8 @@ function lyd(n) {
     case 'nedslag': sus(.35, 8000, 600, .09, 0, 'highpass'); tone(200, 50, .3, 'sawtooth', .04); break;
     case 'dor': sus(.4, 600, 60, .14); tone(70, 40, .5, 'square', .05); break;
     case 'lampe': tone(520, 520, .3, 'sine', .035); tone(780, 780, .45, 'sine', .03, .1); break;
+    case 'pisk': sus(.12, 9000, 2500, .05, 0, 'highpass'); tone(1800, 500, .12, 'sawtooth', .025); break;
+    case 'piskTreff': sus(.1, 4000, 800, .07, 0, 'bandpass'); tone(900, 1500, .1, 'square', .025); break;
     case 'stot': sus(.22, 7000, 500, .07, 0, 'bandpass'); tone(1100, 200, .2, 'sawtooth', .03); break;
     case 'trakk': tone(500, 1000, .1, 'square', .025); sus(.1, 3000, 600, .05); break;
     case 'dod': tone(320, 40, .9, 'triangle', .06); sus(.6, 2000, 100, .06); break;

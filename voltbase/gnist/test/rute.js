@@ -369,6 +369,39 @@ async function fase6(b) {
   await ctx.close();
 }
 const __gnist_omr = s => s;
+async function fase7(b) {
+  console.log('Lynpisk, bossarena og hjelpetekst');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 3, ev: { dobbel: true, hansker: true, stot: true, krok: true, liv2: true, tester: true, sliper: true }, cp: 8, cpLit: [0, 1, 2, 3, 4, 5, 6, 7, 8], orb: [], knust: [1], boss: true, boss2: true, ferdig: true, tid: 600 })), KEY);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
+  // lynpisken med F
+  await page.evaluate(() => { const g = __gnist, e = g.fiender.find(f => f.type === 'lus' && f.liv); g.fiender.length = 0; g.fiender.push(e); e.x0 = 0; e.x1 = 1e6; });
+  await page.evaluate(() => { const g = __gnist, e = g.fiender[0], P = g.P; P.x = e.x - 70; P.y = e.y + e.h - P.h; P.vx = P.vy = 0; P.face = 1; e.dir = 1; P.inv = 999; }); await vent(page, 60);
+  await page.keyboard.press('KeyF'); await vent(page, 250);
+  sjekk('lynpisken slår gnistlusa', await page.evaluate(() => !__gnist.fiender[0].liv));
+  // gnister i lufta slås bort
+  await page.evaluate(() => { const g = __gnist, P = g.P; g.bolter.push({ x: P.x + P.w / 2 + 50, y: P.y + P.h / 2, vx: -50, liv: 5 }); P.piskCd = 0; }); await page.keyboard.press('KeyF'); await vent(page, 150);
+  sjekk('lynpisken slår bort gnister', await page.evaluate(() => __gnist.bolter.length === 0));
+  // ut av gården midt i sluttbossen: kampen startes på nytt i stedet for å låse spillet
+  await page.evaluate(() => { __gnist.P.inv = 9999; }); await pos(page, 152, 26); await vent(page, 500);
+  await page.waitForFunction(() => __gnist.B3.fase === 'kamp', null, { timeout: 8000 }).catch(() => {});
+  await pos(page, 126, 30); await vent(page, 400);
+  sjekk('ut av arenaen nullstiller sluttbossen', await page.evaluate(() => !__gnist.B3.aktiv && __gnist.tile(161, 22) !== 5));
+  await pos(page, 152, 26); await vent(page, 300);
+  sjekk('sluttbossen kan startes igjen', await page.evaluate(() => __gnist.B3.aktiv));
+  await page.waitForFunction(() => __gnist.B3.fase === 'kamp', null, { timeout: 8000 }).catch(() => {});
+  let knust = false; for (let i = 0; i < 2; i++) { await pos(page, 158, 26); await vent(page, 200); await page.keyboard.down('ArrowRight'); await page.keyboard.press('ShiftLeft'); await vent(page, 400); await page.keyboard.up('ArrowRight'); knust = knust || await page.evaluate(() => __gnist.S.knust.has(0)); }
+  sjekk('svak mur kan ikke skjæres opp under bosskamp', !knust);
+  // hjelpetekst av/på
+  await page.keyboard.press('Escape'); await vent(page, 300); await page.click('#bTips'); await vent(page, 100);
+  sjekk('hjelpetekst kan slås av', await page.evaluate(k => JSON.parse(localStorage.getItem(k + '-innst')).tips === false && document.querySelector('#bTips').textContent.includes('av'), KEY));
+  await page.keyboard.press('Escape'); await vent(page, 200);
+  await page.evaluate(() => { document.querySelector('#hint').classList.remove('vis'); hint('testtips', 'Test'); });
+  sjekk('ingen hjelpetekst når den er av', await page.evaluate(() => !document.querySelector('#hint').classList.contains('vis')));
+  sjekk('ingen JS-feil (pisk)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
@@ -400,6 +433,9 @@ async function touch(b, navn, opts) {
   if (krokK) { await page.evaluate(() => { const P = __gnist.P; P.x = 105 * 32; P.y = 50 * 32; P.vy = -200; P.vx = 0; P.onGround = false; });
     await berør('touchStart', [{ x: krokK.x, y: krokK.y, id: 3 }]); await vent(page, 250);
     sjekk('krok-knappen fester kabelen', await page.evaluate(() => !!__gnist.P.krok), await page.evaluate(() => ({ m: __gnist.S.mode, h: __gnist.I.krokHeld, maal: __gnist.S.krokMaal, x: __gnist.P.x / 32, y: __gnist.P.y / 32, dod: __gnist.S.dod, laas: __gnist.S.laas, ts: __gnist.TS }))); await berør('touchEnd', []); }
+  { const pk = await boks('#tPisk'); sjekk('pisk-knapp vises', !!pk && pk.w > 0);
+    await page.evaluate(() => { const g = __gnist; g.P.piskCd = 0; }); await berør('touchStart', [{ x: pk.x, y: pk.y, id: 7 }]); await vent(page, 60); await berør('touchEnd', []);
+    sjekk('pisk-knappen slår', await page.evaluate(() => __gnist.P.piskCd > 0)); }
   // tilpass knapper: flytt og forstørr Hopp, lagres og virker etterpå
   await page.evaluate(() => { __gnist.P.krok = null; __gnist.P.inv = 999; }); await pos(page, 50, 18); await vent(page, 300);
   await page.tap('#menyKnapp'); await vent(page, 300); await page.tap('#bTilpass'); await vent(page, 300);
@@ -440,6 +476,7 @@ async function touch(b, navn, opts) {
     if (med('fase5')) await fase5(b);
     if (med('hemmelig')) await hemmeligheter(b);
     if (med('fase6')) await fase6(b);
+    if (med('fase7')) await fase7(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

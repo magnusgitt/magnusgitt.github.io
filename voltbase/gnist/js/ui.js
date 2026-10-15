@@ -2,8 +2,13 @@
 // Gnist – HUD, paneler, lagring, løkke, input og oppstart.
 // ---------- HUD og paneler ----------
 let hintTid = 0, toastTid = 0, maalTid = 0, bannerTid = 0;
-function hint(key, tekst, varighet) { if (key && S.hintSett.has(key)) return; if (key) S.hintSett.add(key); const h = $('#hint'); h.textContent = tekst; h.classList.toggle('lav', B.aktiv || B2.aktiv || B3.aktiv || B4.aktiv || $('#banner').classList.contains('vis')); h.classList.add('vis'); hintTid = varighet || 4.5; }
-function banner(stor, liten, tid) { $('#bannerStor').textContent = stor; $('#bannerLiten').textContent = liten || ''; $('#banner').classList.add('vis'); $('#hint').classList.add('lav'); bannerTid = tid || 3; }
+// tekster underveis: korte, én om gangen, og kan skrus av i pausemenyen (bosshint uten nøkkel vises alltid)
+let hintVent = null;
+function hint(key, tekst, varighet) { if (key && S.hintSett.has(key)) return; if (key) S.hintSett.add(key); if (key && !INNST.tips) return;
+  if (key && bannerTid > 0) { hintVent = [tekst, varighet]; return; }
+  const h = $('#hint'); h.textContent = tekst; h.classList.toggle('lav', B.aktiv || B2.aktiv || B3.aktiv || B4.aktiv); h.classList.add('vis'); hintTid = Math.min(varighet || 3.5, 4); }
+function banner(stor, liten, tid, rolig) { $('#bannerStor').textContent = stor; $('#bannerLiten').textContent = liten || ''; $('#banner').classList.toggle('rolig', !!rolig); $('#banner').classList.add('vis');
+  if (hintTid > 0) $('#hint').classList.add('lav'); bannerTid = tid || 3; }
 function toast(tekst) { const t = $('#toast'); t.textContent = tekst; t.classList.add('vis'); toastTid = 2.4; }
 function pop(sel) { const e = $(sel); if (!e) return; e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); setTimeout(() => e.classList.remove('pop'), 250); }
 function hud() {
@@ -73,7 +78,7 @@ function maalPunkt() {
   if (!S.ev.liv5) return [36.5, 60.5];
   return null;
 }
-function sjekkMaal(tving) { const m = maalTekst(); if (m !== S.maal || tving) { S.maal = m; $('#maal').innerHTML = '<b>Mål:</b> ' + m; $('#maal').classList.add('vis'); maalTid = 5; } }
+function sjekkMaal(tving) { const m = maalTekst(); if (m !== S.maal || tving) { S.maal = m; $('#maal').innerHTML = '<b>Mål:</b> ' + m; $('#maal').classList.add('vis'); maalTid = 3.5; } }
 function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt', '#lagSnu', '#lagKart', '#lagVerk', '#lagFag', '#lagRull'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
   if (id) { $('#verkKnapp').classList.add('skjult'); sistVerk = false; }
   $('#hud').classList.toggle('vis', id === null || id === '#lagPause' || id === '#lagEvne'); $('#touch').classList.toggle('vis', id === null);
@@ -127,7 +132,7 @@ function loop(n) {
     let mal = iKjeller2(ptx, pty) ? .62 : inne(ptx, pty) ? .58 : .5; if (erHall(ptx, pty)) mal = lerp(.7, .4, S.hallLys) + (S.hallFlimmer > 0 && Math.sin(S.t * 50) > 0 ? .15 : 0);
     S.mork += (mal - S.mork) * Math.min(1, rdt * 2);
     if (hintTid > 0) { hintTid -= rdt; if (hintTid <= 0) $('#hint').classList.remove('vis'); }
-    if (bannerTid > 0) { bannerTid -= rdt; if (bannerTid <= 0) $('#banner').classList.remove('vis'); }
+    if (bannerTid > 0) { bannerTid -= rdt; if (bannerTid <= 0) { $('#banner').classList.remove('vis'); if (hintVent) { const [t, v] = hintVent; hintVent = null; hint(null, t, v); } } }
     if (toastTid > 0) { toastTid -= rdt; if (toastTid <= 0) $('#toast').classList.remove('vis'); }
     if (maalTid > 0) { maalTid -= rdt; if (maalTid <= 0) $('#maal').classList.remove('vis'); }
     oppdaterSurr();
@@ -168,6 +173,7 @@ function startTidsmodus() { lydInit(); S.tidsmodus = true; nyttSpill(null); S.mo
 // ---------- input ----------
 let erTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
 document.documentElement.classList.toggle('touch', erTouch);
+const PISK = ['KeyF', 'KeyV'];
 const HOPP = ['ArrowUp', 'KeyW', 'Space', 'KeyZ', 'KeyK'], STOT = ['ShiftLeft', 'ShiftRight', 'KeyX', 'KeyJ', 'KeyL'], KROK = ['KeyC', 'KeyE'];
 function oppdaterTaster() {
   I.left = !!(K.ArrowLeft || K.KeyA || TS.left); I.right = !!(K.ArrowRight || K.KeyD || TS.right); I.down = !!(K.ArrowDown || K.KeyS);
@@ -189,6 +195,7 @@ addEventListener('keydown', e => {
   if (HOPP.includes(c)) I.jumpP = true;
   if ((c === 'ArrowDown' || c === 'KeyS') && S.verkNaer >= 0 && P.onGround) visVerk();
   if (STOT.includes(c)) I.dashP = true;
+  if (PISK.includes(c)) I.piskP = true;
 });
 addEventListener('keyup', e => { K[e.code] = false; oppdaterTaster(); });
 addEventListener('blur', () => { nullInput(); if (S.mode === 'spill') pauseBytt(); });
@@ -210,6 +217,7 @@ function trykkKnapp(el, ned, opp) {
 }
 trykkKnapp($('#tHopp'), () => { if (S.mode === 'evne') { primar(); return; } TS.jump = true; I.jumpP = true; oppdaterTaster(); }, () => { TS.jump = false; oppdaterTaster(); });
 trykkKnapp($('#tStot'), () => { I.dashP = true; }, () => {});
+trykkKnapp($('#tPisk'), () => { I.piskP = true; }, () => {});
 trykkKnapp($('#tKrok'), () => { TS.krok = true; oppdaterTaster(); }, () => { TS.krok = false; oppdaterTaster(); });
 addEventListener('contextmenu', e => e.preventDefault());
 
@@ -286,10 +294,11 @@ $('#lagEvne').addEventListener('pointerdown', e => { e.preventDefault(); primar(
 $('#bSnuOk').addEventListener('click', lukkSnu);
 $('#bVib').addEventListener('click', () => { INNST.vib = !INNST.vib; lagreInnst(); vib(30); });
 $('#bRist').addEventListener('click', () => { INNST.rist = !INNST.rist; lagreInnst(); });
+$('#bTips').addEventListener('click', () => { INNST.tips = !INNST.tips; lagreInnst(); });
 settLyd(lydPa); visInnst();
 
 // egne knappeplasseringer: flyttes med translate/scale, så treffområdet følger knappen
-const KNAPPER = ['pad', 'tHopp', 'tStot', 'tKrok'];
+const KNAPPER = ['pad', 'tHopp', 'tStot', 'tKrok', 'tPisk'];
 function knappRetning() { return innerWidth > innerHeight ? 'ligg' : 'staa'; }
 function knappOppsett() { const r = knappRetning(); return INNST.knapper[r] || (INNST.knapper[r] = {}); }
 function brukKnapper() {
