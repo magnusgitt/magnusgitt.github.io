@@ -73,6 +73,50 @@ function lyd(n) {
     case 'golv': sus(.7, 7000, 1500, .1, 0, 'highpass'); tone(100, 100, .8, 'sawtooth', .05); break;
     case 'utmattet': tone(400, 90, .9, 'triangle', .05); break;
     case 'b2treff': sus(.12, 2000, 300, .12); tone(600, 120, .5, 'square', .04); tone(150, 40, .8, 'sawtooth', .05, .08); break;
+    case 'fag': [587, 740, 880].forEach((f, i) => tone(f, f, .35, 'sine', .035, i * .07)); tone(1175, 1175, .5, 'triangle', .02, .22); break;
     case 'slutt': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 1.6, 'triangle', .04, i * .16)); break;
+  }
+}
+
+// ---------- musikk (lages fortløpende, et eget tema for hvert område) ----------
+// Hvert tema: tempo, grunntone (MIDI), skala, akkordrekke (trinn i skalaen) og hvor tett arpeggioen spiller.
+const TEMA = {
+  ute:    { bpm: 84, rot: 57, skala: [0, 2, 3, 5, 7, 8, 10], akk: [0, 5, 2, 6], arp: .55, lys: 1 },
+  kjeller:{ bpm: 70, rot: 50, skala: [0, 2, 3, 5, 7, 9, 10], akk: [0, 3, 0, 6], arp: .35, lys: .6 },
+  hall:   { bpm: 108, rot: 52, skala: [0, 1, 3, 5, 7, 8, 10], akk: [0, 1, 0, 6], arp: .8, lys: .8, puls: true },
+  kabel:  { bpm: 76, rot: 54, skala: [0, 2, 3, 5, 7, 8, 10], akk: [0, 5, 3, 4], arp: .45, lys: .7 },
+  boss2:  { bpm: 120, rot: 54, skala: [0, 1, 3, 5, 6, 8, 10], akk: [0, 1, 4, 1], arp: .9, lys: .8, puls: true },
+};
+const MUS = { gain: null, tema: null, neste: 0, steg: 0, takt: 0 };
+const midiF = m => 440 * Math.pow(2, (m - 69) / 12);
+function musTone(f, t, dur, type, vol) { const o = A.c.createOscillator(), g = A.c.createGain(); o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(.4, dur * .3)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(MUS.gain); o.start(t); o.stop(t + dur + .05); }
+function velgTema() {
+  if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
+  const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
+  if (iKjeller2(tx, ty)) return 'kabel'; if (erHall(tx, ty)) return S.bossDone ? 'ute' : 'kjeller'; if (inne(tx, ty)) return 'kjeller'; return 'ute';
+}
+function oppdaterMusikk() {
+  if (!A.c) return;
+  if (!MUS.gain) { MUS.gain = A.c.createGain(); MUS.gain.gain.value = 0; MUS.gain.connect(A.master); }
+  const pa = INNST.mus && lydPa && (S.mode === 'spill' || S.mode === 'evne' || S.mode === 'kart' || S.mode === 'verk');
+  MUS.gain.gain.setTargetAtTime(pa ? 1 : 0, A.c.currentTime, .4);
+  if (!pa) { MUS.neste = 0; return; }
+  const navn = velgTema(); const now = A.c.currentTime;
+  if (MUS.neste < now) { MUS.neste = now + .05; MUS.steg = 0; }
+  // planlegg noter litt fram i tid
+  while (MUS.neste < now + .25) {
+    if (MUS.steg % 16 === 0) { MUS.tema = TEMA[navn]; if (MUS.steg === 0 || MUS.steg >= 64) { MUS.steg = 0; } MUS.takt = MUS.steg / 16 | 0; }
+    const tm = MUS.tema, sek = 60 / tm.bpm / 4, t = MUS.neste, st = MUS.steg, trinn = tm.akk[(st / 16 | 0) % tm.akk.length];
+    const note = k => { const n = trinn + k, okt = Math.floor(n / 7); return tm.rot + tm.skala[((n % 7) + 7) % 7] + 12 * okt; };
+    try {
+      if (st % 16 === 0) { for (const k of [0, 2, 4]) musTone(midiF(note(k)), t, sek * 16, 'triangle', .011 * tm.lys); musTone(midiF(note(0) - 12), t, sek * 8, 'sine', .03); }
+      if (st % 16 === 8) musTone(midiF(note(0) - 12), t, sek * 7, 'sine', .022);
+      if (tm.puls && st % 2 === 0) musTone(midiF(note(0) - 24), t, sek * 1.2, 'square', .006);
+      if (st % 2 === 0 && hs(st, MUS.takt, navn.length) < tm.arp) { const k = [0, 2, 4, 7, 4, 2][(st / 2) % 6 | 0] + (hs(st, 3, MUS.takt) < .2 ? 1 : 0);
+        musTone(midiF(note(k) + 12), t, sek * 3, 'sine', .014 * tm.lys); }
+    } catch (e) {}
+    MUS.neste += sek; MUS.steg = (MUS.steg + 1) % 64;
   }
 }

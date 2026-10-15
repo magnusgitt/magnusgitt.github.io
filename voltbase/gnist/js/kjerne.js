@@ -27,7 +27,9 @@ function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w
 // ---------- tilstand ----------
 const EVNER = ['dobbel', 'hansker', 'stot', 'liv', 'hemmelig', 'krok', 'liv2'];
 function nyeEvner() { const e = {}; for (const k of EVNER) e[k] = false; return e; }
-const S = { mode: 'meny', t: 0, ev: nyeEvner(), cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
+// kartet deles i ruter på 4×4 fliser som fylles inn etter hvert som montøren har vært der
+const KC = 4, KW = Math.ceil(MW / KC), KH = Math.ceil(MH / KC);
+const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8Array(KW * KH), brukt: 0, kjop: {}, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
   bossDone: false, boss2: false, tid: 0, ferdig: false, dodsfall: 0, shake: 0, flash: 0, flashF: '255,255,255', dod: 0, ending: 0, power: 0,
   hintSett: new Set(), mork: .55, frame: 0, panelT: 0, slow: 0, evneVent: 0, omr: '', hallLys: 0, hallFlimmer: 0, maal: '', idle: 0, laas: 0 };
 const P = { x: 0, y: 0, w: 18, h: 30, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buf: 0, air: 0, dashT: 0, dashCd: 0,
@@ -44,9 +46,10 @@ const I = { left: false, right: false, down: false, jumpHeld: false, jumpP: fals
 const K = {}, TS = { left: false, right: false, jump: false, dash: false, krok: false };
 
 // ---------- innstillinger (egen nøkkel, påvirker ikke lagret fremgang) ----------
-const INNST = { vib: true, rist: true };
-try { const d = JSON.parse(localStorage.getItem(NOKKEL + '-innst') || 'null'); if (d && typeof d === 'object') { if (typeof d.vib === 'boolean') INNST.vib = d.vib; if (typeof d.rist === 'boolean') INNST.rist = d.rist; } } catch (e) {}
+const INNST = { vib: true, rist: true, mus: true };
+try { const d = JSON.parse(localStorage.getItem(NOKKEL + '-innst') || 'null'); if (d && typeof d === 'object') for (const k of ['vib', 'rist', 'mus']) if (typeof d[k] === 'boolean') INNST[k] = d[k]; } catch (e) {}
 function lagreInnst() { try { localStorage.setItem(NOKKEL + '-innst', JSON.stringify(INNST)); } catch (e) {} visInnst(); }
-function visInnst() { $('#bVib').textContent = 'Vibrasjon: ' + (INNST.vib ? 'på' : 'av'); $('#bRist').textContent = 'Risting: ' + (INNST.rist ? 'full' : 'redusert'); }
+function visInnst() { $('#bVib').textContent = 'Vibrasjon: ' + (INNST.vib ? 'på' : 'av'); $('#bRist').textContent = 'Risting: ' + (INNST.rist ? 'full' : 'redusert');
+  $('#bMus').textContent = 'Musikk: ' + (INNST.mus ? 'på' : 'av'); }
 // kort vibrasjon på mobil (støttes ikke på alle telefoner, f.eks. iPhone)
 function vib(m) { if (!INNST.vib || !erTouch || !navigator.vibrate) return; try { navigator.vibrate(m); } catch (e) {} }

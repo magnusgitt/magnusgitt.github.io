@@ -123,3 +123,33 @@ a.knapp { text-decoration:none; text-align:center; }
 #lagSnu .snuIkon { font-size:54px; display:inline-block; animation:snu 2.4s ease-in-out infinite; }
 @keyframes snu { 0%,30% { transform:rotate(0); } 60%,100% { transform:rotate(-90deg); } }
 #lagEvne .videre { font-size:12px; color:var(--dempet); margin-top:8px; letter-spacing:.1em; text-transform:uppercase; }
+
+/* fase 4: kart, verksted, fagkort */
+#kartKnapp { margin-left:auto; }
+#lydKnapp { margin-left:0; }
+.kort.bred { max-width:min(96vw, 920px); padding:16px; }
+#kartC { width:100%; display:block; border-radius:10px; background:#060b18; touch-action:none; cursor:pointer; margin-top:8px; }
+#verkKnapp { position:fixed; left:50%; bottom:calc(120px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:2;
+  padding:10px 18px; border-radius:999px; border:1px solid rgba(255,197,107,.6); background:rgba(40,26,8,.75); color:#ffe2ad; font-size:15px; font-weight:600; cursor:pointer; }
+#verkKnapp.skjult { display:none; }
+.orbIgjen { font-size:18px; color:var(--glod); margin:4px 0 10px; font-weight:600; }
+.oppg { display:flex; align-items:center; gap:12px; text-align:left; padding:10px 12px; margin-top:8px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04); }
+.oppg div { flex:1; } .oppg b { display:block; color:#fff; } .oppg span { font-size:13px; color:var(--dempet); }
+.oppg button { flex:none; padding:9px 12px; border-radius:10px; border:1px solid rgba(143,227,255,.5); background:rgba(143,227,255,.15); color:#fff; font-weight:600; cursor:pointer; min-width:84px; }
+.oppg button:disabled { opacity:.4; cursor:default; }
+.oppg.kjopt { border-color:rgba(120,255,170,.4); } .oppg.kjopt button { border-color:rgba(120,255,170,.5); background:transparent; color:#9dffc6; opacity:1; }
+.fagKort { text-align:left; padding:10px 12px; margin-top:8px; border-radius:12px; border:1px solid rgba(255,197,107,.3); background:rgba(255,197,107,.05); }
+.fagKort b { color:#fff1d6; display:block; } .fagKort span { font-size:14px; color:#d6e2f5; line-height:1.45; }
+.fagKort.mangler { border-color:rgba(255,255,255,.1); background:transparent; color:var(--dempet); }
+.fagIkon { font-weight:800; font-size:17px; color:#3a2408; letter-spacing:.04em; }
+@media (max-width:520px) {
+  /* smal skjerm: liv og knapper på første rad, lysorber og evner på andre */
+  #hud { flex-wrap:wrap; row-gap:6px; }
+  #hud::after { content:''; order:2; flex-basis:100%; height:0; }
+  .orbtall { order:3; } .evner { order:4; }
+  .hudKnapp { width:38px; height:38px; }
+  #maal { top:calc(96px + env(safe-area-inset-top)); }
+  #boss { top:calc(136px + env(safe-area-inset-top)); }
+  .touch #toast { top:calc(180px + env(safe-area-inset-top)); }
+}
+@media (max-height:440px) { #lagKart h2 { display:none; } #lagKart .kort { padding:10px 14px; } #lagKart .knapp { padding:10px; } #lagKart .liten { margin-top:6px; } }

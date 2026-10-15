@@ -14,6 +14,7 @@ function hud() {
   sistKlar = null;
   $('#tStot').classList.toggle('skjult', !S.ev.stot);
   $('#tKrok').classList.toggle('skjult', !S.ev.krok);
+  $('#bFag').textContent = `Fagkort: ${S.fag.size} av ${FAG.length}`;
   const b2 = B2.aktiv && B2.fase !== 'intro';
   $('#boss').classList.toggle('vis', (B.aktiv && B.fase === 'kamp') || b2);
   $('#bossNavn').textContent = b2 ? 'Kortslutningen' : 'Overspenningen'; $('#boss').classList.toggle('b2', b2);
@@ -26,6 +27,9 @@ function hudEvneTilstand() {
   const ev = $('#ev-stot'); if (ev) { ev.classList.toggle('klar', klar); ev.classList.toggle('brukt', !klar); }
   $('#tStot').classList.toggle('brukt', !klar);
 }
+let sistVerk = null;
+function hudVerk() { const v = S.mode === 'spill' && S.verkNaer >= 0; if (v === sistVerk) return; sistVerk = v; $('#verkKnapp').classList.toggle('skjult', !v);
+  if (v && !S.hintSett.has('verk')) hint('verk', erTouch ? 'Et verksted! Trykk på knappen for å bruke lysorbene.' : 'Et verksted! Trykk ↓ eller knappen for å bruke lysorbene.', 4); }
 let sistKrokKlar = null;
 function hudKrok() { const k = !!(S.krokMaal || P.krok); if (k === sistKrokKlar) return; sistKrokKlar = k; $('#tKrok').classList.toggle('klar', k); }
 function maalTekst() {
@@ -53,7 +57,7 @@ function maalPunkt() {
   return [168.5, 31];
 }
 function sjekkMaal(tving) { const m = maalTekst(); if (m !== S.maal || tving) { S.maal = m; $('#maal').innerHTML = '<b>Mål:</b> ' + m; $('#maal').classList.add('vis'); maalTid = 5; } }
-function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt', '#lagSnu'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
+function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt', '#lagSnu', '#lagKart', '#lagVerk', '#lagFag'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
   $('#hud').classList.toggle('vis', id === null || id === '#lagPause' || id === '#lagEvne'); $('#touch').classList.toggle('vis', id === null);
   if (id && id !== '#lagEvne') { const k = $(id + ' .knapp'); if (k) setTimeout(() => k.focus({ preventScroll: true }), 50); } }
 function primar() { if (performance.now() - S.panelT < 350) return; const l = document.querySelector('.lag.vis'); if (!l) return;
@@ -63,13 +67,20 @@ function primar() { if (performance.now() - S.panelT < 350) return; const l = do
 
 // ---------- lagring ----------
 // Formatet er bakoverkompatibelt: felt som mangler i gamle lagringer får standardverdi.
+// besøkte kartruter lagres som en kort heksadesimal streng (4 ruter per tegn)
+function settTilHex(a) { let h = ''; for (let i = 0; i < a.length; i += 4) h += ((a[i] | 0) | (a[i + 1] | 0) << 1 | (a[i + 2] | 0) << 2 | (a[i + 3] | 0) << 3).toString(16); return h; }
+function hexTilSett(h) { const a = new Uint8Array(KW * KH); if (typeof h !== 'string') return a;
+  for (let j = 0; j < h.length && j * 4 < a.length; j++) { const n = parseInt(h[j], 16) || 0; for (let b = 0; b < 4; b++) if (j * 4 + b < a.length) a[j * 4 + b] = (n >> b) & 1; } return a; }
 function lagre() { try { localStorage.setItem(NOKKEL, JSON.stringify({ v: LAGRE_VERSJON, ev: S.ev, cp: S.cp, cpLit: [...S.cpLit], orb: [...S.orbTatt],
+  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop,
   boss: S.bossDone, boss2: S.boss2, tid: Math.round(S.tid), ferdig: S.ferdig, dod: S.dodsfall })); } catch (e) {} }
 function hentLagret() {
   try { const d = JSON.parse(localStorage.getItem(NOKKEL) || 'null'); if (!d || typeof d !== 'object' || !d.ev || typeof d.ev !== 'object') return null;
     const ev = {}; for (const k of EVNER) ev[k] = d.ev[k] === true;
     const heltall = (a, max) => Array.isArray(a) ? a.filter(n => Number.isInteger(n) && n >= 0 && n < max) : [];
     return { ev, cp: Number.isInteger(d.cp) && d.cp >= 0 && d.cp < SJEKK.length ? d.cp : 0, cpLit: heltall(d.cpLit, SJEKK.length), orb: heltall(d.orb, ORBER.length),
+      fag: heltall(d.fag, FAG.length), sett: hexTilSett(d.sett), brukt: Number.isInteger(d.brukt) && d.brukt >= 0 ? d.brukt : 0,
+      kjop: Object.fromEntries(OPPGRADERINGER.map(o => [o.id, !!(d.kjop && d.kjop[o.id] === true)])),
       boss: d.boss === true, boss2: d.boss2 === true, tid: typeof d.tid === 'number' && d.tid > 0 ? d.tid : 0, ferdig: d.ferdig === true, dod: Number.isInteger(d.dod) ? d.dod : 0 };
   } catch (e) { return null; }
 }
@@ -87,6 +98,7 @@ function loop(n) {
       velgKrok(); const steg = Math.ceil(dt / (1 / 120)), h = dt / steg; for (let i = 0; i < steg; i++) oppdaterSpiller(h);
       oppdaterVerden(dt); oppdaterProsj(dt); hudEvneTilstand(); hudKrok(); }
     else if (S.mode === 'slutt' || S.mode === 'meny') { KRAN.t += dt; KRAN.x = KRAN.x0 + (.5 - .5 * Math.cos(KRAN.t * .55)) * (KRAN.x1 - KRAN.x0); }
+    hudVerk(); oppdaterMusikk();
     oppdaterPartikler(dt); oppdaterKamera(rdt);
     S.shake = Math.max(0, S.shake - rdt); S.flash = Math.max(0, S.flash - rdt * 1.4);
     if (S.hallFlimmer > 0) S.hallFlimmer -= rdt;
@@ -134,12 +146,16 @@ addEventListener('keydown', e => {
   const c = e.code;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
   lydInit();
-  if (c === 'Escape' || c === 'KeyP') { if (!e.repeat) { if (S.mode === 'evne') lukkEvne(); else pauseBytt(); } return; }
+  if (c === 'Escape' || c === 'KeyP') { if (!e.repeat) { if (S.mode === 'evne') lukkEvne(); else if (S.mode === 'kart' || S.mode === 'verk') lukkPanel();
+    else if ($('#lagFag').classList.contains('vis')) visLag('#lagPause'); else pauseBytt(); } return; }
   if (c === 'KeyM' && !e.repeat) { settLyd(!lydPa); return; }
+  if ((c === 'Tab' || c === 'KeyQ')) { e.preventDefault(); if (!e.repeat) { if (S.mode === 'kart') lukkPanel(); else if (S.mode === 'spill') visKart(); } return; }
+  if (S.mode === 'kart' || S.mode === 'verk') { if ((c === 'Escape' || c === 'KeyP') && !e.repeat) lukkPanel(); else if ((c === 'Enter' || c === 'Space') && !e.repeat) { e.preventDefault(); primar(); } return; }
   if (S.mode !== 'spill') { if ((c === 'Enter' || c === 'Space' || (S.mode === 'evne' && (HOPP.includes(c) || STOT.includes(c)))) && !e.repeat) { e.preventDefault(); primar(); } return; }
   if (e.repeat) return;
   K[c] = true; oppdaterTaster();
   if (HOPP.includes(c)) I.jumpP = true;
+  if ((c === 'ArrowDown' || c === 'KeyS') && S.verkNaer >= 0 && P.onGround) visVerk();
   if (STOT.includes(c)) I.dashP = true;
 });
 addEventListener('keyup', e => { K[e.code] = false; oppdaterTaster(); });
@@ -164,6 +180,60 @@ trykkKnapp($('#tHopp'), () => { if (S.mode === 'evne') { primar(); return; } TS.
 trykkKnapp($('#tStot'), () => { I.dashP = true; }, () => {});
 trykkKnapp($('#tKrok'), () => { TS.krok = true; oppdaterTaster(); }, () => { TS.krok = false; oppdaterTaster(); });
 addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- kart, verksted og fagkort ----------
+let kartBilde = null, kartUtsnitt = null;
+function lagKartBilde() { const c = nyC(MW, MH), g = c.getContext('2d'), id = g.createImageData(MW, MH);
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { const t = tile(x, y), i = (y * MW + x) * 4;
+    let f = erSol(x, y) ? [24, 32, 46] : t === ONE ? [150, 112, 70] : t === HAZ ? [240, 190, 60] : t === VANN ? [70, 180, 230] : t === DOOR ? [220, 110, 60] : inne(x, y) ? [52, 66, 86] : [44, 66, 104];
+    if (erSol(x, y) && dypAt(x, y) <= 1) f = [70, 84, 110];
+    id.data[i] = f[0]; id.data[i + 1] = f[1]; id.data[i + 2] = f[2]; id.data[i + 3] = 255; }
+  g.putImageData(id, 0, 0); return c; }
+function visKart() { if (S.mode !== 'spill') return; S.mode = 'kart'; nullInput(); kartBilde = lagKartBilde(); visLag('#lagKart'); tegnKart();
+  $('#kartTekst').textContent = (B.aktiv || B2.aktiv) ? 'Du kan ikke reise mens en boss er våken.' : 'Trykk på en tent lampe for å reise dit.'; }
+function tegnKart() {
+  const kc = $('#kartC'), w = kc.clientWidth || 600;
+  // vis bare området rundt det som er utforsket
+  let x0 = KW, x1 = 0, y0 = KH, y1 = 0; for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) if (S.sett[y * KW + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x0 > x1) { x0 = 0; x1 = KW - 1; y0 = 0; y1 = KH - 1; }
+  const tx0 = Math.max(0, x0 * KC - 4), ty0 = Math.max(0, y0 * KC - 4), tx1 = Math.min(MW, (x1 + 1) * KC + 4), ty1 = Math.min(MH, (y1 + 1) * KC + 4);
+  const maksH = Math.max(110, Math.min(innerHeight * .6, innerHeight - 200)), sk = Math.min(w / (tx1 - tx0), maksH / (ty1 - ty0));
+  const cw = Math.round((tx1 - tx0) * sk), ch = Math.round((ty1 - ty0) * sk), d = Math.min(window.devicePixelRatio || 1, 2);
+  kc.width = cw * d; kc.height = ch * d; kc.style.width = cw + 'px'; kc.style.height = ch + 'px'; kc.style.margin = '8px auto 0';
+  kartUtsnitt = { tx0, ty0, sk };
+  const g = kc.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); g.imageSmoothingEnabled = false; g.fillStyle = '#060b18'; g.fillRect(0, 0, cw, ch);
+  g.save(); g.beginPath(); for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) if (S.sett[y * KW + x]) g.rect((x * KC - tx0) * sk, (y * KC - ty0) * sk, KC * sk + .5, KC * sk + .5);
+  g.clip(); g.drawImage(kartBilde, tx0, ty0, tx1 - tx0, ty1 - ty0, 0, 0, cw, ch); g.restore();
+  const pkt = (x, y) => [(x - tx0) * sk, (y - ty0) * sk];
+  SJEKK.forEach((c, i) => { if (!S.sett[Math.floor(c.y / KC) * KW + Math.floor(c.x / KC)]) return; const [px, py] = pkt(c.x + .5, c.y + .3), lit = S.cpLit.has(i);
+    g.fillStyle = lit ? '#ffe9a8' : '#59627a'; g.beginPath(); g.arc(px, py, Math.max(4, sk * 1.1), 0, 7); g.fill();
+    if (lit) { g.strokeStyle = 'rgba(255,233,168,.5)'; g.lineWidth = 2; g.beginPath(); g.arc(px, py, Math.max(7, sk * 1.8), 0, 7); g.stroke(); }
+    if (VERKSTED.includes(i)) { g.fillStyle = '#ffc56b'; g.font = `bold ${Math.max(10, sk * 2.2) | 0}px system-ui`; g.textAlign = 'center'; g.fillText('⚒', px, py - Math.max(8, sk * 2)); } });
+  const [mx, my] = pkt((P.x + P.w / 2) / T, (P.y + P.h / 2) / T);
+  g.fillStyle = '#8fe3ff'; g.shadowColor = '#8fe3ff'; g.shadowBlur = 10; g.beginPath(); g.arc(mx, my, Math.max(4, sk * 1.2), 0, 7); g.fill(); g.shadowBlur = 0;
+}
+$('#kartC').addEventListener('pointerdown', e => { if (S.mode !== 'kart' || !kartUtsnitt) return; e.preventDefault();
+  const r = $('#kartC').getBoundingClientRect(), u = kartUtsnitt, tx = (e.clientX - r.left) / u.sk + u.tx0, ty = (e.clientY - r.top) / u.sk + u.ty0;
+  let best = -1, bd = Math.max(3, 14 / u.sk); SJEKK.forEach((c, i) => { const dd = Math.hypot(c.x + .5 - tx, c.y + .3 - ty); if (dd < bd && S.cpLit.has(i)) { bd = dd; best = i; } });
+  if (best >= 0) { if (reiseTil(best)) lukkPanel(); else $('#kartTekst').textContent = 'Du kan ikke reise mens en boss er våken.'; } });
+function lukkPanel() { if (S.mode !== 'kart' && S.mode !== 'verk') return; S.mode = 'spill'; sist = performance.now(); nullInput(); visLag(null); sistVerk = null; }
+function visVerk() { if (S.mode !== 'spill' || S.verkNaer < 0) return; S.mode = 'verk'; nullInput(); visLag('#lagVerk'); tegnVerk(); }
+function tegnVerk() {
+  $('#verkOrb').textContent = `✦ ${orbIgjen()} lysorber å bruke`;
+  $('#verkListe').innerHTML = OPPGRADERINGER.map(o => { const har = !!S.kjop[o.id], kan = !har && orbIgjen() >= o.pris;
+    return `<div class="oppg${har ? ' kjopt' : ''}"><div><b>${o.navn}</b><span>${o.tekst}</span></div><button data-id="${o.id}"${kan ? '' : ' disabled'}>${har ? 'Kjøpt' : '✦ ' + o.pris}</button></div>`; }).join('');
+}
+$('#verkListe').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (b && kjop(b.dataset.id)) { tegnVerk(); toast('Oppgradert!'); } });
+function visFag() {
+  $('#fagListe').innerHTML = FAG.map((f, i) => S.fag.has(i) ? `<div class="fagKort"><b>${f.tittel}</b><span>${f.tekst}</span></div>` : `<div class="fagKort mangler">Ikke funnet ennå</div>`).join('');
+  visLag('#lagFag'); }
+$('#kartKnapp').addEventListener('click', () => { lydInit(); if (S.mode === 'kart') lukkPanel(); else visKart(); });
+$('#bKartLukk').addEventListener('click', lukkPanel);
+$('#verkKnapp').addEventListener('click', () => { lydInit(); visVerk(); });
+$('#bVerkLukk').addEventListener('click', lukkPanel);
+$('#bFag').addEventListener('click', visFag);
+$('#bFagLukk').addEventListener('click', () => visLag('#lagPause'));
+$('#bMus').addEventListener('click', () => { INNST.mus = !INNST.mus; lagreInnst(); });
 
 let bekreftOmstart = 0;
 function pauseBytt() {
@@ -207,4 +277,4 @@ resize(); addEventListener('resize', resize); addEventListener('orientationchang
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 visLag('#lagMeny');
 requestAnimationFrame(loop);
-window.__gnist = { S, P, B, B2, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };
+window.__gnist = { S, P, B, B2, FAG, reiseTil, kjop, orbIgjen, visKart, lukkPanel, visVerk, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };

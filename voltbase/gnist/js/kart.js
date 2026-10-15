@@ -65,6 +65,11 @@ const OMRAADER = [
     [167, 30, 170, 56, AIR],                               // sjakt opp mot trafostasjonen
     [167, 52, 170, 52, ONE], [167, 48, 170, 48, ONE], [167, 44, 170, 44, ONE], [167, 40, 170, 40, ONE], [167, 36, 170, 36, ONE], [167, 32, 170, 32, ONE],
   ] },
+  // ----- hemmeligheter i område 1 -----
+  { navn: 'Takterrassen', kart: [
+    [73, 0, 99, 2, AIR],                                   // åpen terrasse oppå trafohallen
+    [73, 3, 79, 3, AIR], [73, 4, 79, 4, HAZ],              // grop med strømførende kabler: sving over den med kroken
+  ] },
 ];
 function byggKart() {
   map.fill(SOL);
@@ -95,6 +100,7 @@ function omraade(tx, ty) {
     return 'Kabelgangen';
   }
   if (erHall(tx, ty) && tx >= 74) return 'Trafohallen';
+  if (tx >= 73 && tx <= 100 && ty <= 4) return 'Takterrassen';
   if (tx >= 102) return 'Sjakten';
   if (inne(tx, ty)) return 'Kjelleren';
   if (tx >= 39) return 'Stillaset';
@@ -109,7 +115,9 @@ const SJEKK = [{ x: 4, y: 23 }, { x: 40, y: 31 }, { x: 69, y: 18 }, { x: 103, y:
 const ORBER = [[8,22],[19,19],[27,22],[31,21],[17,29],[23,28],[33,28],[38,30],[46,25],[47,21],[43,16],[51,13],[57,9],[51,5],[60,1],[66,10],[70,16],[87,7],[110,12],[114,10],[124,9],
   [10,30],[4,29],[7,29],[67,6],[71,4],
   // område 2: kabelkjelleren
-  [106,37],[121,40],[100,39],[116,41],[93,52],[88,48],[83,52],[75,46],[107,52],[117,50],[120,51],[128,50],[133,52],[153,53],[168,46],[168,38]];
+  [106,37],[121,40],[100,39],[116,41],[93,52],[88,48],[83,52],[75,46],[107,52],[117,50],[120,51],[128,50],[133,52],[153,53],[168,46],[168,38],
+  // takterrassen
+  [84,1],[92,1],[98,1]];
 const IKON = {
   dobbel: '<svg viewBox="0 0 24 24"><path d="M6 2h5v10l8 2c1.7.4 3 1.9 3 3.7V20H2v-3l4-1z"/></svg>',
   hansker: '<svg viewBox="0 0 24 24"><path d="M7 22v-5L4 12c-.8-1.2.9-2.6 2-1.6L8 12V4a1.4 1.4 0 012.8 0V10h.4V2.6a1.4 1.4 0 012.8 0V10h.4V3.6a1.4 1.4 0 012.8 0V11h.4V6a1.4 1.4 0 012.8 0v9c0 3-2 5-3 7z"/></svg>',
@@ -127,7 +135,31 @@ const FUNN = [
 ];
 // krokene du kan svinge deg i med kabeltrommelen (rutekoordinater; kroken henger i overkanten av ruta)
 const KROKER = [[105, 47], [110, 47], [115, 47], [120, 47], [125, 47], [130, 47], [134, 47],
-  [147, 46], [153, 46], [159, 46]];
+  [147, 46], [153, 46], [159, 46],
+  [76, 0]];                                                // over gropa på takterrassen
+// verksteder ved noen sjekkpunkt (indekser i SJEKK): bruk lysorbene på oppgraderinger
+const VERKSTED = [0, 4];
+const OPPGRADERINGER = [
+  { id: 'stot2', navn: 'Lengre strømstøt', tekst: 'Støtet tar deg en god del lenger.', pris: 6 },
+  { id: 'liv3', navn: 'Ekstra livsgnist', tekst: 'Du tåler ett treff mer.', pris: 8 },
+  { id: 'lykt', navn: 'Sterkere hodelykt', tekst: 'Lyser opp mer av mørket rundt deg.', pris: 5 },
+  { id: 'kabel', navn: 'Lengre kabel', tekst: 'Kabeltrommelen når kroker lenger unna.', pris: 6 },
+];
+// fagkort: korte fakta fra elfaget, gjemt rundt på kartet. Nye legges alltid til bakerst.
+const FAG = [
+  { x: 25, y: 20, tittel: 'De fem sikkerhetsreglene', tekst: 'Før arbeid på et anlegg: 1) koble fra, 2) sikre mot innkobling, 3) kontroller at det er spenningsløst, 4) jord og kortslutt, 5) beskytt mot spenningsførende deler i nærheten.' },
+  { x: 12, y: 29, tittel: 'Jordfeilbryter', tekst: 'Stikkontakter til og med 32 A skal ha jordfeilvern på høyst 30 mA. Det bryter strømmen før en feilstrøm gjennom kroppen blir livsfarlig.' },
+  { x: 62, y: 15, tittel: 'Test spenningstesteren', tekst: 'Kontroller at spenningstesteren virker på en kjent spenningskilde, både før og etter at du måler. Ellers kan en død tester lure deg.' },
+  { x: 90, y: 1, tittel: 'Lysbue', tekst: 'En lysbue kan bli flere tusen grader varm og sende ut smeltet metall og trykkbølge. Riktig verneutstyr og avstand redder liv.' },
+  { x: 82, y: 11, tittel: 'Fargene i kabelen', tekst: 'Grønn/gul er alltid beskyttelsesleder (jord). Blå brukes til nøytralleder. Fasene er brun, svart og grå.' },
+  { x: 127, y: 16, tittel: 'Kursfortegnelse', tekst: 'Hver kurs i sikringsskapet skal merkes, så alle kan se hva den forsyner. Da går det raskt og trygt å koble ut riktig kurs.' },
+  { x: 3, y: 30, tittel: 'IT-nett', tekst: 'Mange norske boliger har IT-nett med 230 V mellom fasene. Ved første jordfeil går strømmen ofte ikke, så feilen må finnes og rettes.' },
+  { x: 126, y: 27, tittel: 'Isolasjonsmåling', tekst: 'For vanlige kurser måles isolasjonen med 500 V likespenning. Resultatet skal være minst 1 MΩ.' },
+  { x: 125, y: 39, tittel: 'Kontinuitet i jordlederen', tekst: 'Mål at beskyttelseslederen henger sammen hele veien fra tavla til hvert punkt. En brutt jord gir ingen beskyttelse.' },
+  { x: 93, y: 49, tittel: 'Våtrom', tekst: 'Baderom deles i sone 0, 1 og 2 etter avstand fra badekar og dusj. Jo nærmere vannet, jo strengere krav til utstyret.' },
+  { x: 127, y: 51, tittel: 'Arbeid under spenning', tekst: 'Arbeid under spenning (AUS) krever egen opplæring, egne rutiner og riktig utstyr. Ellers skal anlegget gjøres spenningsløst.' },
+  { x: 168, y: 34, tittel: 'Strøm i vann', tekst: 'Vann og fukt leder strøm og gjør feil farligere. Derfor har utstyr i fuktige rom høyere kapslingsgrad (IP-klasse).' },
+];
 const BRYTERE = [{ x: 78, y: 14, av: false }, { x: 87, y: 9, av: false }, { x: 96, y: 14, av: false }];
 const TAVLE = { x: 123, y: 17 };
 // fiender: gnistlus går fram og tilbake, svevegnist flyr i en bue, releet skyter gnister når du er nær

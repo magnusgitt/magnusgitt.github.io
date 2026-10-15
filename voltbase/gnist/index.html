@@ -17,6 +17,7 @@
   <div class="liv" id="liv"></div>
   <div class="orbtall" id="orbtall">✦ 0</div>
   <div class="evner" id="evner"></div>
+  <button class="hudKnapp" id="kartKnapp" aria-label="Kart">🗺</button>
   <button class="hudKnapp" id="lydKnapp" aria-label="Lyd av eller på">🔊</button>
   <button class="hudKnapp" id="menyKnapp" aria-label="Pause">❚❚</button>
 </div>
@@ -25,6 +26,7 @@
 <div id="hint" class="serif"></div>
 <div id="banner"><div class="stor serif" id="bannerStor"></div><div class="liten" id="bannerLiten"></div></div>
 <div id="toast"></div>
+<button id="verkKnapp" class="skjult">Åpne verkstedet</button>
 
 <div id="touch">
   <div id="pad"><span class="v">◀</span><span class="h">▶</span></div>
@@ -39,7 +41,7 @@
   <h1 class="serif">Gnist</h1>
   <div class="under">Montøren i mørket</div>
   <p>Strømmen har gått på byggeplassen. Følg gnisten, finn nye evner og få strømmen tilbake på hovedtavla.</p>
-  <div class="ctrl barePC"><b>← →</b> eller <b>A D</b>: gå &nbsp;·&nbsp; <b>Mellomrom</b>: hopp<br><b>Shift</b> eller <b>X</b>: støt &nbsp;·&nbsp; <b>C</b>: krok &nbsp;·&nbsp; <b>↓</b>: ned gjennom planker &nbsp;·&nbsp; <b>Esc</b>: pause</div>
+  <div class="ctrl barePC"><b>← →</b> eller <b>A D</b>: gå &nbsp;·&nbsp; <b>Mellomrom</b>: hopp<br><b>Shift</b> eller <b>X</b>: støt &nbsp;·&nbsp; <b>C</b>: krok &nbsp;·&nbsp; <b>↓</b>: ned gjennom planker<br><b>Tab</b> eller <b>Q</b>: kart &nbsp;·&nbsp; <b>Esc</b>: pause</div>
   <div class="ctrl bareTouch"><b>Venstre tommel</b>: gå &nbsp;·&nbsp; <b>Høyre tommel</b>: hopp og støt<br>Hold inne Hopp for å hoppe høyere</div>
   <button class="knapp" id="bFortsett" style="display:none">Fortsett</button>
   <button class="knapp" id="bNy">Start</button>
@@ -50,7 +52,7 @@
 <div class="lag" id="lagEvne"><div class="kort">
   <div class="evneIkon" id="evneIkon"></div>
   <div>
-    <div class="under" style="margin:0">Ny evne</div>
+    <div class="under" style="margin:0" id="evneUnder">Ny evne</div>
     <h2 class="serif" id="evneNavn"></h2>
     <p id="evneTekst"></p>
     <div class="ctrl" id="evneCtrl"></div>
@@ -72,9 +74,32 @@
   <button class="knapp sek" id="bLyd">Lyd: på</button>
   <button class="knapp sek" id="bVib">Vibrasjon: på</button>
   <button class="knapp sek" id="bRist">Risting: full</button>
+  <button class="knapp sek" id="bMus">Musikk: på</button>
+  <button class="knapp sek" id="bFag">Fagkort</button>
   <button class="knapp sek" id="bSjekk">Tilbake til siste sjekkpunkt</button>
   <button class="knapp sek fare" id="bOmstart">Start helt på nytt</button>
   <a class="knapp sek" href="../">Tilbake til Voltbase</a>
+</div></div>
+
+<div class="lag" id="lagKart"><div class="kort bred">
+  <h2 class="serif">Kart</h2>
+  <canvas id="kartC"></canvas>
+  <p class="liten" id="kartTekst">Trykk på en tent lampe for å reise dit.</p>
+  <button class="knapp" id="bKartLukk">Lukk kartet</button>
+</div></div>
+
+<div class="lag" id="lagVerk"><div class="kort">
+  <h2 class="serif">Verksted</h2>
+  <p>Bruk lysorbene du har samlet på bedre utstyr.</p>
+  <div class="orbIgjen" id="verkOrb"></div>
+  <div id="verkListe"></div>
+  <button class="knapp sek" id="bVerkLukk">Ferdig</button>
+</div></div>
+
+<div class="lag" id="lagFag"><div class="kort">
+  <h2 class="serif">Fagkort</h2>
+  <div id="fagListe"></div>
+  <button class="knapp sek" id="bFagLukk">Tilbake</button>
 </div></div>
 
 <div class="lag" id="lagSlutt"><div class="kort">

@@ -129,6 +129,17 @@ function tegnRele(e) {
   ctx.fillStyle = '#151a26'; ctx.fillRect(-12, -2, 24, 2);
   ctx.restore();
 }
+// fagkort: et lite gult kort som svever
+function tegnFagkort() { FAG.forEach((f, i) => { if (S.fag.has(i)) return; const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2 + i) * 3; if (!synlig(X, Y, 60)) return;
+  ctx.save(); ctx.translate(X, Y); ctx.rotate(Math.sin(S.t * 1.3 + i) * .15);
+  ctx.fillStyle = '#ffd36b'; rr(ctx, -8, -10, 16, 20, 2.5); ctx.fill(); ctx.fillStyle = '#3a2408'; ctx.fillRect(-5, -6, 10, 1.6); ctx.fillRect(-5, -2, 10, 1.6); ctx.fillRect(-5, 2, 7, 1.6);
+  ctx.fillStyle = '#e07a22'; ctx.beginPath(); ctx.moveTo(1, 4); ctx.lineTo(-2, 8.5); ctx.lineTo(.5, 8.5); ctx.lineTo(-1, 11); ctx.lineTo(3.5, 6); ctx.lineTo(1, 6); ctx.fill();
+  ctx.restore(); }); }
+// verkstedbenk ved sjekkpunktet
+function tegnVerksted(i) { const c = SJEKK[i], X = (c.x + 1.6) * T, Y = (c.y + 1) * T; if (!synlig(X, Y, 120)) return;
+  ctx.fillStyle = '#5a3f27'; ctx.fillRect(X - 22, Y - 18, 44, 5); ctx.fillStyle = '#3a2a1a'; ctx.fillRect(X - 20, Y - 13, 4, 13); ctx.fillRect(X + 16, Y - 13, 4, 13);
+  ctx.fillStyle = '#7d89a3'; ctx.fillRect(X - 14, Y - 26, 10, 8); ctx.fillStyle = '#c9ced8'; ctx.fillRect(X + 2, Y - 24, 14, 3); ctx.fillStyle = '#e8b730'; ctx.fillRect(X + 12, Y - 27, 4, 9);
+  if (S.verkNaer === i) { ctx.fillStyle = 'rgba(255,197,107,.9)'; ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center'; ctx.fillText('⚒', X, Y - 36 + Math.sin(S.t * 4) * 2); } }
 function tegnKran() {
   const X = KRAN.x, Y = KRAN.y, W = KRAN.w; if (!synlig(X, Y, 300)) return;
   ctx.strokeStyle = '#141a26'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X + W / 2, -40); ctx.lineTo(X + W / 2, Y - 26); ctx.stroke();
@@ -308,9 +319,10 @@ function tegnDynamiskeFliser() {
 function samleLys() {
   lys.length = 0;
   const L = (x, y, r, i) => lys.push({ x, y, r, i });
-  if (S.dod <= 0) { L(P.x + P.w / 2 + P.face * 8, P.y + 2, 220, .95); L(GN.x, GN.y, 130 + GN.flare * 80, .8); }
+  if (S.dod <= 0) { L(P.x + P.w / 2 + P.face * 8, P.y + 2, S.kjop.lykt ? 330 : 220, .95); if (S.kjop.lykt) L(P.x + P.w / 2 + P.face * 120, P.y + 20, 160, .6); L(GN.x, GN.y, 130 + GN.flare * 80, .8); }
   SJEKK.forEach((c, i) => { const X = c.x * T + T / 2, Y = (c.y + 1) * T - 30; if (synlig(X, Y, 250)) L(X, Y, S.cpLit.has(i) ? 230 : 60, S.cpLit.has(i) ? .95 : .4); });
   ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const X = x * T + T / 2, Y = y * T + T / 2; if (synlig(X, Y, 60)) L(X, Y, 55, .6); });
+  FAG.forEach((f, i) => { if (S.fag.has(i)) return; const X = f.x * T + T / 2, Y = f.y * T + T / 2; if (synlig(X, Y, 60)) L(X, Y, 70, .7); });
   for (const f of FUNN) if (funnSynlig(f)) { const X = f.x * T + T / 2, Y = f.y * T + T / 2; if (synlig(X, Y, 200)) L(X, Y, 170, .9); }
   for (const [x, y] of hazListe) { const X = x * T + T / 2, Y = y * T + T - 10; if (synlig(X, Y, 80)) L(X, Y, 70 * (.6 + .4 * Math.sin(S.t * 30 + x * 3)), .6); }
   for (const kol of [73, 101]) { const t0 = tile(kol, 13); if (t0 === AIR) continue; L(kol * T + T / 2, 16 * T, t0 === DOOR ? 120 : 170, t0 === DOOR ? .5 : (S.ev.hansker ? .5 : .8)); }
@@ -340,6 +352,7 @@ function tegnGlod() {
     else glod(SPR.w, X, Y, 30, .25); });
   ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const X = x * T + T / 2, Y = y * T + T / 2 + Math.sin(S.t * 2 + i) * 4; if (!synlig(X, Y, 60)) return;
     glod(SPR.c, X, Y, 26, .8 + .2 * Math.sin(S.t * 4 + i)); glod(SPR.h, X, Y, 6, .9); });
+  FAG.forEach((f, i) => { if (S.fag.has(i)) return; const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2 + i) * 3; if (synlig(X, Y, 60)) glod(SPR.o, X, Y, 26 + 3 * Math.sin(S.t * 3 + i), .55); });
   for (const f of FUNN) { if (!funnSynlig(f)) continue; const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2) * 4; if (!synlig(X, Y, 200)) continue;
     glod(f.liten ? SPR.c : SPR.w, X, Y, 70 + 8 * Math.sin(S.t * 3), .8); glod(SPR.h, X, Y, 20, .5);
     ctx.save(); ctx.translate(X, Y); ctx.rotate(S.t * .4); ctx.globalAlpha = .22; ctx.fillStyle = f.liten ? '#b8f1ff' : '#ffe9b0';
@@ -401,7 +414,7 @@ function tegnGlod() {
     // hodelykt med en myk lyskjegle
     const lx = P.x + P.w / 2 + P.face * 8, ly = P.y + 2;
     glod(SPR.w, lx, ly, 16, .7);
-    ctx.save(); ctx.translate(lx, ly); ctx.rotate(-P.face * Math.PI / 2 + P.face * .12); ctx.globalAlpha = .09; ctx.drawImage(KJEGLE, -50, 0, 100, 170); ctx.restore();
+    ctx.save(); ctx.translate(lx, ly); ctx.rotate(-P.face * Math.PI / 2 + P.face * .12); ctx.globalAlpha = S.kjop.lykt ? .13 : .09; if (S.kjop.lykt) ctx.drawImage(KJEGLE, -70, 0, 140, 250); else ctx.drawImage(KJEGLE, -50, 0, 100, 170); ctx.restore();
     const gs = 36 + 4 * Math.sin(S.t * 6) + GN.flare * 30;
     glod(SPR.c, GN.x, GN.y, gs, .75 + GN.flare * .25); glod(SPR.h, GN.x, GN.y, 8 + GN.flare * 6, 1);
   }
@@ -446,6 +459,8 @@ function tegn() {
   for (const f of FUNN) if (funnSynlig(f) && synlig(f.x * T, f.y * T, 100)) tegnFunn(f);
   for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) tegnFiende(e);
   tegnKroker();
+  for (const i of VERKSTED) tegnVerksted(i);
+  tegnFagkort();
   tegnBoss();
   tegnBoss2();
   tegnSpiller();

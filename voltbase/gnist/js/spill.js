@@ -15,13 +15,13 @@ function lagFiender() { fiender.length = 0; bolter.length = 0;
     else if (f.type === 'rele') fiender.push({ type: 'rele', x: f.x * T + 5, y: (f.y + 1) * T - 22, w: 22, h: 22, dir: 1, liv: true, t: 0, lad: 0, pause: 1 });
     else fiender.push({ type: 'lus', x: (f.x0 + f.x1) / 2 * T, y: (f.y + 1) * T - 14, w: 22, h: 14, x0: f.x0 * T, x1: (f.x1 + 1) * T, dir: 1, liv: true, t: Math.random() * 6 });
   } }
-const maksLiv = () => 4 + (S.ev.liv ? 1 : 0) + (S.ev.liv2 ? 1 : 0);
+const maksLiv = () => 4 + (S.ev.liv ? 1 : 0) + (S.ev.liv2 ? 1 : 0) + (S.kjop.liv3 ? 1 : 0);
 function nyttSpill(lagret) {
   byggKart();
-  S.ev = nyeEvner(); S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
+  S.ev = nyeEvner(); S.fag = new Set(); S.sett.fill(0); S.brukt = 0; S.kjop = {}; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
   S.ending = 0; S.power = 0; S.dod = 0; S.hintSett = new Set(); S.dodsfall = 0; S.omr = ''; S.maal = ''; S.hallLys = 0; S.slow = 0; S.evneVent = 0; S.laas = 0;
   if (lagret) { Object.assign(S.ev, lagret.ev); S.cp = lagret.cp; S.cpLit = new Set([0, ...lagret.cpLit, lagret.cp]); S.orbTatt = new Set(lagret.orb);
-    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
+    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.fag = new Set(lagret.fag); S.sett.set(lagret.sett); S.brukt = lagret.brukt; Object.assign(S.kjop, lagret.kjop); S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
   BRYTERE.forEach(b => b.av = S.bossDone);
   if (S.bossDone) { rect(101, 13, 101, 18, AIR); S.hallLys = 1; }
   if (S.ferdig) { S.power = 1; if (!BG.midtLys) BG.midtLys = lagMidt(true); rect(125, 19, 128, 19, AIR); }
@@ -70,21 +70,34 @@ function faaEvne(f) {
   lyd('evne'); S.flash = .9; S.flashF = '255,235,190'; S.shake = .3; GN.flare = 1; vib([30, 60, 30]);
   sprut(fx, fy, 60, 'w', 320); sprut(fx, fy, 30, 'c', 200); ring(fx, fy, 24, 'w', 260);
   if (f.id === 'dobbel') P.air = 1;
-  $('#evneIkon').innerHTML = IKON[f.id]; $('#evneNavn').textContent = f.navn; $('#evneTekst').textContent = f.tekst;
+  $('#evneUnder').textContent = 'Ny evne'; $('#evneIkon').innerHTML = IKON[f.id]; $('#evneNavn').textContent = f.navn; $('#evneTekst').textContent = f.tekst;
   $('#evneCtrl').innerHTML = erTouch ? f.mob : f.pc;
   hud(); S.evneVent = .75; nullInput();
 }
+function faaFag(i) {
+  const f = FAG[i]; S.fag.add(i); lagre();
+  lyd('fag'); GN.flare = .8; vib([20, 40, 20]); sprut(f.x * T + T / 2, f.y * T + T / 2, 30, 'w', 220);
+  $('#evneIkon').innerHTML = '<span class="fagIkon">NEK</span>'; $('#evneNavn').textContent = f.tittel; $('#evneTekst').textContent = f.tekst;
+  $('#evneCtrl').innerHTML = `Fagkort ${S.fag.size} av ${FAG.length}`; $('#evneUnder').textContent = 'Fagkort';
+  hud(); S.evneVent = .5; nullInput();
+}
+// hurtigreise: til et tent sjekkpunkt fra kartet
+function reiseTil(i) { if (!S.cpLit.has(i) || B.aktiv || B2.aktiv || S.dod > 0) return false;
+  S.cp = i; respawn(true); lagre(); lyd('gjenoppstaa'); ring(P.x + P.w / 2, P.y + P.h / 2, 18, 'c', 160); S.hintSett.add('omr-' + omraade(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T))); return true; }
+function kjop(id) { const o = OPPGRADERINGER.find(o => o.id === id); if (!o || S.kjop[id] || orbIgjen() < o.pris) return false;
+  S.kjop[id] = true; S.brukt += o.pris; if (id === 'liv3') { P.max = maksLiv(); P.hp = P.max; } lagre(); lyd('evne'); hud(); return true; }
+const orbIgjen = () => S.orbTatt.size - S.brukt;
 function lukkEvne() { if (S.mode !== 'evne') return; S.mode = 'spill'; sist = performance.now(); nullInput(); visLag(null); sjekkMaal(true);
   if (S.ev.stot && !S.hintSett.has('stotbruk')) hint('stotbruk', 'Hovedtavla er på andre siden av sjakten.'); }
 function nullInput() { I.jumpP = I.dashP = false; for (const k in K) K[k] = false; TS.left = TS.right = TS.jump = TS.dash = TS.krok = false; oppdaterTaster();
   $('#pad').dataset.dir = ''; document.querySelectorAll('.rund').forEach(b => b.classList.remove('trykk')); }
 
 // ---------- kabeltrommelen ----------
-const KROK_REKKEVIDDE = 7.5;
+const krokRekkevidde = () => S.kjop.kabel ? 9.5 : 7.5;
 // velger kroken som er nærmest, helst foran montøren
 function velgKrok() {
   S.krokMaal = null; if (!S.ev.krok || P.krok || S.dod > 0) return;
-  const cx = P.x + P.w / 2, cy = P.y + 6, R = KROK_REKKEVIDDE * T; let best = null, bs = 1e9;
+  const cx = P.x + P.w / 2, cy = P.y + 6, R = krokRekkevidde() * T; let best = null, bs = 1e9;
   for (const k of KROKER) { const hx = k[0] * T + T / 2, hy = k[1] * T; if (hy > cy - 10) continue;
     const d = Math.hypot(hx - cx, hy - cy); if (d > R || (P.sistKrokT > 0 && k === P.sistKrok)) continue;
     const sk = d - (Math.sign(hx - cx) === P.face ? T * 1.5 : 0); if (sk < bs) { bs = sk; best = k; } }
@@ -115,7 +128,7 @@ function oppdaterSpiller(dt) {
   if (I.dashP) { I.dashP = false; if (!laast && S.ev.stot && p.canDash && p.dashCd <= 0 && p.dashT <= 0) {
     if (L) p.face = -1; if (R) p.face = 1;
     if (p.krok) slippKrok(false);
-    p.dashT = .16; p.canDash = false; p.dashCd = .3; p.vy = 0; lyd('stot'); S.shake = .12; GN.flare = .8; vib(18);
+    p.dashT = S.kjop.stot2 ? .22 : .16; p.canDash = false; p.dashCd = .3; p.vy = 0; lyd('stot'); S.shake = .12; GN.flare = .8; vib(18);
     ring(p.x + p.w / 2, p.y + p.h / 2, 10, 'c', 140, .6); } }
   p.buf -= dt; p.dashCd -= dt; p.inv -= dt; p.landT -= dt; p.krokCd -= dt; p.sistKrokT -= dt;
   // kabeltrommelen: hold krok-knappen nær en krok for å henge, slipp for å fly videre
@@ -197,6 +210,14 @@ function oppdaterVerden(dt) {
   // hemmelig rom
   if (!S.ev.hemmelig) { const tx = Math.floor(pcx / T), ty = Math.floor(pcy / T);
     if (iSkjult(tx, ty)) { S.ev.hemmelig = true; beregnDyp(); chunks.clear(); lyd('hemmelig'); toast('Hemmelig rom funnet!'); sprut(pcx, pcy, 30, 'c', 180); lagre(); } }
+  // kartet fylles inn rundt montøren
+  { const kx = Math.floor(pcx / T / KC), ky = Math.floor(pcy / T / KC);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = kx + dx, y = ky + dy; if (x >= 0 && y >= 0 && x < KW && y < KH) S.sett[y * KW + x] = 1; } }
+  // fagkort
+  FAG.forEach((f, i) => { if (S.fag.has(i)) return; const fx = f.x * T + T / 2, fy = f.y * T + T / 2 + Math.sin(S.t * 2 + i) * 3;
+    if (Math.abs(pcx - fx) < 22 && Math.abs(pcy - fy) < 26) faaFag(i); });
+  // verksted ved sjekkpunktet
+  S.verkNaer = -1; if (!B.aktiv && !B2.aktiv) for (const i of VERKSTED) { const c = SJEKK[i]; if (Math.abs(pcx - (c.x + 1.5) * T) < T * 2.2 && Math.abs(pcy - (c.y + .5) * T) < T * 1.5) S.verkNaer = i; }
   // funn
   for (const f of FUNN) { if (!funnSynlig(f)) continue; const fx = f.x * T + T / 2, fy = f.y * T + T / 2;
     if (Math.abs(pcx - fx) < 22 && Math.abs(pcy - fy) < 26) { faaEvne(f); return; } }

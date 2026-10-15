@@ -110,7 +110,10 @@ async function omraade2(b) {
   await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 2, ev: { dobbel: true, hansker: true, stot: true }, cp: 3, cpLit: [0, 1, 2, 3], orb: [], boss: true, ferdig: true, tid: 300 })), KEY);
   await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
   sjekk('luka er åpen etter kapittel 1', await page.evaluate(() => __gnist.tile(126, 19) === 0));
-  await pos(page, 126, 18); await vent(page, 2500);
+  await pos(page, 126, 18); await vent(page, 1200);
+  // fagkortet i sjakten tas i fallet
+  if (await page.evaluate(() => __gnist.S.mode === 'evne' || __gnist.S.evneVent > 0)) await lukkKort(page);
+  await vent(page, 1500);
   const t1 = await tilstand(page); sjekk('faller ned i kabelgangen', t1.y > 36 && t1.y <= 42.1, t1);
   // kabeltrommelen ligger innerst i pumpehallen
   await page.evaluate(() => { __gnist.fiender.length = 0; }); await pos(page, 74, 55); await vent(page, 600);
@@ -166,6 +169,50 @@ async function omraade2(b) {
   await ctx.close();
 }
 
+async function fase4(b) {
+  console.log('Kart, hurtigreise, verksted, fagkort og musikk');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 3, ev: { dobbel: true, hansker: true, stot: true, krok: true }, cp: 3, cpLit: [0, 1, 2, 3, 4], orb: [...Array(20).keys()], boss: true, ferdig: true, tid: 600 })), KEY);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
+  for (const [x, y] of [[126, 18], [128, 30], [130, 41]]) { await pos(page, x, y); await vent(page, 250); }
+  await page.keyboard.press('Tab'); await vent(page, 300);
+  sjekk('Tab åpner kartet', await page.evaluate(() => __gnist.S.mode === 'kart' && document.querySelector('#lagKart').classList.contains('vis')));
+  const kartOk = await page.evaluate(() => { const c = document.querySelector('#kartC'); return c.width > 50 && c.height > 30; }); sjekk('kartet tegnes', kartOk);
+  // klikk på lampe 0 (start) er ikke besøkt; klikk på lampe 4
+  const r = await page.locator('#kartC').boundingBox(), u = await page.evaluate(() => kartUtsnitt), c4 = await page.evaluate(() => __gnist.SJEKK[4]);
+  await page.mouse.click(r.x + (c4.x + .5 - u.tx0) * u.sk, r.y + (c4.y + .3 - u.ty0) * u.sk); await vent(page, 400);
+  const t = await tilstand(page); sjekk('hurtigreise til tent lampe', t.mode === 'spill' && t.cp === 4 && Math.abs(t.x - 132.5) < 1.5, t);
+  await page.keyboard.press('KeyQ'); await vent(page, 200); await page.keyboard.press('KeyQ'); await vent(page, 200);
+  sjekk('Q åpner og lukker kartet', await page.evaluate(() => __gnist.S.mode === 'spill'));
+  // verkstedet ved lampe 4
+  await vent(page, 300); sjekk('verkstedknapp vises', await page.locator('#verkKnapp').isVisible());
+  await page.keyboard.press('ArrowDown'); await vent(page, 300);
+  sjekk('↓ åpner verkstedet', await page.evaluate(() => __gnist.S.mode === 'verk'));
+  await page.click('#verkListe button[data-id="kabel"]'); await vent(page, 200);
+  sjekk('kjøp: lengre kabel', await page.evaluate(() => __gnist.S.kjop.kabel && __gnist.orbIgjen() === 14));
+  await page.click('#verkListe button[data-id="liv3"]'); await vent(page, 200);
+  sjekk('kjøp: ekstra liv', await page.evaluate(() => __gnist.S.kjop.liv3 && __gnist.P.max === 5 && __gnist.orbIgjen() === 6));
+  await page.click('#verkListe button[data-id="stot2"]'); await vent(page, 200);
+  sjekk('for dyrt er sperret', await page.evaluate(() => __gnist.orbIgjen() === 0 && document.querySelector('#verkListe button[data-id="lykt"]').disabled));
+  await page.click('#bVerkLukk'); await vent(page, 200);
+  // fagkort
+  await pos(page, 125, 39); await vent(page, 300);
+  await page.waitForFunction(() => __gnist.S.mode === 'evne', null, { timeout: 4000 }).catch(() => {});
+  sjekk('fagkort plukket opp', await page.evaluate(() => __gnist.S.fag.has(8) && document.querySelector('#evneUnder').textContent === 'Fagkort'));
+  await lukkKort(page);
+  await page.keyboard.press('Escape'); await vent(page, 200); await page.click('#bFag'); await vent(page, 200);
+  sjekk('fagkortlista viser kortet', (await page.locator('#fagListe .fagKort:not(.mangler)').count()) === 1);
+  await page.click('#bFagLukk'); await page.click('#bMus'); await vent(page, 100);
+  sjekk('musikkbryter', (await page.textContent('#bMus')) === 'Musikk: av'); await page.click('#bMus');
+  await page.click('#bPauseFortsett'); await vent(page, 800);
+  sjekk('musikken spiller', await page.evaluate(() => !A.c || (MUS.gain && MUS.tema !== null)));
+  await page.reload(); await vent(page, 400);
+  const l = await page.evaluate(() => { const l = hentLagret(); return { fag: l.fag, kabel: l.kjop.kabel, brukt: l.brukt, sett: [...l.sett].filter(x => x).length }; });
+  sjekk('lagring: fagkort, kjøp og kart', l.fag.includes(8) && l.kabel && l.brukt === 20 && l.sett > 5, l);
+  sjekk('ingen JS-feil (fase 4)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
   const { ctx, page, errs } = await nySide(b, opts);
@@ -186,6 +233,9 @@ async function touch(b, navn, opts) {
   await pos(page, 76, 18); await vent(page, 3800);
   sjekk('bosskamp på touch', (await tilstand(page)).fase === 'kamp');
   sjekk('ingen scroll', (await page.evaluate(() => scrollY)) === 0);
+  { const kk = await boks('#kartKnapp'); sjekk('kartknapp innenfor skjermen', kk && kk.x + kk.w / 2 <= (opts.viewport || {}).width + 1 && kk.x > 0, kk);
+    await page.tap('#kartKnapp'); await vent(page, 300); sjekk('kartknapp åpner kartet', await page.evaluate(() => __gnist.S.mode === 'kart'));
+    await page.tap('#bKartLukk'); await vent(page, 300); }
   // krok-knappen: vises med kabeltrommelen og fester kabelen
   await page.evaluate(() => { const g = __gnist; g.B.aktiv = false; g.B.fase = ''; g.S.bossDone = true; g.S.laas = 0; g.S.ev.krok = true; g.fiender.length = 0; g.prosj.length = 0; g.P.inv = 999; }); await page.evaluate(() => hud());
   await pos(page, 100, 56); await vent(page, 500);
@@ -208,6 +258,7 @@ async function touch(b, navn, opts) {
     if (med('pc')) await pcRute(b);
     if (med('lagring')) await lagring(b);
     if (med('omr2')) await omraade2(b);
+    if (med('fase4')) await fase4(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });
