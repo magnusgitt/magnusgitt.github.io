@@ -89,6 +89,8 @@ const TEMA = {
   kabel:  { bpm: 76, rot: 54, skala: [0, 2, 3, 5, 7, 8, 10], akk: [0, 5, 3, 4], arp: .45, lys: .7 },
   stasjon:{ bpm: 92, rot: 55, skala: [0, 2, 4, 5, 7, 9, 10], akk: [0, 3, 4, 0], arp: .6, lys: .9 },
   boss3:  { bpm: 132, rot: 50, skala: [0, 1, 3, 5, 7, 8, 10], akk: [0, 5, 1, 4], arp: 1, lys: .9, puls: true },
+  kraft:  { bpm: 66, rot: 48, skala: [0, 2, 3, 5, 7, 8, 11], akk: [0, 5, 3, 6], arp: .4, lys: .55 },
+  boss4:  { bpm: 126, rot: 52, skala: [0, 1, 3, 5, 7, 8, 11], akk: [0, 3, 1, 5], arp: .95, lys: .85, puls: true },
   boss2:  { bpm: 120, rot: 54, skala: [0, 1, 3, 5, 6, 8, 10], akk: [0, 1, 4, 1], arp: .9, lys: .8, puls: true },
 };
 const MUS = { gain: null, tema: null, neste: 0, steg: 0, takt: 0 };
@@ -97,9 +99,9 @@ function musTone(f, t, dur, type, vol) { const o = A.c.createOscillator(), g = A
   g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(.4, dur * .3)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(MUS.gain); o.start(t); o.stop(t + dur + .05); }
 function velgTema() {
-  if (B3.aktiv && B3.fase !== 'dod') return 'boss3'; if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
+  if (B4.aktiv && B4.fase !== 'dod') return 'boss4'; if (B3.aktiv && B3.fase !== 'dod') return 'boss3'; if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
   const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
-  if (tx >= 132 && ty <= 27) return 'stasjon'; if (iKjeller2(tx, ty)) return 'kabel'; if (erHall(tx, ty)) return S.bossDone ? 'ute' : 'kjeller'; if (inne(tx, ty)) return 'kjeller'; return 'ute';
+  if (iKraft(tx, ty)) return 'kraft'; if (tx >= 132 && ty <= 27) return 'stasjon'; if (iKjeller2(tx, ty)) return 'kabel'; if (erHall(tx, ty)) return S.bossDone ? 'ute' : 'kjeller'; if (inne(tx, ty)) return 'kjeller'; return 'ute';
 }
 function oppdaterMusikk() {
   if (!A.c) return;

@@ -170,7 +170,8 @@ const PAL = {
   hall: { c: ['#000', '#30344a', '#26293c', '#1d1f2e', '#171824', '#12131c', '#0e0f16'], mose: '#4b516b', stra: ['#5c6380', '#6b7392', '#4f5670'] },
 };
 PAL.kabel = { c: ['#000', '#2e3a3f', '#253035', '#1d272b', '#172024', '#12191c', '#0e1416'], mose: '#3f5559', stra: ['#56707a', '#68848d', '#4a6168'] };
-const palAt = (x, y) => erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
+PAL.kraft = { c: ['#000', '#33402f', '#293427', '#202a1f', '#192119', '#141a14', '#0f140f'], mose: '#4d6340', stra: ['#6f8a5c', '#86a26f', '#5b7349'] };
+const palAt = (x, y) => iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
 const chunks = new Map();
@@ -188,6 +189,18 @@ function bakvegg(g, x, y) {
     if (y === 9 && x % 4 === 1) { g.strokeStyle = '#0d0f1a'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(X + 8, Y - 6); g.bezierCurveTo(X + 10, Y + 30, X + 2, Y + 60, X + 9, Y + 96); g.stroke(); }
     if (y === 11 && x % 6 === 0) { g.fillStyle = '#222538'; rr(g, X + 4, Y - 10, 24, 34, 3); g.fill(); g.fillStyle = 'rgba(255,200,80,.25)'; g.beginPath(); g.moveTo(X + 16, Y - 2); g.lineTo(X + 22, Y + 9); g.lineTo(X + 10, Y + 9); g.fill(); }
     if (y === 15 && x % 7 === 3) { g.fillStyle = '#1e2133'; rr(g, X + 2, Y - 4, 28, 40, 3); g.fill(); g.fillStyle = 'rgba(255,255,255,.05)'; for (let i = 0; i < 4; i++) g.fillRect(X + 6, Y + 2 + i * 8, 20, 3); }
+  } else if (iKraft(x, y)) {
+    // det gamle kraftverket: flislagte vegger, store rør og nagler
+    g.fillStyle = '#161d18'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
+    g.fillStyle = 'rgba(170,210,160,.04)'; g.fillRect(X, Y, T, 1); g.fillRect(X, Y, 1, T);
+    if (y % 2 === 0) { g.fillStyle = 'rgba(170,210,160,.03)'; g.fillRect(X + 16, Y, 1, T); }
+    if (y % 8 === 3) { g.fillStyle = '#25302a'; g.fillRect(X, Y + 4, T, 16); g.fillStyle = 'rgba(190,220,180,.12)'; g.fillRect(X, Y + 6, T, 2);
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(X, Y + 17, T, 3); if (x % 6 === 0) { g.fillStyle = '#323f37'; g.fillRect(X + 4, Y + 1, 6, 22); } }
+    if (x % 9 === 4) { g.fillStyle = '#212b25'; g.fillRect(X + 9, Y, 14, T); g.fillStyle = 'rgba(190,220,180,.08)'; g.fillRect(X + 11, Y, 3, T);
+      if (y % 4 === 0) { g.fillStyle = '#323f37'; g.fillRect(X + 7, Y + 10, 18, 5); } }
+    if (hs(x, y, 95) < .1) { g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(X + 6, Y + 6, 1.5, 0, 7); g.arc(X + 26, Y + 6, 1.5, 0, 7); g.fill(); }
+    if (y % 11 === 6 && x % 14 === 9) { g.fillStyle = '#202a23'; rr(g, X + 3, Y - 6, 26, 32, 3); g.fill(); g.strokeStyle = 'rgba(170,210,160,.15)'; g.lineWidth = 1; g.stroke();
+      g.fillStyle = 'rgba(240,200,90,.35)'; g.beginPath(); g.arc(X + 16, Y + 6, 7, Math.PI, 0); g.fill(); g.fillStyle = '#111'; g.fillRect(X + 15.3, Y - 1, 1.4, 7); }
   } else if (iKjeller2(x, y)) {
     // kabelkjelleren: betong med kabelbroer og rør
     g.fillStyle = '#141d21'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);

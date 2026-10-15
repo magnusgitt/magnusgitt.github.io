@@ -2,23 +2,23 @@
 // Gnist – HUD, paneler, lagring, løkke, input og oppstart.
 // ---------- HUD og paneler ----------
 let hintTid = 0, toastTid = 0, maalTid = 0, bannerTid = 0;
-function hint(key, tekst, varighet) { if (key && S.hintSett.has(key)) return; if (key) S.hintSett.add(key); const h = $('#hint'); h.textContent = tekst; h.classList.toggle('lav', B.aktiv || B2.aktiv || $('#banner').classList.contains('vis')); h.classList.add('vis'); hintTid = varighet || 4.5; }
+function hint(key, tekst, varighet) { if (key && S.hintSett.has(key)) return; if (key) S.hintSett.add(key); const h = $('#hint'); h.textContent = tekst; h.classList.toggle('lav', B.aktiv || B2.aktiv || B3.aktiv || B4.aktiv || $('#banner').classList.contains('vis')); h.classList.add('vis'); hintTid = varighet || 4.5; }
 function banner(stor, liten, tid) { $('#bannerStor').textContent = stor; $('#bannerLiten').textContent = liten || ''; $('#banner').classList.add('vis'); $('#hint').classList.add('lav'); bannerTid = tid || 3; }
 function toast(tekst) { const t = $('#toast'); t.textContent = tekst; t.classList.add('vis'); toastTid = 2.4; }
 function pop(sel) { const e = $(sel); if (!e) return; e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); setTimeout(() => e.classList.remove('pop'), 250); }
 function hud() {
   $('#liv').innerHTML = Array.from({ length: P.max }, (_, i) => `<i class="${i < P.hp ? '' : 'tom'}"></i>`).join('');
   $('#orbtall').textContent = '✦ ' + S.orbTatt.size + ' / ' + ORBER.length;
-  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']); if (S.ev.tester) e.push(['tester', 'Spenningstester']); if (S.ev.sliper) e.push(['sliper', 'Vinkelsliper']);
+  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']); if (S.ev.tester) e.push(['tester', 'Spenningstester']); if (S.ev.sliper) e.push(['sliper', 'Vinkelsliper']); if (S.ev.klatre) e.push(['klatre', 'Klatrejern']);
   $('#evner').innerHTML = e.map(([id, n]) => `<div class="ev" id="ev-${id}" title="${n}">${IKON[id]}</div>`).join('');
   sistKlar = null;
   $('#tStot').classList.toggle('skjult', !S.ev.stot);
   $('#tKrok').classList.toggle('skjult', !S.ev.krok);
   $('#bFag').textContent = `Fagkort: ${S.fag.size} av ${FAG.length}`;
-  const b2 = B2.aktiv && B2.fase !== 'intro', b3 = B3.aktiv && B3.fase !== 'intro';
-  $('#boss').classList.toggle('vis', (B.aktiv && B.fase === 'kamp') || b2 || b3);
-  $('#bossNavn').textContent = b3 ? 'Trafokjempen' : b2 ? 'Kortslutningen' : 'Overspenningen'; $('#boss').classList.toggle('b2', b2); $('#boss').classList.toggle('b3', b3);
-  const n = b3 ? 6 : 3, hp = b3 ? B3.hp : b2 ? B2.hp : B.hp;
+  const b2 = B2.aktiv && B2.fase !== 'intro', b3 = B3.aktiv && B3.fase !== 'intro', b4 = B4.aktiv && B4.fase !== 'intro';
+  $('#boss').classList.toggle('vis', (B.aktiv && B.fase === 'kamp') || b2 || b3 || b4);
+  $('#bossNavn').textContent = b4 ? 'Generatoren' : b3 ? 'Trafokjempen' : b2 ? 'Kortslutningen' : 'Overspenningen'; $('#boss').classList.toggle('b2', b2 || b4); $('#boss').classList.toggle('b3', b3);
+  const n = b4 ? 4 : b3 ? 6 : 3, hp = b4 ? B4.hp : b3 ? B3.hp : b2 ? B2.hp : B.hp;
   if ($('#bossSik').children.length !== n) $('#bossSik').innerHTML = '<i></i>'.repeat(n);
   [...$('#bossSik').children].forEach((el, i) => el.classList.toggle('av', i >= hp));
   $('#tidtaker').classList.toggle('vis', S.tidsmodus);
@@ -48,6 +48,11 @@ function maalTekst() {
   if (!S.ev.tester) return ty <= 27 && tx >= 132 ? 'Finn et måleinstrument i trafostasjonen' : 'Klatre opp stigesjakten';
   if (!S.ev.sliper) return 'Klatre opp transformatortårnet';
   if (!S.boss3) return B3.aktiv ? 'Slå ut Trafokjempen' : 'Skjær deg gjennom muren til stasjonsgården';
+  if (!S.boss4) { if (B4.aktiv) return 'Støt inn i kullbørsten som lyser';
+    if (!iKraft(tx, ty)) return 'Noe brummer under kjelleren. Finn luka i gulvet';
+    if (!S.ev.klatre) return 'Finn en vei opp den høye pipa';
+    return 'Følg fallrøret ned til turbinhallen'; }
+  if (!S.ev.liv5) return 'Ta livsgnisten i turbinhallen';
   return 'Finn alle lysorber, fagkort og gjemmesteder';
 }
 function maalPunkt() {
@@ -63,6 +68,9 @@ function maalPunkt() {
   if (!S.ev.tester) return ty <= 27 && tx >= 132 ? [178.5, 26.5] : [168.5, 28];
   if (!S.ev.sliper) return [193.5, 6.5];
   if (!S.boss3) return B3.aktiv ? null : [161, 23];
+  if (!S.boss4) { if (B4.aktiv) return null; const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
+    if (!iKraft(tx, ty)) return [43, 32]; if (!S.ev.klatre) return [5.5, 44.5]; return [36.5, 58]; }
+  if (!S.ev.liv5) return [36.5, 60.5];
   return null;
 }
 function sjekkMaal(tving) { const m = maalTekst(); if (m !== S.maal || tving) { S.maal = m; $('#maal').innerHTML = '<b>Mål:</b> ' + m; $('#maal').classList.add('vis'); maalTid = 5; } }
@@ -82,7 +90,7 @@ function settTilHex(a) { let h = ''; for (let i = 0; i < a.length; i += 4) h += 
 function hexTilSett(h) { const a = new Uint8Array(KW * KH); if (typeof h !== 'string') return a;
   for (let j = 0; j < h.length && j * 4 < a.length; j++) { const n = parseInt(h[j], 16) || 0; for (let b = 0; b < 4; b++) if (j * 4 + b < a.length) a[j * 4 + b] = (n >> b) & 1; } return a; }
 function lagre() { if (S.tidsmodus) return; try { localStorage.setItem(NOKKEL, JSON.stringify({ v: LAGRE_VERSJON, ev: S.ev, cp: S.cp, cpLit: [...S.cpLit], orb: [...S.orbTatt],
-  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop, knust: [...S.knust], boss3: S.boss3, helt: S.helt,
+  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop, knust: [...S.knust], boss3: S.boss3, boss4: S.boss4, helt: S.helt,
   boss: S.bossDone, boss2: S.boss2, tid: Math.round(S.tid), ferdig: S.ferdig, dod: S.dodsfall })); } catch (e) {} }
 function hentLagret() {
   try { const d = JSON.parse(localStorage.getItem(NOKKEL) || 'null'); if (!d || typeof d !== 'object' || !d.ev || typeof d.ev !== 'object') return null;
@@ -91,7 +99,7 @@ function hentLagret() {
     return { ev, cp: Number.isInteger(d.cp) && d.cp >= 0 && d.cp < SJEKK.length ? d.cp : 0, cpLit: heltall(d.cpLit, SJEKK.length), orb: heltall(d.orb, ORBER.length),
       fag: heltall(d.fag, FAG.length), sett: hexTilSett(d.sett), brukt: Number.isInteger(d.brukt) && d.brukt >= 0 ? d.brukt : 0,
       kjop: Object.fromEntries(OPPGRADERINGER.map(o => [o.id, !!(d.kjop && d.kjop[o.id] === true)])),
-      knust: heltall(d.knust, SVAKE.length), boss3: d.boss3 === true, helt: d.helt === true,
+      knust: heltall(d.knust, SVAKE.length), boss3: d.boss3 === true, boss4: d.boss4 === true, helt: d.helt === true,
       boss: d.boss === true, boss2: d.boss2 === true, tid: typeof d.tid === 'number' && d.tid > 0 ? d.tid : 0, ferdig: d.ferdig === true, dod: Number.isInteger(d.dod) ? d.dod : 0 };
   } catch (e) { return null; }
 }
@@ -349,4 +357,4 @@ resize(); addEventListener('resize', resize); addEventListener('orientationchang
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 visLag('#lagMeny');
 requestAnimationFrame(loop);
-window.__gnist = { INNST, brukKnapper, startTilpass, sluttTilpass, S, P, B, B2, B3, SVAKE, knusVegg, startTidsmodus, FAG, reiseTil, kjop, orbIgjen, visKart, lukkPanel, visVerk, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };
+window.__gnist = { B4, TURBIN, BORSTER, borstePos, INNST, brukKnapper, startTilpass, sluttTilpass, S, P, B, B2, B3, SVAKE, knusVegg, startTidsmodus, FAG, reiseTil, kjop, orbIgjen, visKart, lukkPanel, visVerk, tile, rect, faaEvne, FUNN, respawn, SJEKK, fiender, lagre, hentLagret, KRAN, I, KROKER, ORBER, TS, bolter, sveip, prosj, nyttSpill };

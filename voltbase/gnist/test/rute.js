@@ -284,6 +284,83 @@ async function hemmeligheter(b) {
   await ctx.close();
 }
 
+async function fase6(b) {
+  console.log('Område 4: kraftverket, klatrejern og Generatoren');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  const ev = { dobbel: true, hansker: true, stot: true, krok: true, liv: true, liv2: true, tester: true, sliper: true, liv4: true };
+  await page.evaluate(([k, ev]) => localStorage.setItem(k, JSON.stringify({ v: 3, ev, cp: 1, cpLit: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], orb: [], boss: true, boss2: true, boss3: true, helt: true, ferdig: true, tid: 900 })), [KEY, ev]);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
+  sjekk('maks liv teller med livsgnist 4', await page.evaluate(() => __gnist.P.max === 7), await page.evaluate(() => __gnist.P.max));
+  sjekk('luka i kjellergulvet er åpen', await page.evaluate(() => __gnist.tile(42, 32) === 0 && __gnist.tile(43, 32) === 0));
+  await pos(page, 42, 31); await vent(page, 1500);
+  { const t = await tilstand(page); sjekk('faller ned i inntaket', t.y > 44 && t.y <= 45.1 && __gnist_omr(await page.evaluate(() => __gnist.S.omr)) === 'Inntaket', t); }
+  // pipa er for høy uten klatrejern
+  await pos(page, 49, 44); await vent(page, 300);
+  await page.keyboard.down('ArrowRight'); await page.keyboard.down('Space'); await vent(page, 250); await page.keyboard.up('Space'); await vent(page, 80);
+  await page.keyboard.down('Space'); await vent(page, 250); await page.keyboard.up('Space'); await page.keyboard.press('ShiftLeft'); await vent(page, 300);
+  const minY = await page.evaluate(() => __gnist.P.y / 32); await page.keyboard.up('ArrowRight'); await vent(page, 800);
+  sjekk('pipa kan ikke klatres uten klatrejern', minY > 37, minY);
+  // klatrejernet i verktøyrommet
+  await pos(page, 5, 44); await vent(page, 600); sjekk('klatrejern plukket opp', (await tilstand(page)).ev.klatre); await lukkKort(page);
+  // skli og hopp fra veggen
+  await page.evaluate(() => { const P = __gnist.P; P.x = 50 * 32 - P.w - .5; P.y = 38 * 32; P.vx = 0; P.vy = 300; TS.right = true; oppdaterTaster(); }); await vent(page, 300);
+  const gl = await page.evaluate(() => ({ vegg: __gnist.P.vegg, vy: __gnist.P.vy }));
+  sjekk('sklir langsomt nedover veggen', gl.vegg === 1 && gl.vy <= 161, gl);
+  await page.evaluate(() => { __gnist.I.jumpP = true; TS.jump = true; oppdaterTaster(); }); await vent(page, 50);
+  const vh = await page.evaluate(() => ({ vx: __gnist.P.vx, vy: __gnist.P.vy })); await page.evaluate(() => { TS.right = TS.jump = false; oppdaterTaster(); });
+  sjekk('veggsprett skyver ut fra veggen og opp', vh.vx < -150 && vh.vy < -300, vh);
+  // klatre opp pipa med veggsprett (styrt av en enkel «spiller» i siden)
+  await pos(page, 49, 44); await vent(page, 300);
+  await page.evaluate(() => { let side = 1, t = 0; TS.right = true; __gnist.I.jumpP = true; oppdaterTaster();
+    window.__bot = setInterval(() => { const P = __gnist.P, I = __gnist.I, n = performance.now();
+      TS.jump = true; if (P.onGround && n - t > 200) { I.jumpP = true; t = n; } if (P.vegg) { side = P.vegg; TS.left = TS.right = false; I.jumpP = true; t = n; }
+      else if (n - t > 120) { TS.right = side > 0; TS.left = side < 0; }
+      oppdaterTaster(); }, 16); });
+  const oppe = await page.waitForFunction(() => __gnist.P.y / 32 < 35.2 && __gnist.P.x / 32 > 47, null, { timeout: 8000 }).then(() => true, () => false);
+  await page.evaluate(() => { clearInterval(window.__bot); TS.left = TS.right = TS.jump = false; oppdaterTaster(); });
+  sjekk('klatrer opp pipa med veggsprett', oppe, await page.evaluate(() => ({ x: __gnist.P.x / 32, y: __gnist.P.y / 32 })));
+  await pos(page, 57, 35); await vent(page, 300); await page.keyboard.down('ArrowRight'); await vent(page, 500); await page.keyboard.up('ArrowRight'); await page.keyboard.down('ArrowDown');
+  // fagkortet i fallrøret tas i fallet
+  await page.waitForFunction(() => __gnist.S.mode === 'evne', null, { timeout: 3000 }).catch(() => {}); await page.keyboard.up('ArrowDown'); await lukkKort(page); await page.keyboard.down('ArrowDown');
+  await page.waitForFunction(() => __gnist.P.onGround && __gnist.P.y / 32 > 59, null, { timeout: 5000 }).catch(() => {});
+  await page.keyboard.up('ArrowDown'); sjekk('ned fallrøret med fagkort', (await tilstand(page)).y > 60.9 && (await page.evaluate(() => __gnist.S.fag.has(13))), await tilstand(page));
+  await vent(page, 300); sjekk('sjekkpunkt i fallrøret', (await tilstand(page)).cp === 11, await tilstand(page));
+  // snarvei til pumpehallen: bare fra vest
+  let snarvei = false;
+  for (let i = 0; i < 3 && !snarvei; i++) { await pos(page, 66, 54); await vent(page, 300); await page.keyboard.down('ArrowRight'); await vent(page, 60); await page.keyboard.press('ShiftLeft'); await vent(page, 500); await page.keyboard.up('ArrowRight');
+    snarvei = await page.evaluate(() => __gnist.S.knust.has(3)); }
+  sjekk('snarvei til pumpehallen åpnes', snarvei);
+  // Generatoren
+  await page.evaluate(() => { __gnist.P.inv = 9999; }); await pos(page, 44, 60); await vent(page, 500);
+  sjekk('Generatoren våkner', await page.evaluate(() => __gnist.B4.aktiv));
+  sjekk('døra til turbinhallen stenges', await page.evaluate(() => __gnist.tile(53, 58) === 5));
+  sjekk('kamp mot Generatoren', await page.waitForFunction(() => __gnist.B4.fase === 'kamp', null, { timeout: 8000 }).then(() => true, () => false));
+  sjekk('bossnavn i HUD', (await page.textContent('#bossNavn')) === 'Generatoren');
+  const brukt = new Set(); let golv4 = false; const tB = Date.now();
+  while (Date.now() - tB < 60000) {
+    const s = await page.evaluate(() => ({ fase: __gnist.B4.fase, b: __gnist.B4.borste, golv: __gnist.B4.golv, hp: __gnist.B4.hp }));
+    if (s.fase !== 'kamp') break; if (s.golv) golv4 = true;
+    if (s.b >= 0) { brukt.add(s.b); const hp0 = s.hp;
+      await page.evaluate(i => { const [x, y, r] = __gnist.BORSTER[i], P = __gnist.P; P.x = (x + r * 3) * 32 - P.w / 2; P.y = (y + .5) * 32 - P.h / 2; P.vx = 0; P.vy = 0; P.face = -r; P.dashCd = 0; P.canDash = true; }, s.b);
+      await page.keyboard.press('ShiftLeft'); await vent(page, 300);
+      if ((await page.evaluate(() => __gnist.B4.hp)) === hp0) await vent(page, 200);
+      continue; }
+    await vent(page, 60);
+  }
+  sjekk('høye og lave kullbørster', [...brukt].some(i => i >= 2) && [...brukt].some(i => i < 2), [...brukt]);
+  sjekk('Generatoren stanset, døra åpen', await page.waitForFunction(() => __gnist.S.boss4 && __gnist.tile(53, 58) === 0, null, { timeout: 8000 }).then(() => true, () => false));
+  const max0 = await page.evaluate(() => __gnist.P.max); await page.evaluate(() => { __gnist.P.inv = 0; }); await pos(page, 36, 60); await vent(page, 600);
+  sjekk('livsgnist 5 etter bossen', await page.evaluate(m => __gnist.S.ev.liv5 && __gnist.P.max === m + 1, max0));
+  let gjemt = false;
+  for (let i = 0; i < 3 && !gjemt; i++) { await pos(page, 22, 60); await vent(page, 300); await page.keyboard.down('ArrowLeft'); await vent(page, 60); await page.keyboard.press('ShiftLeft'); await vent(page, 500); await page.keyboard.up('ArrowLeft');
+    gjemt = await page.evaluate(() => __gnist.S.knust.has(4)); }
+  sjekk('gjemt rom bak turbinhallen', gjemt);
+  sjekk('lagring husker område 4', await page.evaluate(() => { const l = hentLagret(); return l.boss4 && l.ev.klatre && l.ev.liv5 && l.knust.includes(3); }));
+  sjekk('ingen JS-feil (område 4)', errs.length === 0, errs);
+  await ctx.close();
+}
+const __gnist_omr = s => s;
+
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
   const { ctx, page, errs } = await nySide(b, opts);
@@ -353,6 +430,7 @@ async function touch(b, navn, opts) {
     if (med('fase4')) await fase4(b);
     if (med('fase5')) await fase5(b);
     if (med('hemmelig')) await hemmeligheter(b);
+    if (med('fase6')) await fase6(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

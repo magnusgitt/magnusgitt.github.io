@@ -89,7 +89,8 @@ function tegnFunn(f) {
   else if (f.id === 'hansker') { rr(ctx, -5, -4, 10, 11, 3); ctx.fill(); for (let i = 0; i < 3; i++) { rr(ctx, -5 + i * 3.4, -9, 2.6, 7, 1.3); ctx.fill(); } rr(ctx, 4, -2, 5, 2.6, 1.3); ctx.fill(); }
   else if (f.id === 'krok') { ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(-1, -2, 5, 0, 7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(4, -2); ctx.quadraticCurveTo(9, 4, 2, 8); ctx.stroke(); ctx.fillRect(-2, -3, 2, 2); }
-  else if (f.id === 'liv' || f.id === 'liv2') { ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(0, 7); ctx.bezierCurveTo(-9, 1, -7, -8, 0, -3); ctx.bezierCurveTo(7, -8, 9, 1, 0, 7); ctx.fill(); }
+  else if (f.id === 'klatre') { ctx.fillRect(-2, -9, 4, 14); ctx.beginPath(); ctx.moveTo(2, -2); ctx.lineTo(9, -6); ctx.lineTo(9, -3); ctx.lineTo(2, 1); ctx.fill(); ctx.beginPath(); ctx.moveTo(-2, 5); ctx.lineTo(2, 5); ctx.lineTo(0, 10); ctx.fill(); }
+  else if (f.id.startsWith('liv')) { ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(0, 7); ctx.bezierCurveTo(-9, 1, -7, -8, 0, -3); ctx.bezierCurveTo(7, -8, 9, 1, 0, 7); ctx.fill(); }
   else { ctx.beginPath(); ctx.moveTo(2, -9); ctx.lineTo(-5, 1); ctx.lineTo(0, 1); ctx.lineTo(-2, 9); ctx.lineTo(5, -2); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill(); }
   ctx.restore();
 }
@@ -186,6 +187,7 @@ function poseFor(p) {
   const fart = Math.min(1, Math.abs(p.vx) / RUN), ph = p.anim;
   if (p.dashT > 0) return { b1: [-.9, .5], b2: [-.4, 1.1], a1: [-1.3, .3], a2: [-1.6, .2], bob: 0, hode: 0 };
   if (p.krok) { const sv = Math.sin(S.t * 6) * .15; return { b1: [-.3 + sv, .6], b2: [.25 - sv, .8], a1: [3.0, .1], a2: [2.9, .15], bob: 0, hode: 0 }; }
+  if (!p.onGround && p.vegg) return { b1: [.5, .9], b2: [-.2, .5], a1: [2.6, .3], a2: [2.2, .6], bob: 0, hode: .2 };
   if (!p.onGround) {
     if (p.vy < -80) return { b1: [-.35, 1.0], b2: [.75, 1.4], a1: [-2.5, .5], a2: [2.3, .4], bob: 0, hode: -.5 };
     const fl = Math.sin(S.t * 18) * .18;
@@ -286,6 +288,29 @@ function tegnBoss3() {
   ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, 14, 0, 7); ctx.fill();
   ctx.restore(); ctx.globalAlpha = 1;
 }
+function tegnBoss4() {
+  if (!B4.aktiv) return;
+  const a = B4.fase === 'dod' ? clamp(B4.dod / 3, 0, 1) : 1, [hx, hy] = b4Navn(), flimmer = B4.stun > 0 && Math.sin(S.t * 40) > 0;
+  // fundament og aksling
+  ctx.globalAlpha = a; ctx.fillStyle = '#1e2620'; ctx.fillRect(hx - 18, hy, 36, TURBIN.gulv * T - hy); ctx.fillStyle = 'rgba(190,220,180,.1)'; ctx.fillRect(hx - 14, hy, 4, TURBIN.gulv * T - hy);
+  ctx.fillStyle = '#2a332c'; rr(ctx, hx - 70, TURBIN.gulv * T - 26, 140, 26, 4); ctx.fill();
+  // statoren: en stor ring med viklinger
+  ctx.save(); ctx.translate(hx, hy);
+  ctx.strokeStyle = flimmer ? '#e8fbff' : '#3b4a40'; ctx.lineWidth = 14; ctx.beginPath(); ctx.arc(0, 0, 58, 0, 7); ctx.stroke();
+  ctx.strokeStyle = 'rgba(200,120,60,.75)'; ctx.lineWidth = 5; for (let i = 0; i < 16; i++) { const v = i / 16 * 6.283; ctx.beginPath(); ctx.arc(0, 0, 58, v, v + .22); ctx.stroke(); }
+  // rotoren snurrer
+  ctx.rotate(B4.vinkel * 2.2); ctx.fillStyle = flimmer ? '#fff' : '#4a5a50';
+  for (let i = 0; i < 6; i++) { ctx.rotate(Math.PI / 3); rr(ctx, -6, -46, 12, 34, 4); ctx.fill(); }
+  ctx.fillStyle = '#26302a'; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 7); ctx.fill();
+  ctx.restore();
+  // øyne i navet
+  ctx.fillStyle = B4.stun > 0 ? '#fff' : '#7fe0ff'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(hx + s * 3, hy - 2); ctx.lineTo(hx + s * 12, hy - 6); ctx.lineTo(hx + s * 11, hy + 2); ctx.closePath(); ctx.fill(); }
+  // kullbørstene på veggene
+  BORSTER.forEach(([x, y, r], i) => { const X = x * T, Y = y * T; if (!synlig(X, Y, 60)) return; const aktiv = B4.borste === i;
+    ctx.fillStyle = '#2b2b2b'; ctx.fillRect(r > 0 ? X : X - 14, Y + 6, 14, 20); ctx.fillStyle = aktiv ? '#fff2c8' : '#4a4038'; ctx.fillRect(r > 0 ? X + 2 : X - 12, Y + 9, 10, 14);
+    ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(r > 0 ? X : X, Y + 16); ctx.lineTo(r > 0 ? X - 10 : X + 10, Y + 16); ctx.stroke(); });
+  ctx.globalAlpha = 1;
+}
 function tegnBoss2() {
   if (!B2.aktiv) return;
   const X = B2.x, Y = B2.y, a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1, rs = 3 - B2.hp, ned = B2.ned > 0;
@@ -317,10 +342,10 @@ function tegnDor(kol, y0, y1) { const X = kol * T, Y0 = y0 * T, Y1 = (y1 + 1) * 
   const gr = ctx.createLinearGradient(X, 0, X + T, 0); gr.addColorStop(0, '#2b3044'); gr.addColorStop(.5, '#424a64'); gr.addColorStop(1, '#22263a');
   ctx.fillStyle = gr; ctx.fillRect(X + 2, Y0, T - 4, Y1 - Y0); ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let y = Y0 + 8; y < Y1; y += 12) ctx.fillRect(X + 2, y, T - 4, 2);
   ctx.fillStyle = 'rgba(255,120,60,.8)'; ctx.fillRect(X + T / 2 - 1.5, Y0, 3, Y1 - Y0); }
-function tegnLuke() { const X = 125 * T, Y = 19 * T, W = 4 * T; if (!synlig(X, Y, 200)) return;
-  if (tile(125, 19) === LUKE) { const gr = ctx.createLinearGradient(0, Y, 0, Y + T); gr.addColorStop(0, '#59647f'); gr.addColorStop(1, '#2a3042');
-    ctx.fillStyle = gr; ctx.fillRect(X, Y, W, T); ctx.fillStyle = 'rgba(0,0,0,.4)'; for (let i = 1; i < 4; i++) ctx.fillRect(X + i * T - 1, Y + 3, 2, T - 6);
-    ctx.fillStyle = 'rgba(240,195,60,.5)'; for (let i = 0; i < 8; i++) ctx.fillRect(X + 4 + i * 16, Y + 2, 8, 3);
+function tegnLuke(kx, ky, b) { kx = kx || 125; ky = ky || 19; const X = kx * T, Y = ky * T, W = (b || 4) * T; if (!synlig(X, Y, 200)) return;
+  if (tile(kx, ky) === LUKE) { const gr = ctx.createLinearGradient(0, Y, 0, Y + T); gr.addColorStop(0, '#59647f'); gr.addColorStop(1, '#2a3042');
+    ctx.fillStyle = gr; ctx.fillRect(X, Y, W, T); ctx.fillStyle = 'rgba(0,0,0,.4)'; for (let i = 1; i < (b || 4); i++) ctx.fillRect(X + i * T - 1, Y + 3, 2, T - 6);
+    ctx.fillStyle = 'rgba(240,195,60,.5)'; for (let i = 0; i < (b || 4) * 2; i++) ctx.fillRect(X + 4 + i * 16, Y + 2, 8, 3);
     ctx.fillStyle = '#c9ced8'; ctx.fillRect(X + W / 2 - 8, Y + T / 2 - 2, 16, 4); }
   else { ctx.fillStyle = '#0d1216'; ctx.fillRect(X, Y, W, T); ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 6, Y, 6, T); ctx.fillRect(X + W, Y, 6, T);
     ctx.save(); ctx.translate(X + W + 6, Y); ctx.rotate(-1.25); ctx.fillStyle = '#4a5470'; ctx.fillRect(0, -6, W * .55, 6); ctx.restore(); } }
@@ -386,6 +411,9 @@ function samleLys() {
     if (B3.golv === 2) for (let x = GARD.x0; x <= GARD.x1; x += 4) L(x * T, GARD.gulv * T, 140, .6); }
   if (S.ev.tester) for (const [x, y] of ghoListe) if (x % 2 === 0 && synlig(x * T, y * T, 60)) L(x * T + T / 2, y * T + 4, 60, .45);
   for (const [x0, y0] of TRAFOER) if (synlig(x0 * T, y0 * T, 200)) L((x0 + 2) * T, (y0 - .5) * T, 120, .5);
+  if (B4.aktiv) { const a = B4.fase === 'dod' ? clamp(B4.dod / 3, 0, 1) : 1, [hx, hy] = b4Navn(); L(hx, hy, 320, .9 * a);
+    if (B4.borste >= 0) { const [bx, by] = borstePos(B4.borste); L(bx, by, 200, .9); }
+    if (B4.golv === 2) for (let x = TURBIN.x0; x <= TURBIN.x1; x += 4) L(x * T, TURBIN.gulv * T, 140, .6); }
   if (B2.aktiv) { const a = B2.fase === 'dod' ? clamp(B2.dod / 2.4, 0, 1) : 1; L(B2.x, B2.y, 260, .9 * a); if (B2.golv === 2) for (let x = ARENA2.x0; x <= ARENA2.x1; x += 4) L(x * T, ARENA2.gulv * T, 140, .6); }
   for (const [x, y] of vannListe) if (tile(x, y) === VANN && x % 2 === 0 && synlig(x * T, y * T, 80)) L(x * T + T / 2, y * T + 12, 70, .35);
   if (S.ev.krok) for (const k of KROKER) if (synlig(k[0] * T, k[1] * T, 60)) L(k[0] * T + T / 2, k[1] * T, S.krokMaal === k ? 90 : 40, S.krokMaal === k ? .7 : .35);
@@ -453,6 +481,16 @@ function tegnGlod() {
       else { glod(SPR.o, X, Y, 36, .5); if (hs(x, (S.t * 12) | 0, 7) < .3) { ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(255,235,200,.95)'; jagget(X - 16, Y, X + 16, Y - 5, 6, 5, (S.t * 25 | 0) + x); } } }
     if (B3.stun <= 0 && B3.fase === 'kamp') { ctx.globalAlpha = .8; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(255,220,160,.9)';
       for (let i = 0; i < 2 + (6 - B3.hp) / 2; i++) { const v = S.t * 3 + i * 2.2, r = 50 + 30 * Math.sin(v * 1.6); jagget(kx, ky, kx + Math.cos(v) * r, ky + Math.sin(v) * r, 6, 5, (S.t * 18 | 0) + i * 5); } } }
+  if (B4.aktiv) { const a = B4.fase === 'dod' ? clamp(B4.dod / 3, 0, 1) : 1, [hx, hy] = b4Navn(), n = b4Armer(), L = 8.6 * T * B4.R;
+    glod(SPR.c, hx, hy, 100 + 10 * Math.sin(S.t * 6), (.55 + .2 * Math.sin(S.t * 7)) * a); glod(SPR.h, hx, hy, 14, a);
+    if (B4.fase !== 'dod') for (let i = 0; i < n; i++) { const v = B4.vinkel + i * Math.PI * 2 / n, ex = hx + Math.cos(v) * L, ey = hy + Math.sin(v) * L, sx = hx + Math.cos(v) * 20, sy = hy + Math.sin(v) * 20;
+      ctx.globalAlpha = (B4.stun > 0 ? .25 : 1) * a; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(110,210,255,.3)'; jagget(sx, sy, ex, ey, 9, 10, (S.t * 20 | 0) + i * 9);
+      ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(230,250,255,.95)'; jagget(sx, sy, ex, ey, 9, 10, (S.t * 20 | 0) + i * 9); glod(SPR.c, ex, ey, 30, .8 * a); }
+    if (B4.borste >= 0) { const [bx, by] = borstePos(B4.borste); glod(SPR.w, bx, by, 60 + 8 * Math.sin(S.t * 8), .9); glod(SPR.h, bx, by, 14, 1);
+      ctx.globalAlpha = .6 + .3 * Math.sin(S.t * 10); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bx, by, 28 + 3 * Math.sin(S.t * 8), 0, 7); ctx.stroke(); }
+    if (B4.golv) for (let x = TURBIN.x0; x <= TURBIN.x1; x++) { const X = x * T + T / 2, Y = TURBIN.gulv * T - 2; if (!synlig(X, Y, 40)) continue;
+      if (B4.golv === 1) glod(SPR.o, X, Y, 24, .25 + .2 * Math.sin(S.t * 18));
+      else { glod(SPR.c, X, Y, 36, .5); if (hs(x, (S.t * 12) | 0, 9) < .3) { ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(220,250,255,.95)'; jagget(X - 16, Y, X + 16, Y - 5, 6, 5, (S.t * 25 | 0) + x); } } } }
   if (S.ev.tester) for (const [x, y] of ghoListe) { const X = x * T + T / 2; if (synlig(X, y * T, 40)) glod(SPR.o, X, y * T + 4, 18, .25 + .08 * Math.sin(S.t * 4 + x)); }
   if (S.krokMaal && !P.krok) { const X = S.krokMaal[0] * T + T / 2, Y = S.krokMaal[1] * T; glod(SPR.c, X, Y, 30 + 6 * Math.sin(S.t * 8), .9); glod(SPR.h, X, Y, 8, .9); }
   if (P.krok) glod(SPR.c, P.krok.x, P.krok.y, 26, .8);
@@ -514,7 +552,7 @@ function tegn() {
   const nx = (S.frame % 2 ? cx1 + 1 : cx0 - 1), ny = cy0 + (S.frame >> 1) % (cy1 - cy0 + 1);
   if (nx >= 0 && nx * CH < MW && ny >= 0 && ny * CH < MH && !chunks.has(nx + ',' + ny)) hentChunk(nx, ny);
   tegnDynamiskeFliser();
-  tegnLuke(); tegnDor(140, 54, 56); tegnDor(166, 52, 56); tegnDor(161, 19, 26); tegnDor(131, 15, 18);
+  tegnLuke(); tegnLuke(42, 32, 2); tegnDor(53, 57, 60); tegnDor(140, 54, 56); tegnDor(166, 52, 56); tegnDor(161, 19, 26); tegnDor(131, 15, 18);
   tegnSpesialFliser();
   tegnLysbue();
   tegnKran();
@@ -529,6 +567,7 @@ function tegn() {
   tegnBoss();
   tegnBoss2();
   tegnBoss3();
+  tegnBoss4();
   tegnSpiller();
   tegnVann();
   tegnStov();

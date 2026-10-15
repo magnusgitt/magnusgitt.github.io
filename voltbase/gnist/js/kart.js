@@ -86,6 +86,23 @@ const OMRAADER = [
     [124, 15, 126, 15, GHO], [121, 11, 123, 11, GHO], [124, 7, 126, 7, GHO], [127, 4, 128, 4, GHO], [129, 1, 131, 3, AIR],   // usynlig trapp i sjakten
     [50, 20, 56, 23, AIR], [49, 20, 49, 23, SVAK],          // hule bak en svak vegg i sjakta ved stillaset
   ] },
+  // ----- Område 4: Kraftverket (under kjelleren, åpnes når spillet er fullført) -----
+  { navn: 'Kraftverket', kart: [
+    [42, 32, 43, 32, LUKE], [42, 33, 43, 37, AIR],          // luke i kjellergulvet og sjakt ned
+    [28, 38, 45, 44, AIR], [46, 42, 46, 44, AIR],           // inntaket
+    [33, 41, 36, 41, ONE],
+    [47, 34, 49, 44, AIR],                                  // høy pipe med vegger på begge sider: krever klatrejern
+    [50, 34, 58, 35, AIR],                                  // gang øverst
+    [8, 41, 27, 44, AIR], [14, 45, 18, 46, AIR], [14, 46, 18, 46, VANN],   // gangen vestover med en vannfylt grop
+    [3, 36, 7, 44, AIR], [3, 40, 4, 40, ONE],               // verktøyrommet (klatrejernet)
+    [59, 34, 62, 60, AIR],                                  // fallrøret
+    [59, 40, 60, 40, ONE], [61, 46, 62, 46, ONE], [59, 52, 60, 52, ONE],
+    [63, 52, 69, 54, AIR], [70, 52, 71, 54, SVAK],          // snarvei til pumpehallen
+    [53, 57, 58, 60, AIR],                                  // inngang til turbinhallen
+    [20, 48, 52, 60, AIR],                                  // turbinhallen (bossen)
+    [21, 55, 23, 55, ONE], [49, 55, 51, 55, ONE],
+    [11, 57, 18, 60, AIR], [19, 57, 19, 60, SVAK],          // gjemt rom bak turbinhallen
+  ] },
 ];
 function byggKart() {
   map.fill(SOL);
@@ -103,12 +120,15 @@ function beregnDyp() {
       if (nx < 0 || ny < 0 || nx >= MW || ny >= MH) continue; const j = ny * MW + nx; if (dyp[j] > d + 1) { dyp[j] = d + 1; q.push(j); } } }
 }
 const dypAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? 6 : Math.min(6, dyp[y * MW + x]);
-const iKjeller2 = (x, y) => y >= 20 && x >= 70 && x <= 171 && !(y < 36 && (x < 123 || x > 130)) && !(x >= 167 && y <= 27);
-function inne(x, y) { return iKjeller2(x, y) || (x >= 49 && x <= 56 && y >= 20 && y <= 23) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
+const iKraft = (x, y) => x <= 71 && y >= 33 && !(x >= 70 && y < 52);
+const erTurbin = (x, y) => x >= 20 && x <= 52 && y >= 48 && y <= 61;
+const iKjeller2 = (x, y) => !iKraft(x, y) && y >= 20 && x >= 70 && x <= 171 && !(y < 36 && (x < 123 || x > 130)) && !(x >= 167 && y <= 27);
+function inne(x, y) { return iKraft(x, y) || iKjeller2(x, y) || (x >= 49 && x <= 56 && y >= 20 && y <= 23) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
 const erHall = (x, y) => x >= 73 && x <= 101 && y >= 5 && y <= 19;
 const erGard = (x, y) => x >= 132 && x <= 159 && y >= 4 && y <= 27;
 const erArena2 = (x, y) => x >= 140 && x <= 166 && y >= 42 && y <= 58;
 function omraade(tx, ty) {
+  if (iKraft(tx, ty)) return erTurbin(tx, ty) || (tx <= 19 && ty >= 56) ? 'Turbinhallen' : tx >= 59 ? 'Fallrøret' : tx <= 27 ? 'Verktøyrommet' : 'Inntaket';
   if (tx >= 132 && ty <= 26) return erGard(tx, ty) ? 'Stasjonsgården' : 'Trafostasjonen';
   if (iKjeller2(tx, ty)) {
     if (tx >= 167) return 'Stigesjakten';
@@ -129,7 +149,8 @@ function omraade(tx, ty) {
 // nye sjekkpunkt legges alltid til bakerst, så indeksene i gamle lagringer stemmer
 const SJEKK = [{ x: 4, y: 23 }, { x: 40, y: 31 }, { x: 69, y: 18 }, { x: 103, y: 18 },
   { x: 132, y: 41 }, { x: 99, y: 56 }, { x: 137, y: 56 }, { x: 168, y: 56 },
-  { x: 164, y: 26 }, { x: 196, y: 26 }];
+  { x: 164, y: 26 }, { x: 196, y: 26 },
+  { x: 44, y: 44 }, { x: 61, y: 60 }];
 // De 21 første ligger i samme rekkefølge som i første versjon, så lagrede lysorber stemmer fortsatt.
 const ORBER = [[8,22],[19,19],[27,22],[31,21],[17,29],[23,28],[33,28],[38,30],[46,25],[47,21],[43,16],[51,13],[57,9],[51,5],[60,1],[66,10],[70,16],[87,7],[110,12],[114,10],[124,9],
   [10,30],[4,29],[7,29],[67,6],[71,4],
@@ -138,13 +159,16 @@ const ORBER = [[8,22],[19,19],[27,22],[31,21],[17,29],[23,28],[33,28],[38,30],[4
   // takterrassen
   [84,1],[92,1],[98,1],
   // fase 5: gjemmesteder og trafostasjonen
-  [130,2],[51,22],[54,22],[56,21],[165,20],[178,16],[190,21],[194,17],[190,13],[194,9],[146,22],[176,10],[188,5]];
+  [130,2],[51,22],[54,22],[56,21],[165,20],[178,16],[190,21],[194,17],[190,13],[194,9],[146,22],[176,10],[188,5],
+  // område 4: kraftverket
+  [30,39],[36,40],[48,36],[54,34],[57,34],[4,37],[6,38],[16,42],[61,42],[60,50],[66,53],[13,59],[16,58],[22,54],[50,54]];
 const IKON = {
   dobbel: '<svg viewBox="0 0 24 24"><path d="M6 2h5v10l8 2c1.7.4 3 1.9 3 3.7V20H2v-3l4-1z"/></svg>',
   hansker: '<svg viewBox="0 0 24 24"><path d="M7 22v-5L4 12c-.8-1.2.9-2.6 2-1.6L8 12V4a1.4 1.4 0 012.8 0V10h.4V2.6a1.4 1.4 0 012.8 0V10h.4V3.6a1.4 1.4 0 012.8 0V11h.4V6a1.4 1.4 0 012.8 0v9c0 3-2 5-3 7z"/></svg>',
   stot: '<svg viewBox="0 0 24 24"><path d="M14 1L4 14h7l-2 9 11-14h-7z"/></svg>',
   tester: '<svg viewBox="0 0 24 24"><path d="M9 1h6v8l-1 2v11h-4V11L9 9zM11 3v4h2V3zM3 13l3-2 1 2-3 2zm18 0l-3-2-1 2 3 2zM3 6l3 1-.5 2L2.5 8z"/></svg>',
   sliper: '<svg viewBox="0 0 24 24"><path d="M2 14h11v4H2zM13 13h4v6h-4zM17 15h5v2h-5zM8 8a5 5 0 1110 0 5 5 0 01-10 0zm3 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>',
+  klatre: '<svg viewBox="0 0 24 24"><path d="M8 1h4v13l3 3v6h-4v-5l-3-3zM12 6l7-3 1 2-8 3zM12 11l6 1v2l-6-1zM3 20l5-2v3l-5 2z"/></svg>',
   krok: '<svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 014 4c0 1.5-.8 2.8-2 3.5V14a5 5 0 01-10 0v-2h3v2a2 2 0 004 0V8.5A4 4 0 0112 1zm0 2.6a1.4 1.4 0 100 2.8 1.4 1.4 0 000-2.8zM19 9h3v13h-3z"/></svg>',
 };
 const FUNN = [
@@ -158,6 +182,8 @@ const FUNN = [
   { id: 'tester', x: 178, y: 26, navn: 'Spenningstester', tekst: 'Viser deg plattformer og koblinger som ellers er usynlige.', pc: 'Virker av seg selv: se etter gule omriss', mob: 'Virker av seg selv: se etter gule omriss' },
   { id: 'sliper', x: 193, y: 6, navn: 'Vinkelsliper', tekst: 'Skjær deg gjennom svake vegger med sprekker i.', pc: 'Bruk <b>Strømstøt</b> rett inn i en svak vegg', mob: 'Bruk <b>Støt</b> rett inn i en svak vegg' },
   { id: 'liv4', x: 53, y: 23, navn: 'Livsgnist', liten: true },
+  { id: 'klatre', x: 5, y: 44, navn: 'Klatrejern', tekst: 'Linjemontørens gamle venn. Skli nedover vegger og hopp fra dem.', pc: 'Hold mot en vegg i lufta, og trykk <b>Mellomrom</b>', mob: 'Hold mot en vegg i lufta, og trykk <b>Hopp</b>' },
+  { id: 'liv5', x: 36, y: 60, boss4: true, navn: 'Livsgnist', liten: true },
 ];
 // krokene du kan svinge deg i med kabeltrommelen (rutekoordinater; kroken henger i overkanten av ruta)
 const KROKER = [[105, 47], [110, 47], [115, 47], [120, 47], [125, 47], [130, 47], [134, 47],
@@ -186,22 +212,28 @@ const FAG = [
   { x: 93, y: 49, tittel: 'Våtrom', tekst: 'Baderom deles i sone 0, 1 og 2 etter avstand fra badekar og dusj. Jo nærmere vannet, jo strengere krav til utstyret.' },
   { x: 127, y: 51, tittel: 'Arbeid under spenning', tekst: 'Arbeid under spenning (AUS) krever egen opplæring, egne rutiner og riktig utstyr. Ellers skal anlegget gjøres spenningsløst.' },
   { x: 168, y: 34, tittel: 'Strøm i vann', tekst: 'Vann og fukt leder strøm og gjør feil farligere. Derfor har utstyr i fuktige rom høyere kapslingsgrad (IP-klasse).' },
+  { x: 5, y: 37, tittel: 'Arbeid i høyden', tekst: 'Fall er en av de vanligste årsakene til alvorlige ulykker på byggeplassen. Bruk fallsikring, og sørg for at stige og stillas står stødig.' },
+  { x: 61, y: 38, tittel: 'Kullbørster', tekst: 'I mange motorer og generatorer fører kullbørster strømmen over til den delen som roterer. Børstene slites og må byttes, ellers gnistrer det.' },
+  { x: 12, y: 60, tittel: 'Vannkraft', tekst: 'Fallende vann driver en turbin, og turbinen roterer en generator. Nesten all strøm i Norge kommer fra vannkraft.' },
 ];
 // svake vegger som kan skjæres opp (id brukes i lagringen)
-const SVAKE = [{ x0: 160, y0: 19, x1: 161, y1: 26 }, { x0: 129, y0: 15, x1: 131, y1: 18 }, { x0: 49, y0: 20, x1: 49, y1: 23 }];
+const SVAKE = [{ x0: 160, y0: 19, x1: 161, y1: 26 }, { x0: 129, y0: 15, x1: 131, y1: 18 }, { x0: 49, y0: 20, x1: 49, y1: 23 },
+  { x0: 70, y0: 52, x1: 71, y1: 54, fraVest: true }, { x0: 19, y0: 57, x1: 19, y1: 60 }];
 const TRAFOER = [[172, 23, 175, 26], [182, 22, 186, 26]];
 const BRYTERE = [{ x: 78, y: 14, av: false }, { x: 87, y: 9, av: false }, { x: 96, y: 14, av: false }];
 const TAVLE = { x: 123, y: 17 };
 // fiender: gnistlus går fram og tilbake, svevegnist flyr i en bue, releet skyter gnister når du er nær
-const FIENDE_DEF = [{ x0: 22, x1: 31, y: 23 }, { x0: 36, x1: 43, y: 31 }, { x0: 55, x1: 67, y: 18 },
+const FIENDE_DEF = [{ x0: 22, x1: 31, y: 23 }, { x0: 36, x1: 41, y: 31 }, { x0: 55, x1: 67, y: 18 },
   { x0: 119, x1: 129, y: 41 }, { type: 'sveve', x: 109, y: 38.5, ax: 3, ay: 1 }, { type: 'sveve', x: 86, y: 46, ax: 4, ay: 1.2 },
   { type: 'rele', x: 72, y: 56 },
-  { x0: 162, x1: 171, y: 26 }, { x0: 187, x1: 197, y: 26 }, { type: 'sveve', x: 179, y: 14, ax: 3, ay: 1.5 }, { type: 'sveve', x: 192, y: 13, ax: 2, ay: 2 }, { type: 'rele', x: 176, y: 26 }];
+  { x0: 162, x1: 171, y: 26 }, { x0: 187, x1: 197, y: 26 }, { type: 'sveve', x: 179, y: 14, ax: 3, ay: 1.5 }, { type: 'sveve', x: 192, y: 13, ax: 2, ay: 2 }, { type: 'rele', x: 176, y: 26 },
+  { x0: 29, x1: 40, y: 44 }, { x0: 19, x1: 27, y: 44 }, { type: 'rele', x: 9, y: 44 }, { type: 'sveve', x: 60.5, y: 46, ax: 1, ay: 4 }, { x0: 63, x1: 69, y: 54 }];
 const LYSBUE = { x: 28, y0: 27, y1: 31, per: 3.2 };   // tidsstyrt lysbue i kjelleren
 const KRAN = { x0: 65 * T, x1: 69 * T, y: 8 * T, w: 3 * T, x: 65 * T, dx: 0, t: 0 };
 const hazListe = [];
 const KJELLERLYS = [[16, 27], [29, 27], [40, 27], [6, 28],   // svake taklamper i kjelleren
-  [104, 36], [112, 36], [120, 36], [131, 36], [76, 43], [85, 43], [94, 43], [108, 47], [124, 47], [137, 47], [168, 31]];
+  [104, 36], [112, 36], [120, 36], [131, 36], [76, 43], [85, 43], [94, 43], [108, 47], [124, 47], [137, 47], [168, 31],
+  [32, 38], [40, 38], [12, 41], [5, 36], [55, 34], [61, 34], [26, 48], [36, 48], [46, 48], [15, 57]];
 const vannListe = [], ghoListe = [];
 
 // ---------- kollisjon ----------
@@ -242,6 +274,7 @@ function flyttY(p, dy) {
 function traffVegg(tx, ty, retning) {
   const t = tile(tx, ty);
   if (t === SVAK) { const i = SVAKE.findIndex(v => tx >= v.x0 && tx <= v.x1 && ty >= v.y0 && ty <= v.y1);
+    if (i >= 0 && SVAKE[i].fraVest && retning > 0) { hint('tykk', 'Veggen er for tykk fra denne siden.'); return; }
     if (S.ev.sliper && P.dashT > 0 && i >= 0) knusVegg(i);
     else hint('svak', S.ev.sliper ? 'Bruk støtet rett inn i den svake veggen.' : 'Veggen har sprekker. Med riktig verktøy kunne du skåret deg gjennom.'); return; }
   if (t === CUR && !S.ev.hansker) {
