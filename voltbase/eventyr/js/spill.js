@@ -4,6 +4,7 @@
 let tilstand = 'meny', tid = 0;
 let objekter = [], mynter = [], skjulte = [], gnister = [], boss = null, skudd = [], gnistRegn = [], tyver = [], maaker = [], flyt = [];
 let kamX = 0, kamY = 0;
+let stov = [];   // støv fra skritt og svevende partikler
 
 // ── Spilleren ───────────────────────────────────────────────────────
 const sp = { x: 6 * TS + 3, y: 22 * TS + 6, w: 10, h: 8, retning: 'opp', steg: 0, gaar: false, liv: 6, usarbar: 0, kb: null, zap: 0 };
@@ -494,6 +495,13 @@ function oppdater(dt) {
   flyt = flyt.filter((f) => f.t > 0);
   for (const p of gnistRegn) { p.x += p.vx * dt; p.y += p.vy * dt; p.t -= dt; }
   gnistRegn = gnistRegn.filter((p) => p.t > 0);
+  for (const d of stov) { d.x += d.vx * dt; d.y += d.vy * dt; d.t -= dt; }
+  if ((omr === 'ute' || omr === 'kjeller') && stov.length < 40 && Math.random() < dt * 3) {
+    const natt = omr === 'ute' && nattFaktor() > 0.6;
+    stov.push({ x: kamX + Math.random() * VW, y: kamY + Math.random() * VH, vx: 4 + Math.random() * 6, vy: (Math.random() - 0.5) * 4, t: 2.5, s: 1,
+      f: omr === 'kjeller' ? '#8b9bb4' : natt ? '#d8ff7a' : '#fff1a8' });
+  }
+  stov = stov.filter((d) => d.t > 0);
   maalTimer -= dt; if (maalTimer <= 0) { maalTimer = 0.5; oppdaterMaal(); }
   if (iDialog) { if (aTrykk) { aTrykk = false; nesteSide(); } return; }
   if (aTrykk) { aTrykk = false; handling(); if (iDialog || tilstand !== 'spill') return; }
@@ -519,7 +527,12 @@ function oppdater(dt) {
       if (st && sperreMelding <= 0) { melding(st, 3); sperreMelding = 3; }
     }
     sp.steg += dt * 8;
-    if (Math.floor(sp.steg / 2) !== sistSteg) { sistSteg = Math.floor(sp.steg / 2); LYD.steg(); }
+    if (Math.floor(sp.steg / 2) !== sistSteg) {
+      sistSteg = Math.floor(sp.steg / 2); LYD.steg();
+      const under = kart[spTy()] && kart[spTy()][spTx()];
+      if (under === '.' || under === ',' || under === 'b' || under === 't') for (let i = 0; i < 2; i++)
+        stov.push({ x: sp.x + 2 + Math.random() * 6, y: sp.y + sp.h - 1, vx: (Math.random() - 0.5) * 14, vy: -6 - Math.random() * 6, t: 0.45, s: 1 + (Math.random() < 0.4), f: under === ',' ? '#7fe08f' : under === '.' ? '#e8d3a6' : '#8b9bb4' });
+    }
   }
   if (sperreMelding > 0) sperreMelding -= dt;
   if (sp.usarbar > 0) sp.usarbar -= dt;
@@ -820,8 +833,7 @@ function tegnMaake(m) {
 function tegn() {
   r(0, 0, VW, VH, '#0e0f18');
   const kx = Math.round(kamX), ky = Math.round(kamY);
-  const x0 = Math.max(0, Math.floor(kx / TS)), y0 = Math.max(0, Math.floor(ky / TS));
-  for (let y = y0; y <= y0 + VH / TS + 1 && y < MH; y++) for (let x = x0; x <= x0 + VW / TS + 1 && x < MW; x++) tegnRute(x, y, x * TS - kx, y * TS - ky);
+  tegnKart(kx, ky);
 
   for (const m of mynter) if (!m.tatt) {
     const X = m.x - kx, Y = m.y - ky + (Math.floor(tid * 3 + m.x) % 2), f = Math.floor(tid * 6 + m.x) % 4, w = [4, 3, 1, 3][f];
@@ -839,8 +851,12 @@ function tegn() {
   for (const s of skudd) { const X = Math.round(s.x - kx), Y = Math.round(s.y - ky); r(X, Y, 6, 6, '#9fe8ff'); r(X + 1, Y + 1, 4, 4, '#ffffff'); }
   for (const p of gnistRegn) r(Math.round(p.x - kx), Math.round(p.y - ky), 2, 2, Math.random() < 0.5 ? '#ffffff' : '#ffcd3c');
   for (const m of maaker) tegnMaake(m);
+  for (const d of stov) { g.globalAlpha = Math.min(1, d.t * 2) * 0.7; r(Math.round(d.x - kx), Math.round(d.y - ky), d.s, d.s, d.f); }
+  g.globalAlpha = 1;
 
+  tegnFargetone();
   tegnLys(kx, ky);
+  tegnVignett();
 
   // Gløder oppå mørket
   if (boss && boss.fase !== 'sover') glod(boss.x + 11 - kx, boss.y + 11 - ky, 50, 'rgb(65,166,246)', 0.3);
@@ -854,6 +870,27 @@ function tegn() {
   for (const f of flyt) { const w = g.measureText(f.tekst).width, X = Math.round(f.x - kx - w / 2), Y = Math.round(f.y - ky);
     g.globalAlpha = Math.min(1, f.t * 2); g.fillStyle = '#1a1c2c'; g.fillText(f.tekst, X + 1, Y + 1); g.fillStyle = f.farge; g.fillText(f.tekst, X, Y); g.globalAlpha = 1; }
   if (tilstand === 'spill' && !iDialog) tegnMaalPil(kx, ky);
+}
+
+// Varm tone morgen og kveld utendørs
+function tegnFargetone() {
+  if (!OMR[omr].natt) return;
+  const m = minutt();
+  const kveld = m >= 17 * 60 && m < 21 * 60 ? Math.sin((m - 17 * 60) / 240 * Math.PI) : 0;
+  const morgen = m >= 6 * 60 && m < 9 * 60 ? Math.sin((m - 6 * 60) / 180 * Math.PI) : 0;
+  if (kveld > 0) { g.fillStyle = 'rgba(255,120,60,' + (0.14 * kveld) + ')'; g.fillRect(0, 0, VW, VH); }
+  if (morgen > 0) { g.fillStyle = 'rgba(255,190,150,' + (0.09 * morgen) + ')'; g.fillRect(0, 0, VW, VH); }
+}
+// Mørkere hjørner gir dybde
+const vignett = { cv: document.createElement('canvas'), w: 0 };
+function tegnVignett() {
+  if (vignett.w !== VW) {
+    vignett.w = VW; vignett.cv.width = VW; vignett.cv.height = VH;
+    const x = vignett.cv.getContext('2d'), gr = x.createRadialGradient(VW / 2, VH / 2, VH * 0.45, VW / 2, VH / 2, Math.hypot(VW, VH) * 0.62);
+    gr.addColorStop(0, 'rgba(10,8,24,0)'); gr.addColorStop(1, 'rgba(10,8,24,0.42)');
+    x.fillStyle = gr; x.fillRect(0, 0, VW, VH);
+  }
+  g.drawImage(vignett.cv, 0, 0);
 }
 
 function tegnLys(kx, ky) {
