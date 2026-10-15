@@ -126,6 +126,8 @@
   #lagEvne h2 { font-size:28px; margin:0; }
   #lagEvne p { margin:4px 0 8px; font-size:15px; }
   #lagEvne .ctrl { padding:6px 10px; display:inline-block; }
+  #lagSnu .snuIkon { font-size:54px; display:inline-block; animation:snu 2.4s ease-in-out infinite; }
+  @keyframes snu { 0%,30% { transform:rotate(0); } 60%,100% { transform:rotate(-90deg); } }
   #lagEvne .videre { font-size:12px; color:var(--dempet); margin-top:8px; letter-spacing:.1em; text-transform:uppercase; }
 </style>
 </head>
@@ -161,7 +163,7 @@
   <div class="ctrl bareTouch"><b>Venstre tommel</b>: gå &nbsp;·&nbsp; <b>Høyre tommel</b>: hopp og støt<br>Hold inne Hopp for å hoppe høyere</div>
   <button class="knapp" id="bFortsett" style="display:none">Fortsett</button>
   <button class="knapp" id="bNy">Start</button>
-  <div class="liten bareTouch" id="snuTips">Tips: snu telefonen på tvers for større bilde.</div>
+  <div class="liten bareTouch" id="snuTips">Anbefalt: snu telefonen på tvers for større bilde.</div>
   <a class="knapp sek" href="../">Tilbake til Voltbase</a>
 </div></div>
 
@@ -176,11 +178,20 @@
   </div>
 </div></div>
 
+<div class="lag" id="lagSnu"><div class="kort">
+  <div class="snuIkon">📱</div>
+  <h2 class="serif">Snu telefonen</h2>
+  <p>Gnist er laget for liggende format. Da blir bildet større og knappene sitter bedre.</p>
+  <button class="knapp" id="bSnuOk">Spill i stående likevel</button>
+</div></div>
+
 <div class="lag" id="lagPause"><div class="kort">
   <h2 class="serif">Pause</h2>
   <p id="pauseMaal"></p>
   <button class="knapp" id="bPauseFortsett">Fortsett</button>
   <button class="knapp sek" id="bLyd">Lyd: på</button>
+  <button class="knapp sek" id="bVib">Vibrasjon: på</button>
+  <button class="knapp sek" id="bRist">Risting: full</button>
   <button class="knapp sek" id="bSjekk">Tilbake til siste sjekkpunkt</button>
   <button class="knapp sek fare" id="bOmstart">Start helt på nytt</button>
   <a class="knapp sek" href="../">Tilbake til Voltbase</a>
@@ -301,6 +312,7 @@ const FIENDE_DEF = [{ x0: 22, x1: 31, y: 23 }, { x0: 36, x1: 43, y: 31 }, { x0: 
 const LYSBUE = { x: 28, y0: 27, y1: 31, per: 3.2 };   // tidsstyrt lysbue i kjelleren
 const KRAN = { x0: 65 * T, x1: 69 * T, y: 8 * T, w: 3 * T, x: 65 * T, dx: 0, t: 0 };
 const hazListe = [];
+const KJELLERLYS = [[16, 27], [29, 27], [40, 27], [6, 28]];   // svake taklamper i kjelleren
 
 // ---------- tilstand ----------
 const S = { mode: 'meny', t: 0, ev: { dobbel: false, hansker: false, stot: false, liv: false, hemmelig: false }, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
@@ -315,6 +327,14 @@ let lyn = null;
 const cam = { x: 0, y: 0, look: 0, anker: 0, zoom: 1 };
 const I = { left: false, right: false, down: false, jumpHeld: false, jumpP: false, dashP: false };
 const K = {}, TS = { left: false, right: false, jump: false, dash: false };
+
+// ---------- innstillinger (egen nøkkel, påvirker ikke lagret fremgang) ----------
+const INNST = { vib: true, rist: true };
+try { const d = JSON.parse(localStorage.getItem(NOKKEL + '-innst') || 'null'); if (d && typeof d === 'object') { if (typeof d.vib === 'boolean') INNST.vib = d.vib; if (typeof d.rist === 'boolean') INNST.rist = d.rist; } } catch (e) {}
+function lagreInnst() { try { localStorage.setItem(NOKKEL + '-innst', JSON.stringify(INNST)); } catch (e) {} visInnst(); }
+function visInnst() { $('#bVib').textContent = 'Vibrasjon: ' + (INNST.vib ? 'på' : 'av'); $('#bRist').textContent = 'Risting: ' + (INNST.rist ? 'full' : 'redusert'); }
+// kort vibrasjon på mobil (støttes ikke på alle telefoner, f.eks. iPhone)
+function vib(m) { if (!INNST.vib || !erTouch || !navigator.vibrate) return; try { navigator.vibrate(m); } catch (e) {} }
 
 // ---------- lyd (lages med Web Audio, ingen lydfiler) ----------
 const A = { c: null, master: null, stoy: null, surr: null };
@@ -560,7 +580,7 @@ const chunks = new Map();
 function bakvegg(g, x, y) {
   const X = x * T, Y = y * T;
   const hall = erHall(x, y);
-  g.fillStyle = hall ? '#141628' : '#131823'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
+  g.fillStyle = hall ? '#141628' : '#182030'; g.fillRect(X - .5, Y - .5, T + 1, T + 1);
   if (hall) {
     if (x % 2 === 0) { g.fillStyle = 'rgba(150,160,230,.06)'; g.fillRect(X, Y, 1.5, T); }
     if (y === 18) { g.save(); g.beginPath(); g.rect(X, Y + 18, T, 14); g.clip();
@@ -689,6 +709,7 @@ function resize() {
   const gr = vg.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .75);
   gr.addColorStop(0, 'rgba(0,0,8,0)'); gr.addColorStop(1, 'rgba(0,0,8,.6)'); vg.fillStyle = gr; vg.fillRect(0, 0, w, h);
   $('#snuTips').style.display = cssH > cssW ? '' : 'none';
+  if (S.mode === 'snu' && cssW > cssH) lukkSnu();
   oppdaterKamera(0, true);
 }
 
@@ -784,7 +805,7 @@ function maalPunkt() {
   return null;
 }
 function sjekkMaal(tving) { const m = maalTekst(); if (m !== S.maal || tving) { S.maal = m; $('#maal').innerHTML = '<b>Mål:</b> ' + m; $('#maal').classList.add('vis'); maalTid = 5; } }
-function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
+function visLag(id) { ['#lagMeny', '#lagEvne', '#lagPause', '#lagSlutt', '#lagSnu'].forEach(s => $(s).classList.toggle('vis', s === id)); S.panelT = performance.now();
   $('#hud').classList.toggle('vis', id === null || id === '#lagPause' || id === '#lagEvne'); $('#touch').classList.toggle('vis', id === null);
   if (id && id !== '#lagEvne') { const k = $(id + ' .knapp'); if (k) setTimeout(() => k.focus({ preventScroll: true }), 50); } }
 function primar() { if (performance.now() - S.panelT < 350) return; const l = document.querySelector('.lag.vis'); if (!l) return;
@@ -844,7 +865,7 @@ function startBoss() {
 }
 function skade(fraX, felle) {
   if (P.inv > 0 || S.ending || S.dod > 0 || P.dashT > 0) return;
-  P.hp--; P.inv = 1.3; S.shake = .35; S.flash = .45; S.flashF = '255,60,60'; lyd('au'); S.slow = .12;
+  P.hp--; P.inv = 1.3; S.shake = .35; S.flash = .45; S.flashF = '255,60,60'; lyd('au'); S.slow = .12; vib(P.hp <= 0 ? [60, 40, 120] : 70);
   sprut(P.x + P.w / 2, P.y + P.h / 2, 14, 'r', 220); hud(); pop('#liv');
   if (P.hp <= 0) { S.dod = 1.2; S.dodsfall++; lyd('dod'); sprut(P.x + P.w / 2, P.y + P.h / 2, 40, 'c', 300); return; }
   if (felle) { P.x = P.safeX; P.y = P.safeY; P.vx = P.vy = 0; P.dashT = 0; ring(P.x + P.w / 2, P.y + P.h / 2, 12, 'c', 120); }
@@ -854,7 +875,7 @@ function faaEvne(f) {
   S.ev[f.id] = true; lagre();
   const fx = f.x * T + T / 2, fy = f.y * T + T / 2;
   if (f.liten) { P.max = 5; P.hp = P.max; lyd('liv'); sprut(fx, fy, 30, 'c', 200); toast('Livsgnist funnet! Du tåler ett treff mer.'); hud(); pop('#liv'); return; }
-  lyd('evne'); S.flash = .9; S.flashF = '255,235,190'; S.shake = .3; GN.flare = 1;
+  lyd('evne'); S.flash = .9; S.flashF = '255,235,190'; S.shake = .3; GN.flare = 1; vib([30, 60, 30]);
   sprut(fx, fy, 60, 'w', 320); sprut(fx, fy, 30, 'c', 200); ring(fx, fy, 24, 'w', 260);
   if (f.id === 'dobbel') P.air = 1;
   $('#evneIkon').innerHTML = IKON[f.id]; $('#evneNavn').textContent = f.navn; $('#evneTekst').textContent = f.tekst;
@@ -879,7 +900,7 @@ function oppdaterSpiller(dt) {
   if (I.jumpP) { I.jumpP = false; if (!laast) p.buf = .14; }
   if (I.dashP) { I.dashP = false; if (!laast && S.ev.stot && p.canDash && p.dashCd <= 0 && p.dashT <= 0) {
     if (L) p.face = -1; if (R) p.face = 1;
-    p.dashT = .16; p.canDash = false; p.dashCd = .3; p.vy = 0; lyd('stot'); S.shake = .12; GN.flare = .8;
+    p.dashT = .16; p.canDash = false; p.dashCd = .3; p.vy = 0; lyd('stot'); S.shake = .12; GN.flare = .8; vib(18);
     ring(p.x + p.w / 2, p.y + p.h / 2, 10, 'c', 140, .6); } }
   p.buf -= dt; p.dashCd -= dt; p.inv -= dt; p.landT -= dt;
   p.coyote = p.onGround ? .11 : p.coyote - dt;
@@ -912,7 +933,7 @@ function oppdaterSpiller(dt) {
   flyttX(p, p.vx * dt);
   if (flyttY(p, p.vy * dt) === 1) p.onGround = true;
   if (p.onGround) { p.air = S.ev.dobbel ? 1 : 0; p.canDash = true;
-    if (!varBakke && vyFor > 250) { const k = clamp(vyFor / 820, .3, 1); p.sx = 1 + .32 * k; p.sy = 1 - .3 * k; p.landT = .12 * k; stov(p.x + p.w / 2, p.y + p.h, 4 + (8 * k | 0), k); lyd('land'); } }
+    if (!varBakke && vyFor > 250) { const k = clamp(vyFor / 820, .3, 1); p.sx = 1 + .32 * k; p.sy = 1 - .3 * k; p.landT = .12 * k; stov(p.x + p.w / 2, p.y + p.h, 4 + (8 * k | 0), k); lyd('land'); if (k > .7) vib(12); } }
   if (!p.onGround && p.vy > 0) p.fallT += dt; else p.fallT = 0;
   p.sx += (1 - p.sx) * Math.min(1, dt * 13); p.sy += (1 - p.sy) * Math.min(1, dt * 13);
   if (p.onGround && Math.abs(p.vx) > 20) { const for_ = Math.sin(p.anim); p.anim += dt * Math.abs(p.vx) * .052; if (Math.sign(for_) !== Math.sign(Math.sin(p.anim))) { lyd('steg'); if (Math.random() < .5) stov(p.x + p.w / 2, p.y + p.h, 1, .3); } }
@@ -952,7 +973,7 @@ function oppdaterVerden(dt) {
   for (const e of fiender) { if (!e.liv) continue; e.t += dt;
     e.x += e.dir * 46 * dt; if (e.x < e.x0) { e.x = e.x0; e.dir = 1; } if (e.x + e.w > e.x1) { e.x = e.x1 - e.w; e.dir = -1; }
     if (P.x + P.w > e.x && P.x < e.x + e.w && P.y + P.h > e.y && P.y < e.y + e.h) {
-      if (P.dashT > 0 || (P.vy > 0 && P.y + P.h - e.y < 14)) { e.liv = false; lyd('trakk'); sprut(e.x + e.w / 2, e.y + e.h / 2, 18, 'c', 200); S.shake = .15;
+      if (P.dashT > 0 || (P.vy > 0 && P.y + P.h - e.y < 14)) { e.liv = false; lyd('trakk'); vib(15); sprut(e.x + e.w / 2, e.y + e.h / 2, 18, 'c', 200); S.shake = .15;
         if (P.dashT <= 0) { P.vy = -470; P.air = S.ev.dobbel ? 1 : 0; P.canDash = true; P.sy = 1.2; P.sx = .85; } }
       else skade(e.x + e.w / 2, false); } }
   // lysbue i kjelleren
@@ -960,7 +981,7 @@ function oppdaterVerden(dt) {
     if (fa === 2 && Math.abs(pcx - (LYSBUE.x + .5) * T) < 10 + P.w / 2 && P.y + P.h > LYSBUE.y0 * T && P.y < (LYSBUE.y1 + 1) * T) skade((LYSBUE.x + .5) * T, false); }
   // brytere
   if (B.aktiv && B.fase === 'kamp') BRYTERE.forEach(b => { if (b.av) return; const bx = b.x * T + T / 2, by = b.y * T + T / 2;
-    if (Math.abs(pcx - bx) < 20 && Math.abs(pcy - by) < 26) { b.av = true; B.hp--; B.stun = 1.8; lyd('bryter'); S.shake = .5; S.flash = .5; S.flashF = '200,150,255'; S.hallFlimmer = 1;
+    if (Math.abs(pcx - bx) < 20 && Math.abs(pcy - by) < 26) { b.av = true; B.hp--; B.stun = 1.8; lyd('bryter'); S.shake = .5; vib(50); S.flash = .5; S.flashF = '200,150,255'; S.hallFlimmer = 1;
       sprut(bx, by, 26, 'p', 240); lyn = { x1: bx, y1: by, x2: B.x, y2: B.y, t: .35 }; prosj.length = 0; striker.length = 0;
       if (B.hp <= 0) { B.fase = 'dod'; B.dod = 2.4; S.slow = .9; lyd('bossdod'); }
       else toast(`Sikring ${3 - B.hp} av 3 slått av`);
@@ -1295,6 +1316,8 @@ function tegnDynamiskeFliser() {
     if (t0 === DOOR) { const gr = ctx.createLinearGradient(X, 0, X + T, 0); gr.addColorStop(0, '#2b3044'); gr.addColorStop(.5, '#424a64'); gr.addColorStop(1, '#22263a');
       ctx.fillStyle = gr; ctx.fillRect(X + 2, Y0, T - 4, Y1 - Y0 - 6); ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let y = Y0 + 8; y < Y1 - 6; y += 12) ctx.fillRect(X + 2, y, T - 4, 2);
       ctx.fillStyle = 'rgba(255,120,60,.8)'; ctx.fillRect(X + T / 2 - 1.5, Y0, 3, Y1 - Y0 - 6); } }
+  for (const [x, y] of KJELLERLYS) { if (x === 6 && !S.ev.hemmelig) continue; const X = x * T + T / 2, Y = y * T; if (!synlig(X, Y, 80)) continue;
+    ctx.fillStyle = '#2a3040'; rr(ctx, X - 10, Y, 20, 5, 2); ctx.fill(); ctx.fillStyle = 'rgba(255,236,190,.85)'; ctx.fillRect(X - 7, Y + 5, 14, 2); }
   // sprekker i veggen foran det hemmelige rommet
   if (!S.ev.hemmelig && synlig(10 * T, 29 * T, 100)) { ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.2; ctx.beginPath();
     ctx.moveTo(10 * T - 2, 28 * T + 6); ctx.lineTo(10 * T - 8, 29 * T); ctx.lineTo(10 * T - 4, 29 * T + 14); ctx.lineTo(10 * T - 10, 30 * T + 10); ctx.stroke(); }
@@ -1317,6 +1340,7 @@ function samleLys() {
   for (const s of striker) L(s.x, 15 * T, s.aktiv > 0 ? 260 : 90, s.aktiv > 0 ? .9 : .35);
   for (const e of fiender) if (e.liv && synlig(e.x, e.y, 80)) L(e.x + e.w / 2, e.y + 4, 50, .5);
   { const fa = lysbueFase(); if (fa && synlig(LYSBUE.x * T, LYSBUE.y0 * T, 120)) L((LYSBUE.x + .5) * T, 29.5 * T, fa === 2 ? 170 : 60, fa === 2 ? .85 : .4); }
+  for (const [x, y] of KJELLERLYS) if (synlig(x * T, y * T, 200)) L(x * T + T / 2, y * T + 8, 150, .45);
   if (lyn) L((lyn.x1 + lyn.x2) / 2, (lyn.y1 + lyn.y2) / 2, 260, .8);
   if (S.power > 0) { const vw = cssW / skala; for (let x = 0; x < MW * T; x += 260) if (x > cam.x - 300 && x < cam.x + vw + 300) L(x, 10 * T, 600, S.power * .6); }
   if (S.hallLys > 0 && synlig(87 * T, 12 * T, 600)) for (let x = 76; x <= 99; x += 6) L(x * T, 9 * T, 300, .55 * S.hallLys);
@@ -1349,6 +1373,7 @@ function tegnGlod() {
   for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) { glod(SPR.c, e.x + e.w / 2, e.y + 4, 18 + Math.sin(e.t * 9) * 3, .6);
     if (Math.sin(e.t * 23) > .7) { ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(190,245,255,.9)'; jagget(e.x + 4, e.y + 2, e.x + e.w - 4, e.y - 3, 3, 4, (e.t * 30 | 0)); } }
   if (!S.ev.hemmelig && synlig(10 * T, 29 * T, 100)) glod(SPR.c, 10 * T - 6, 29.5 * T, 14 + 4 * Math.sin(S.t * 2), .35);
+  for (const [x, y] of KJELLERLYS) { if (x === 6 && !S.ev.hemmelig) continue; if (synlig(x * T, y * T, 120)) glod(SPR.w, x * T + T / 2, y * T + 8, 34, .35); }
   if (B.aktiv) { const a = B.fase === 'dod' ? clamp(B.dod / 2.4, 0, 1) : 1, rs = 3 - B.hp;
     glod(rs === 2 ? SPR.m : SPR.p, B.x, B.y, 170 + B.varsel * 80 + B.lad * 60, (.55 + .2 * Math.sin(S.t * 5)) * a); glod(SPR.h, B.x, B.y - 4, 22 + B.lad * 12, .7 * a);
     if (B.stun <= 0 && B.fase !== 'dod') { ctx.globalAlpha = .8; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(220,180,255,.9)';
@@ -1391,7 +1416,7 @@ function tegnLys() {
 let camX = 0, camY = 0;
 function tegn() {
   S.frame++;
-  const sh = S.shake > 0 ? Math.min(1, S.shake) * 10 : 0;
+  const sh = S.shake > 0 ? Math.min(1, S.shake) * (INNST.rist ? 10 : 2.5) : 0;
   camX = cam.x + (Math.random() - .5) * sh; camY = cam.y + (Math.random() - .5) * sh;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   tegnBakgrunn(camX, camY);
@@ -1424,7 +1449,7 @@ function tegn() {
   tegnForgrunn();
   tegnMotes(true);
   if (vign) ctx.drawImage(vign, 0, 0, cv.width, cv.height);
-  if (S.flash > 0) { ctx.fillStyle = `rgba(${S.flashF},${Math.min(1, S.flash) * .55})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+  if (S.flash > 0) { ctx.fillStyle = `rgba(${S.flashF},${Math.min(1, S.flash) * (INNST.rist ? .55 : .2)})`; ctx.fillRect(0, 0, cv.width, cv.height); }
   if (S.dod > 0) { ctx.fillStyle = `rgba(2,4,12,${clamp((1.2 - S.dod) / .6, 0, 1) * .85})`; ctx.fillRect(0, 0, cv.width, cv.height); }
 }
 
@@ -1446,7 +1471,7 @@ function loop(n) {
     if (S.hallFlimmer > 0) S.hallFlimmer -= rdt;
     if (S.bossDone && S.hallLys < 1) S.hallLys = Math.min(1, S.hallLys + rdt * .5);
     const ptx = Math.floor((P.x + P.w / 2) / T), pty = Math.floor((P.y + P.h / 2) / T);
-    let mal = inne(ptx, pty) ? .68 : .5; if (erHall(ptx, pty)) mal = lerp(.7, .4, S.hallLys) + (S.hallFlimmer > 0 && Math.sin(S.t * 50) > 0 ? .15 : 0);
+    let mal = inne(ptx, pty) ? .58 : .5; if (erHall(ptx, pty)) mal = lerp(.7, .4, S.hallLys) + (S.hallFlimmer > 0 && Math.sin(S.t * 50) > 0 ? .15 : 0);
     S.mork += (mal - S.mork) * Math.min(1, rdt * 2);
     if (hintTid > 0) { hintTid -= rdt; if (hintTid <= 0) $('#hint').classList.remove('vis'); }
     if (bannerTid > 0) { bannerTid -= rdt; if (bannerTid <= 0) $('#banner').classList.remove('vis'); }
@@ -1531,8 +1556,14 @@ $('#bOmstart').addEventListener('click', () => {
   try { localStorage.removeItem(NOKKEL); } catch (e) {} BG.midtLys = null; start(null);
 });
 $('#lagEvne').addEventListener('pointerdown', e => { e.preventDefault(); primar(); });
-settLyd(lydPa);
+$('#bSnuOk').addEventListener('click', lukkSnu);
+$('#bVib').addEventListener('click', () => { INNST.vib = !INNST.vib; lagreInnst(); vib(30); });
+$('#bRist').addEventListener('click', () => { INNST.rist = !INNST.rist; lagreInnst(); });
+settLyd(lydPa); visInnst();
+let snuVist = false;
+function lukkSnu() { if (S.mode !== 'snu') return; S.mode = 'spill'; sist = performance.now(); visLag(null); }
 function start(lagret) { lydInit(); nyttSpill(lagret); S.mode = 'spill'; sist = performance.now(); visLag(null); setTimeout(() => sjekkMaal(true), 1500);
+  if (erTouch && cssH > cssW && !snuVist) { snuVist = true; S.mode = 'snu'; visLag('#lagSnu'); }
   if (!lagret) { banner('Gnist', 'Byggeplassen'); S.hintSett.add('omr-Byggeplassen'); setTimeout(() => hint(null, erTouch ? 'Gå med venstre tommel. Hopp med høyre. Hold inne for høyere hopp.' : 'Gå med piltastene. Hopp med mellomrom. Hold inne for høyere hopp.', 5), 2600); }
   else S.hintSett.add('omr-' + omraade(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T))); }
 $('#bNy').addEventListener('click', () => {
