@@ -30,11 +30,13 @@ function tegnBakgrunn(kx, ky) {
     ctx.globalAlpha = .045 + .02 * Math.sin(S.t * .5 + i * 2); ctx.drawImage(STRALE, -ch * .12, 0, ch * (.18 + i * .06), ch * 1.6); ctx.restore(); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   lag(BG.midt, .3, .5, 1);
-  if (BG.midtLys && S.power > 0) lag(BG.midtLys, .3, .5, S.power);
+  // vinduene i ruinbyen tennes litt etter litt etter hvert som strømmen kommer tilbake
+  const byLys = Math.max(S.power, lysNiva() * .5);
+  if (byLys > 0) { if (!BG.midtLys) BG.midtLys = lagMidt(true); lag(BG.midtLys, .3, .5, byLys); }
   // blinkende varsellys på kranene
-  { const y0 = lagY(.5), blink = (Math.sin(S.t * 2.4) > .2) ? 1 : .25; ctx.globalCompositeOperation = 'lighter';
+  if (byLys > 0) { const y0 = lagY(.5), blink = (Math.sin(S.t * 2.4) > .2) ? 1 : .25; ctx.globalCompositeOperation = 'lighter';
     for (let x = lagX0(.3) - lw; x < cw + lw; x += lw) for (const [lx, ly] of KRANLYS) { const sx = x + lx * k, sy = y0 + ly * k; if (sx < -50 || sx > cw + 50) continue;
-      glod(SPR.r, sx, sy, 16 * k, .9 * blink); } ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
+      glod(SPR.r, sx, sy, 16 * k, .9 * blink * Math.min(1, byLys * 3)); } ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
   lag(BG.naer, .55, .8, 1);
   // tåkebanker som driver
   for (let i = 0; i < 3; i++) { const w = cw * 1.1, x = ((S.t * (10 + i * 7) * dpr - kx * skala * dpr * (.6 + i * .1) + i * w * .6) % (cw + w) + cw + w) % (cw + w) - w;
@@ -63,7 +65,8 @@ function tegnLampe(c, i) {
   const X = c.x * T + T / 2, Y = (c.y + 1) * T, lit = S.cpLit.has(i);
   ctx.strokeStyle = '#1b2232'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, Y - 26); ctx.lineTo(X - 9, Y); ctx.moveTo(X, Y - 26); ctx.lineTo(X + 9, Y); ctx.moveTo(X, Y - 26); ctx.lineTo(X, Y); ctx.stroke();
   ctx.fillStyle = '#e8b730'; rr(ctx, X - 9, Y - 36, 18, 12, 3); ctx.fill();
-  ctx.fillStyle = lit ? '#fff6d2' : '#3a3f4e'; rr(ctx, X - 6, Y - 34, 12, 8, 2); ctx.fill();
+  const naer = !lit && Math.abs(P.x + P.w / 2 - X) < 3 * T && Math.abs(P.y + P.h - Y) < 2 * T, flimmer = naer && Math.sin(S.t * 31 + i) * Math.sin(S.t * 7.3) > .35;
+  ctx.fillStyle = lit ? '#fff6d2' : flimmer ? '#9a8f6a' : '#3a3f4e'; rr(ctx, X - 6, Y - 34, 12, 8, 2); ctx.fill();
 }
 function tegnBryter(b) {
   const X = b.x * T + T / 2, Y = (b.y + 1) * T;

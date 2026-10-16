@@ -30,38 +30,63 @@ function myk(g, x, y, rx, ry, farge, a) { g.save(); g.translate(x, y); g.scale(1
   gr.addColorStop(0, `rgba(${farge},${a})`); gr.addColorStop(1, `rgba(${farge},0)`); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fill(); g.restore(); }
 function lagHimmel() {
   const c = nyC(LW, LH), g = c.getContext('2d'), r = rng(7);
+  // en død verden: kald, tung himmel uten bylys under skyene
   let gr = g.createLinearGradient(0, 0, 0, LH);
-  gr.addColorStop(0, '#050b1f'); gr.addColorStop(.38, '#0e2245'); gr.addColorStop(.66, '#22405f'); gr.addColorStop(.86, '#3b4a69'); gr.addColorStop(1, '#58506b');
+  gr.addColorStop(0, '#04070f'); gr.addColorStop(.35, '#0b1729'); gr.addColorStop(.62, '#18293d'); gr.addColorStop(.84, '#2a3546'); gr.addColorStop(1, '#3a3b48');
   g.fillStyle = gr; g.fillRect(0, 0, LW, LH);
-  myk(g, LW * .28, LH * .98, LW * .62, LH * .4, '255,165,115', .2);
-  myk(g, LW * .66, LH * .45, 700, 380, '70,175,195', .12);
-  for (let i = 0; i < 320; i++) { const x = r() * LW, y = r() * LH * .66, s = r() * 1.3 + .2, a = (.2 + r() * .75) * (1 - y / (LH * .7));
-    g.fillStyle = `rgba(225,238,255,${a})`; g.beginPath(); g.arc(x, y, s, 0, 7); g.fill(); }
-  for (let i = 0; i < 10; i++) myk(g, r() * LW, r() * LH * .5, 6, 6, '200,230,255', .5);
+  myk(g, LW * .3, LH * .98, LW * .62, LH * .38, '170,150,140', .1);
+  for (let i = 0; i < 260; i++) { const x = r() * LW, y = r() * LH * .6, s = r() * 1.2 + .2, a = (.15 + r() * .6) * (1 - y / (LH * .65));
+    g.fillStyle = `rgba(220,232,250,${a})`; g.beginPath(); g.arc(x, y, s, 0, 7); g.fill(); }
   const mx = LW * .74, my = LH * .19;
-  myk(g, mx, my, 430, 430, '180,212,255', .2); myk(g, mx, my, 150, 150, '210,228,255', .25);
-  gr = g.createRadialGradient(mx - 10, my - 12, 4, mx, my, 50); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.85, '#dbe6ff'); gr.addColorStop(1, 'rgba(219,230,255,0)');
+  myk(g, mx, my, 420, 420, '170,196,235', .16); myk(g, mx, my, 140, 140, '200,218,245', .22);
+  gr = g.createRadialGradient(mx - 10, my - 12, 4, mx, my, 50); gr.addColorStop(0, '#f4f7ff'); gr.addColorStop(.85, '#cfdaf0'); gr.addColorStop(1, 'rgba(207,218,240,0)');
   g.fillStyle = gr; g.beginPath(); g.arc(mx, my, 50, 0, 7); g.fill();
-  [[-14, -8, 9], [12, 6, 7], [-4, 16, 5], [16, -16, 4], [-20, 12, 4]].forEach(([dx, dy, s]) => { g.fillStyle = 'rgba(160,178,214,.28)'; g.beginPath(); g.arc(mx + dx, my + dy, s, 0, 7); g.fill(); });
-  for (let i = 0; i < 30; i++) { const x = r() * LW, y = LH * (.12 + r() * .55), w = 220 + r() * 520; myk(g, x, y, w, 18 + r() * 46, i % 3 ? '140,168,212' : '120,190,205', .05 + r() * .06); }
+  [[-14, -8, 9], [12, 6, 7], [-4, 16, 5], [16, -16, 4], [-20, 12, 4]].forEach(([dx, dy, s]) => { g.fillStyle = 'rgba(150,165,196,.28)'; g.beginPath(); g.arc(mx + dx, my + dy, s, 0, 7); g.fill(); });
+  // tunge skybanker: mørke klumper med kant av månelys
+  const sky = (cx, cy, w, h, n) => { for (let i = 0; i < n; i++) { const x = cx + (r() - .5) * w, y = cy + (r() - .5) * h * .6, rx = w * (.12 + r() * .18), ry = rx * (.35 + r() * .2);
+      const nar = Math.max(0, 1 - Math.hypot(x - mx, y - my) / 700);
+      myk(g, x, y - ry * .25, rx * 1.05, ry * 1.05, '150,170,205', .05 + nar * .16);
+      myk(g, x, y, rx, ry, '14,20,32', .55 + r() * .25); } };
+  sky(LW * .2, LH * .2, 700, 140, 26); sky(LW * .62, LH * .32, 900, 160, 30); sky(LW * .92, LH * .12, 500, 110, 16); sky(LW * .4, LH * .5, 1100, 120, 26);
+  for (let i = 0; i < 22; i++) { const x = r() * LW, y = LH * (.15 + r() * .5), w = 260 + r() * 520; myk(g, x, y, w, 16 + r() * 40, i % 3 ? '120,140,175' : '100,150,165', .04 + r() * .05); }
   return c;
 }
 function lagFjern() {
   return flislag((g, r) => {
     const base = 600;
+    // ruinbyen i det fjerne: knekte tårn, vinduer uten lys, og trær som vokser på takene
     let x = -30;
     while (x < LW) {
-      const w = 26 + r() * 70, h = 50 + Math.pow(r(), 1.6) * 270, s = r();
-      g.fillStyle = `rgb(${24 + s * 9 | 0},${38 + s * 11 | 0},${62 + s * 14 | 0})`; g.fillRect(x, base - h, w, h + 400);
-      g.fillStyle = 'rgba(120,160,210,.18)'; g.fillRect(x + w - 2, base - h, 2, h);
-      for (let yy = base - h + 8; yy < base - 6; yy += 9) for (let xx = x + 4; xx < x + w - 4; xx += 7)
-        if (r() < .2) { g.fillStyle = r() < .8 ? 'rgba(255,196,120,.55)' : 'rgba(170,220,255,.5)'; g.fillRect(xx, yy, 2, 3); }
-      if (r() < .22) { g.fillStyle = '#1d2c46'; g.fillRect(x + w / 2, base - h - 30, 2, 30); g.fillStyle = 'rgba(255,80,80,.9)'; g.beginPath(); g.arc(x + w / 2 + 1, base - h - 31, 2, 0, 7); g.fill(); }
+      const w = 26 + r() * 70, h = 50 + Math.pow(r(), 1.6) * 270, s = r(), knekt = r() < .55;
+      g.fillStyle = `rgb(${20 + s * 8 | 0},${30 + s * 9 | 0},${46 + s * 12 | 0})`;
+      g.beginPath(); g.moveTo(x, base + 400); g.lineTo(x, base - h);
+      if (knekt) { const n = 3 + (r() * 4 | 0); for (let i = 1; i <= n; i++) g.lineTo(x + w * i / n, base - h + (r() * .35 + (i === n ? .25 : 0)) * h * (r() < .5 ? 1 : .4)); }
+      else g.lineTo(x + w, base - h);
+      g.lineTo(x + w, base + 400); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(110,140,180,.12)'; g.fillRect(x + w - 2, base - h * (knekt ? .7 : 1), 2, h * (knekt ? .7 : 1));
+      for (let yy = base - h * (knekt ? .65 : 1) + 8; yy < base - 6; yy += 9) for (let xx = x + 4; xx < x + w - 4; xx += 7)
+        if (r() < .3) { g.fillStyle = 'rgba(4,7,14,.55)'; g.fillRect(xx, yy, 2.4, 3.4); }
+      if (r() < .35 && !knekt) { const tx = x + w * (.2 + r() * .6), ty = base - h + 3, str = 6 + r() * 7; g.fillStyle = g.fillStyle;
+        for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(tx + (r() - .5) * str * 1.6, ty - r() * str, str * (.35 + r() * .3), 0, 7); g.fill(); } }
       x += w + r() * 14;
     }
+    // gamle kraftmaster langs horisonten, noen har veltet; linjene henger slakt mellom dem
+    const mast = (mx, hoyde, helling) => { g.save(); g.translate(mx, base - 4); g.rotate(helling); g.strokeStyle = '#16202e'; g.lineWidth = 1.6; g.beginPath();
+      g.moveTo(-9, 0); g.lineTo(-2, -hoyde); g.moveTo(9, 0); g.lineTo(2, -hoyde); for (let y = 0; y > -hoyde; y -= 12) { const b = 9 - (-y / hoyde) * 7; g.moveTo(-b, y); g.lineTo(b, y - 12); g.moveTo(b, y); g.lineTo(-b, y - 12); }
+      g.moveTo(-16, -hoyde * .8); g.lineTo(16, -hoyde * .8); g.moveTo(-12, -hoyde * .92); g.lineTo(12, -hoyde * .92); g.stroke(); g.restore(); };
+    const master = [[140, 120, 0], [420, 112, .05], [700, 118, 0], [980, 100, .55], [1260, 116, -.04]];
+    master.forEach(([mx, h, a]) => mast(mx, h, a));
+    g.strokeStyle = 'rgba(20,30,44,.8)'; g.lineWidth = 1;
+    for (let i = 0; i < master.length - 1; i++) { const [a, ha, ra] = master[i], [b, hb, rb] = master[i + 1]; if (Math.abs(ra) > .2 || Math.abs(rb) > .2) continue;
+      for (const s of [-16, 16]) { g.beginPath(); g.moveTo(a + s, base - 4 - ha * .8); g.quadraticCurveTo((a + b) / 2, base - 4 - Math.min(ha, hb) * .8 + 40, b + s, base - 4 - hb * .8); g.stroke(); } }
+    // et stort, forlatt kraftverk med kjøletårn og piper
+    g.fillStyle = '#141d2b'; const kx = 1380;
+    g.beginPath(); g.moveTo(kx - 70, base); g.quadraticCurveTo(kx - 40, base - 120, kx - 52, base - 190); g.lineTo(kx + 52, base - 190); g.quadraticCurveTo(kx + 40, base - 120, kx + 70, base); g.closePath(); g.fill();
+    g.fillRect(kx + 80, base - 250, 14, 250); g.fillRect(kx + 104, base - 230, 12, 230); g.fillRect(kx + 60, base - 90, 120, 90);
+    g.fillStyle = 'rgba(120,150,190,.12)'; g.fillRect(kx + 80, base - 250, 14, 3); g.fillRect(kx + 104, base - 230, 12, 3);
     const gr = g.createLinearGradient(0, base - 200, 0, base + 60);
-    gr.addColorStop(0, 'rgba(70,98,135,0)'); gr.addColorStop(1, 'rgba(70,98,135,.6)'); g.fillStyle = gr; g.fillRect(0, base - 200, LW, 260);
-    g.fillStyle = '#26364f'; g.fillRect(0, base + 60, LW, LH);
+    gr.addColorStop(0, 'rgba(60,80,105,0)'); gr.addColorStop(1, 'rgba(60,80,105,.65)'); g.fillStyle = gr; g.fillRect(0, base - 200, LW, 260);
+    g.fillStyle = '#1e2a3c'; g.fillRect(0, base + 60, LW, LH);
   }, 11);
 }
 // posisjoner (i lagkoordinater) for blinkende varsellys på kranene i midtlaget
@@ -83,10 +108,18 @@ function lagMidt(lit) {
           if (ufull) { g.strokeStyle = 'rgba(150,90,60,.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx - 2, yt); g.lineTo(cx - 3, yt - 12); g.moveTo(cx + 2, yt); g.lineTo(cx + 4, yt - 10); g.stroke(); }
           if (k < nk) { const vis = r(), farge = r();
             if (lit && !ufull && vis < .6) { g.fillStyle = farge < .8 ? 'rgba(255,186,110,.32)' : 'rgba(190,225,255,.3)'; g.fillRect(cx + 6, y + 12, br / nk - 12, eh - 14);
-              g.fillStyle = 'rgba(255,215,150,.55)'; g.fillRect(cx + 6, y + 12, br / nk - 12, 2); } }
+              g.fillStyle = 'rgba(255,215,150,.55)'; g.fillRect(cx + 6, y + 12, br / nk - 12, 2); }
+            else if (!lit && !ufull && vis < .75) { g.fillStyle = 'rgba(3,6,12,.55)'; g.fillRect(cx + 6, y + 12, br / nk - 12, eh - 14); } }
         }
       }
       g.fillStyle = 'rgba(30,60,90,.6)'; g.fillRect(x0 + br * .2, base - eh * 2 + 9, br * .3, eh - 9);
+      for (let e = 1; e < et; e++) { const y = base - e * eh + 9;
+        for (let k = 0; k < 3; k++) { const vx = x0 + r() * br, l = 14 + r() * 40; g.strokeStyle = 'rgba(28,48,40,.85)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(vx, y); g.quadraticCurveTo(vx + 5, y + l * .5, vx - 2, y + l); g.stroke();
+          g.fillStyle = 'rgba(30,54,44,.8)'; for (let b = 8; b < l; b += 7) { g.beginPath(); g.ellipse(vx + (b % 14 ? 2 : -2), y + b, 2.6, 1.4, .6, 0, 7); g.fill(); } }
+        if (r() < .6) { const rx = x0 + r() * br; const rg = g.createLinearGradient(0, y, 0, y + 50); rg.addColorStop(0, 'rgba(120,70,40,.35)'); rg.addColorStop(1, 'rgba(120,70,40,0)'); g.fillStyle = rg; g.fillRect(rx, y, 3, 50); } }
+      // et sammenrast hjørne øverst
+      g.fillStyle = '#0a1220'; g.beginPath(); g.moveTo(x0 + br * .62, base - et * eh); g.lineTo(x0 + br * .8, base - et * eh + 46); g.lineTo(x0 + br + 9, base - et * eh + 30); g.lineTo(x0 + br + 9, base - et * eh - 4); g.closePath();
+      g.globalCompositeOperation = 'destination-out'; g.fill(); g.globalCompositeOperation = 'source-over';
     }
     function kran(x, top, jl, jr) {
       const w = 20; g.strokeStyle = mork; g.lineWidth = 3; g.beginPath();
@@ -156,6 +189,11 @@ function lagNaer() {
     for (let x = 0; x < LW; x += 3) { const h = 6 + Math.pow(r(), 2) * 34, l = (r() - .5) * 14;
       g.beginPath(); g.moveTo(x - 2, base + 1); g.quadraticCurveTo(x + l * .3, base - h * .5, x + l, base - h); g.lineTo(x + 2, base + 1); g.fill(); }
     for (let i = 0; i < 18; i++) { const x = r() * LW; g.beginPath(); g.ellipse(x, base + 4, 30 + r() * 70, 10 + r() * 14, 0, Math.PI, 0); g.fill(); }
+    g.save(); g.translate(1420, base); g.fillStyle = c; rr(g, -70, -30, 140, 26, 8); g.fill(); g.beginPath(); g.moveTo(-40, -30); g.lineTo(-22, -54); g.lineTo(30, -54); g.lineTo(48, -30); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(120,160,210,.1)'; g.fillRect(-18, -50, 20, 16); g.fillRect(8, -50, 18, 16); g.fillStyle = c; g.beginPath(); g.arc(-40, -4, 13, 0, 7); g.arc(42, -4, 13, 0, 7); g.fill(); g.restore();
+    for (const [bx, bh] of [[120, 120], [930, 150], [1560, 100]]) { g.strokeStyle = c; g.lineWidth = 4; g.beginPath(); g.moveTo(bx, base); g.quadraticCurveTo(bx + 6, base - bh * .5, bx - 4, base - bh); g.stroke();
+      for (let i = 0; i < 9; i++) { const a = r() * Math.PI * 2, d = r() * 34; g.beginPath(); g.arc(bx - 4 + Math.cos(a) * d, base - bh + Math.sin(a) * d * .7, 14 + r() * 12, 0, 7); g.fill(); } }
+    for (let i = 0; i < 14; i++) { const x = r() * LW, w = 26 + r() * 50; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(x + (r() - .5) * w, base - 6 - r() * 18, 8 + r() * 12, 0, 7); g.fill(); } }
     gr = g.createLinearGradient(0, base - 40, 0, base + 30); gr.addColorStop(0, 'rgba(50,85,105,0)'); gr.addColorStop(1, 'rgba(50,85,105,.25)');
     g.fillStyle = gr; g.fillRect(0, base - 40, LW, 70);
   }, 37);
@@ -244,6 +282,17 @@ function topp(g, x, y, pal) {
     else if (d < .16) { g.fillStyle = '#4b566c'; rr(g, X + 5, Y - 9, 18, 11, 2); g.fill(); g.fillStyle = 'rgba(200,220,255,.18)'; g.fillRect(X + 6, Y - 9, 16, 1.5); }
     else if (d < .2) { g.fillStyle = '#e2722e'; g.beginPath(); g.moveTo(X + 9, Y + 1); g.lineTo(X + 23, Y + 1); g.lineTo(X + 16, Y - 16); g.closePath(); g.fill();
       g.fillStyle = '#f2efe6'; g.fillRect(X + 12.5, Y - 8, 7, 2.5); g.fillStyle = '#2a2a2a'; g.fillRect(X + 7, Y - 1, 18, 3); }
+    // spor etter folk som jobbet her før strømmen forsvant: verktøykasser, sikringsskap, skilt og aggregater
+    else if (pal === PAL.ute && d < .26 && !erSol(x, y - 1) && !erSol(x + 1, y - 1)) { const v = hv(91);
+      if (v < .25) { g.fillStyle = '#7a3a24'; rr(g, X + 6, Y - 9, 20, 10, 1.5); g.fill(); g.fillStyle = '#5a2a1a'; g.fillRect(X + 6, Y - 6, 20, 1.5); g.strokeStyle = '#3a2418'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X + 12, Y - 9); g.lineTo(X + 12, Y - 12); g.lineTo(X + 20, Y - 12); g.lineTo(X + 20, Y - 9); g.stroke();
+        g.fillStyle = 'rgba(150,90,50,.5)'; g.fillRect(X + 9, Y - 4, 3, 3); }
+      else if (v < .5) { g.fillStyle = '#3d4650'; rr(g, X + 7, Y - 24, 16, 24, 1.5); g.fill(); g.fillStyle = '#2b3138'; g.save(); g.translate(X + 23, Y - 23); g.rotate(.5); g.fillRect(0, 0, 8, 21); g.restore();
+        g.fillStyle = '#1b1f24'; g.fillRect(X + 9, Y - 21, 12, 17); g.fillStyle = '#6a5a3a'; for (let i = 0; i < 4; i++) g.fillRect(X + 10 + i * 3, Y - 18, 2, 5); g.fillStyle = 'rgba(140,80,40,.6)'; g.fillRect(X + 8, Y - 24, 3, 14); }
+      else if (v < .75) { g.strokeStyle = '#2c2f36'; g.lineWidth = 2; g.beginPath(); g.moveTo(X + 16, Y); g.lineTo(X + 14, Y - 18); g.stroke(); g.save(); g.translate(X + 14, Y - 22); g.rotate(-.18);
+        g.fillStyle = '#b8922a'; g.beginPath(); g.moveTo(0, -8); g.lineTo(9, 7); g.lineTo(-9, 7); g.closePath(); g.fill(); g.fillStyle = '#2a2418'; g.fillRect(-1, -3, 2, 6); g.fillRect(-1, 4, 2, 1.6);
+        g.fillStyle = 'rgba(90,60,30,.5)'; g.beginPath(); g.moveTo(3, 1); g.lineTo(9, 7); g.lineTo(2, 7); g.closePath(); g.fill(); g.restore(); }
+      else { g.fillStyle = '#3a4a3a'; rr(g, X + 2, Y - 14, 28, 14, 2); g.fill(); g.fillStyle = '#26302a'; for (let i = 0; i < 5; i++) g.fillRect(X + 5 + i * 4, Y - 11, 2, 8); g.fillStyle = '#1a1f1c'; g.beginPath(); g.arc(X + 7, Y, 3, 0, 7); g.arc(X + 25, Y, 3, 0, 7); g.fill();
+        g.fillStyle = 'rgba(150,90,50,.55)'; g.fillRect(X + 22, Y - 14, 6, 3); g.strokeStyle = '#141414'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X + 28, Y - 6); g.quadraticCurveTo(X + 36, Y - 2, X + 34, Y + 1); g.stroke(); } }
     g.fillStyle = pal.mose; g.beginPath(); g.moveTo(X - 1, Y + 8);
     g.lineTo(X - 1, Y - 1); for (let i = 1; i <= 4; i++) g.quadraticCurveTo(X + (i - .5) * 8, Y - 2.5 - hv(20 + i) * 3, X + i * 8 + (i === 4 ? 1 : 0), Y - .5);
     g.lineTo(X + T + 1, Y + 8); g.closePath(); g.fill();

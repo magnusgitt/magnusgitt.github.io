@@ -31,7 +31,8 @@ const ST = { navn: 'ute', mf: [3, 7, 20], tint: [255, 255, 255], dis: [120, 170,
 function oppdaterStemning(dt, snap) {
   const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
   ST.navn = stemningFor(tx, ty); const m = STEMNINGER[ST.navn], k = snap ? 1 : 1 - Math.exp(-dt * 1.6);
-  for (const n of ['mf', 'tint', 'dis']) for (let i = 0; i < 3; i++) ST[n][i] += (m[n][i] - ST[n][i]) * k;
+  const varme = ST.navn === 'ute' ? Math.max(lysNiva(), S.power) : 0, VARM = { tint: [255, 238, 214], dis: [255, 190, 140] };
+  for (const n of ['mf', 'tint', 'dis']) for (let i = 0; i < 3; i++) { const mal = VARM[n] ? m[n][i] + (VARM[n][i] - m[n][i]) * varme * .6 : m[n][i]; ST[n][i] += (mal - ST[n][i]) * k; }
   ST.bloom += (m.bloom - ST.bloom) * k;
   for (const s of ['kjeller', 'hall', 'kabel', 'kraft']) { const v = ST.bgVekt[s] || 0, mal = m.bg === s ? 1 : 0; ST.bgVekt[s] = v + (mal - v) * k; }
 }
