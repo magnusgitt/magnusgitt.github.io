@@ -148,10 +148,11 @@ function loop(n) {
     if (S.mode === 'spill' && S.evneVent <= 0) { S.tid += dt; if (S.laas > 0) S.laas -= dt;
       velgKrok(); const steg = Math.ceil(dt / (1 / 120)), h = dt / steg; for (let i = 0; i < steg; i++) oppdaterSpiller(h);
       oppdaterVerden(dt); oppdaterProsj(dt); hudEvneTilstand(); hudKrok(); }
+    else if (S.mode === 'intro') oppdaterIntro(dt);
     else if (S.mode === 'slutt' || S.mode === 'meny') { KRAN.t += dt; KRAN.x = KRAN.x0 + (.5 - .5 * Math.cos(KRAN.t * .55)) * (KRAN.x1 - KRAN.x0); }
     hudVerk(); oppdaterMusikk();
     if (S.tidsmodus && S.mode === 'spill') { const m = Math.floor(S.tid / 60), sk = S.tid % 60; $('#tidtaker').textContent = `${m}:${sk < 10 ? '0' : ''}${sk.toFixed(1)}`; }
-    oppdaterPartikler(dt); oppdaterKamera(rdt); oppdaterStemning(rdt); maalYtelse(rdt);
+    oppdaterPartikler(dt); oppdaterKamera(rdt); introKamera(); oppdaterStemning(rdt); maalYtelse(rdt);
     S.shake = Math.max(0, S.shake - rdt); S.flash = Math.max(0, S.flash - rdt * 1.4);
     if (S.hallFlimmer > 0) S.hallFlimmer -= rdt;
     if (S.bossDone && S.hallLys < 1) S.hallLys = Math.min(1, S.hallLys + rdt * .5);
@@ -211,6 +212,7 @@ addEventListener('keydown', e => {
   const c = e.code;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
   lydInit();
+  if (S.mode === 'intro') { e.preventDefault(); if (!e.repeat && INTRO.t > .4) sluttIntro(); return; }
   if ((c === 'Escape' || c === 'KeyP') && S.mode !== 'dialog') { if (!e.repeat) { if (S.mode === 'tilpass') sluttTilpass(); else if (S.mode === 'evne') lukkEvne(); else if (S.mode === 'kart' || S.mode === 'verk') lukkPanel();
     else if ($('#lagFag').classList.contains('vis')) visLag('#lagPause'); else pauseBytt(); } return; }
   if (c === 'KeyM' && !e.repeat) { settLyd(!lydPa); return; }
@@ -380,10 +382,13 @@ addEventListener('resize', () => requestAnimationFrame(() => { brukKnapper(); if
 brukKnapper();
 let snuVist = false;
 function lukkSnu() { if (S.mode !== 'snu') return; S.mode = 'spill'; sist = performance.now(); visLag(null); }
-function start(lagret) { lydInit(); S.tidsmodus = false; nyttSpill(lagret); S.mode = 'spill'; sist = performance.now(); visLag(null); setTimeout(() => sjekkMaal(true), 1500);
+function start(lagret) { lydInit(); S.tidsmodus = false; nyttSpill(lagret); S.mode = 'spill'; sist = performance.now(); visLag(null);
+  ANIM.drakt = 'montor'; ANIM.overstyr = null; GN.skjult = false; INTRO.aktiv = false; INTRO.tatt = true;
+  // et nytt spill åpner med introen; snu-tipset kommer etter den
+  if (!lagret) { startIntro(); return; }
+  setTimeout(() => sjekkMaal(true), 1500);
   if (erTouch && cssH > cssW && !snuVist) { snuVist = true; S.mode = 'snu'; visLag('#lagSnu'); }
-  if (!lagret) { banner('Gnist', 'Byggeplassen'); S.hintSett.add('omr-Byggeplassen'); setTimeout(() => hint(null, erTouch ? 'Gå med venstre tommel. Hopp med høyre. Hold inne for høyere hopp.' : 'Gå med piltastene. Hopp med mellomrom. Hold inne for høyere hopp.', 5), 2600); }
-  else S.hintSett.add('omr-' + omraade(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T))); }
+  S.hintSett.add('omr-' + omraade(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T))); }
 $('#bNy').addEventListener('click', () => {
   if (hentLagret() && $('#bNy').dataset.bekreft !== '1') { $('#bNy').dataset.bekreft = '1'; $('#bNy').textContent = 'Trykk igjen: slett fremgangen og start på nytt'; return; }
   try { localStorage.removeItem(NOKKEL); } catch (e) {} BG.midtLys = null; start(null); });

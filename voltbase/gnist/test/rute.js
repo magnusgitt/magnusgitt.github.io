@@ -43,7 +43,7 @@ async function pcRute(b) {
   console.log('PC: hele område 1 med tastatur');
   const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
   await page.evaluate(k => localStorage.removeItem(k), KEY); await page.reload(); await vent(page, 400);
-  await page.click('#bNy'); await vent(page, 700);
+  await page.click('#bNy'); await page.evaluate(() => { if (S.mode === 'intro') sluttIntro(); }); await vent(page, 700);
   await pos(page, 32, 23); await vent(page, 300); await dobbelhopp(page, 'ArrowRight', 900);
   sjekk('veggen stopper uten stigesko', (await tilstand(page)).x < 35);
   await pos(page, 41, 31); await vent(page, 300); await page.keyboard.down('ArrowRight');
@@ -720,7 +720,7 @@ async function grafikk(b) {
   console.log('Grafikk: stemning, detaljer og kvalitet');
   for (const kval of [2, 1, 0]) {
     const { ctx, page, errs } = await nySide(b, { viewport: { width: 960, height: 540 } }, '?kval=' + kval);
-    await page.click('#bNy'); await vent(page, 500);
+    await page.click('#bNy'); await page.evaluate(() => { if (S.mode === 'intro') sluttIntro(); }); await vent(page, 500);
     const steder = [[10, 23, 'ute'], [20, 31, 'kjeller'], [86, 18, 'hall'], [110, 41, 'kabel'], [74, 56, 'pumpe'], [176, 26, 'stasjon'], [35, 44, 'kraft'], [36, 60, 'turbin']];
     const sett = [];
     for (const [x, y] of steder) { await page.evaluate(([x, y]) => { const g = __gnist; g.S.bossDone = true; g.S.boss2 = true; g.S.boss3 = true; g.S.boss4 = true; g.P.inv = 99; }, [x, y]);
@@ -742,11 +742,42 @@ async function grafikk(b) {
   }
   // automatisk kvalitet: går ned når bildet er tregt
   const { ctx, page, errs } = await nySide(b, { viewport: { width: 800, height: 450 } });
-  await page.click('#bNy'); await vent(page, 300);
+  await page.click('#bNy'); await page.evaluate(() => { if (S.mode === 'intro') sluttIntro(); }); await vent(page, 300);
   const k = await page.evaluate(() => { S.kval = 2; MAAL.spilt = 0; for (let i = 0; i < 400; i++) maalYtelse(1 / 25); const a = S.kval; for (let i = 0; i < 400; i++) maalYtelse(1 / 60); return [a, S.kval]; });
   sjekk('kvaliteten går ned når bildet er tregt', k[0] < 2, k);
   sjekk('ingen JS-feil (automatisk kvalitet)', errs.length === 0, errs);
   await ctx.close();
+}
+
+// Ny historie: introen spilles ved nytt spill, kan hoppes over og ender i vanlig spill med utstyret
+async function intro(b) {
+  console.log('Intro: den døde byen og elektrikeren');
+  const steg = (page, sek) => page.evaluate(sek => { let n = performance.now(); for (let x = 0; x < sek; x += 1 / 60) { n += 1000 / 60; loop(n); } }, sek);
+  let { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.removeItem(k), KEY); await page.reload(); await vent(page, 400);
+  sjekk('menyen forteller den nye historien', (await page.textContent('#lagMeny')).includes('hundre år'));
+  await page.evaluate(() => { requestAnimationFrame = () => 0; }); await page.click('#bNy');
+  let t = await page.evaluate(() => ({ mode: S.mode, drakt: ANIM.drakt, skjult: GN.skjult, vis: $('#intro').classList.contains('vis'), hud: getComputedStyle($('#hud')).visibility }));
+  sjekk('nytt spill starter introen', t.mode === 'intro' && t.vis && t.hud === 'hidden', t);
+  sjekk('vandreren har ikke utstyret ennå', t.drakt === 'vandrer' && t.skjult, t);
+  await steg(page, 11); t = await page.evaluate(() => ({ x: P.x / 32, tekst: $('#introTekst').textContent, tatt: INTRO.tatt }));
+  sjekk('vandreren går fram til elektrikeren', t.x > 6.5 && t.x < 8.5 && !t.tatt, t);
+  await steg(page, 5); t = await page.evaluate(() => ({ drakt: ANIM.drakt, skjult: GN.skjult, tatt: INTRO.tatt }));
+  sjekk('han tar utstyret, og gnisten våkner', t.tatt && t.drakt === 'montor' && !t.skjult, t);
+  await steg(page, 10); t = await page.evaluate(() => ({ mode: S.mode, vis: $('#intro').classList.contains('vis'), hud: getComputedStyle($('#hud')).visibility }));
+  sjekk('introen ender i vanlig spill', t.mode === 'spill' && !t.vis && t.hud === 'visible', t);
+  sjekk('ingen JS-feil (intro)', errs.length === 0, errs); await ctx.close();
+  // hoppe over med et trykk, på mobil i stående format
+  ({ ctx, page, errs } = await nySide(b, devices['iPhone 13']));
+  await page.evaluate(k => localStorage.removeItem(k), KEY); await page.reload(); await vent(page, 400);
+  await page.tap('#bNy'); await vent(page, 900); await page.tap('#intro'); await vent(page, 200);
+  t = await page.evaluate(() => ({ mode: S.mode, drakt: ANIM.drakt, tatt: INTRO.tatt, skjult: GN.skjult }));
+  sjekk('et trykk hopper over introen', t.mode !== 'intro' && t.tatt && t.drakt === 'montor' && !t.skjult, t);
+  // et lagret spill hopper rett inn uten intro
+  await page.evaluate(() => { S.mode = 'spill'; lagre(); }); await page.reload(); await vent(page, 400);
+  await page.tap('#bFortsett'); await vent(page, 300);
+  t = await page.evaluate(() => S.mode); sjekk('fortsett spiller ikke introen igjen', t !== 'intro', t);
+  sjekk('ingen JS-feil (intro mobil)', errs.length === 0, errs); await ctx.close();
 }
 
 (async () => {
@@ -767,6 +798,7 @@ async function grafikk(b) {
     if (med('dam')) await dam(b);
     if (med('spiker')) await spiker(b);
     if (med('anim')) await anim(b);
+    if (med('intro')) await intro(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

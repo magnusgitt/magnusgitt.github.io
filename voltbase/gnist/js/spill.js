@@ -648,7 +648,7 @@ function oppdaterPartikler(dt) {
     if (Math.random() < dt * 6) part(GN.x, GN.y, dx / l * 60, dy / l * 60, .8, 4, 'c', 0); }
   GN.vx += ((tx - GN.x) * 30 - GN.vx * 7) * dt; GN.vy += ((ty - GN.y) * 30 - GN.vy * 7) * dt;
   GN.x += GN.vx * dt; GN.y += GN.vy * dt; GN.flare = Math.max(0, GN.flare - dt * 1.5);
-  if (Math.random() < dt * (10 + Math.hypot(GN.vx, GN.vy) * .05)) part(GN.x, GN.y, (Math.random() - .5) * 20 - GN.vx * .1, 10 + Math.random() * 20 - GN.vy * .1, .7, 4, 'c', 0);
+  if (!GN.skjult && Math.random() < dt * (10 + Math.hypot(GN.vx, GN.vy) * .05)) part(GN.x, GN.y, (Math.random() - .5) * 20 - GN.vx * .1, 10 + Math.random() * 20 - GN.vy * .1, .7, 4, 'c', 0);
   // gnister fra feller
   for (const [x, y] of hazListe) { if (!synlig(x * T, y * T, T)) continue;
     if (Math.random() < dt * 2.5) part(x * T + Math.random() * T, y * T + T - 8, (Math.random() - .5) * 120, -100 - Math.random() * 160, .4 + Math.random() * .3, 3 + Math.random() * 3, Math.random() < .5 ? 'o' : 'c', 600); }

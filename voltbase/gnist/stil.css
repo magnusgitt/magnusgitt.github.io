@@ -201,3 +201,13 @@ a.knapp { text-decoration:none; text-align:center; }
 #kartSoner { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
 #kartSoner button { padding:6px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.05); color:#dfe6f3; font-size:14px; cursor:pointer; }
 #kartSoner button.valgt { border-color:rgba(255,197,107,.7); background:rgba(255,197,107,.15); color:#ffe2ad; }
+/* introen: filmstriper, tekst og hopp over */
+#intro { position:fixed; inset:0; display:none; z-index:20; cursor:pointer; }
+#intro.vis { display:block; }
+#intro .band { position:absolute; left:0; right:0; height:11vh; background:#000; }
+#intro .oppe { top:0; } #intro .nede { bottom:0; }
+#introTekst { position:absolute; left:50%; bottom:calc(11vh + 22px); transform:translate(-50%,8px); width:min(88vw,640px); text-align:center;
+  font-size:clamp(19px,3.2vw,30px); line-height:1.3; color:#eef4ff; text-shadow:0 2px 14px rgba(0,0,0,.9); opacity:0; transition:opacity .9s, transform .9s; }
+#introTekst.vis { opacity:1; transform:translate(-50%,0); }
+#intro .hopp { position:absolute; right:16px; bottom:calc(env(safe-area-inset-bottom) + 3vh); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.45); }
+html.iIntro #hud, html.iIntro #touch, html.iIntro #verkKnapp, html.iIntro #hint { visibility:hidden; }

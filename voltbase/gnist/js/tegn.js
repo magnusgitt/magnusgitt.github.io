@@ -21,10 +21,15 @@ function tegnBakgrunn(kx, ky) {
   ctx.globalAlpha = 1;
   const k = ch / 640, lw = LW * k, lh = LH * k, slakk = lh - ch;
   const lagY = pv => -slakk * (.5 + (t - .5) * pv);
-  const lagX0 = p => { let x0 = -((kx * skala * dpr * p) % lw); if (x0 > 0) x0 -= lw; return x0; };
-  const lag = (bilde, p, pv, a) => { if (!bilde || a <= 0) return; ctx.globalAlpha = a; const y = lagY(pv);
-    for (let x = lagX0(p); x < cw; x += lw) ctx.drawImage(bilde, x, y, lw + 1, lh); ctx.globalAlpha = 1; };
-  lag(BG.fjern, .08, .25, 1);
+  const lagX0 = (p, f = 0) => { let x0 = -((((kx * skala * dpr * p - f) % lw) + lw) % lw); if (x0 > 0) x0 -= lw; return x0; };
+  const lag = (bilde, p, pv, a, f) => { if (!bilde || a <= 0) return; ctx.globalAlpha = a; const y = lagY(pv);
+    for (let x = lagX0(p, f); x < cw; x += lw) ctx.drawImage(bilde, x, y, lw + 1, lh); ctx.globalAlpha = 1; };
+  // fjernlaget ligger slik at kraftverket i horisonten er i bildet når introen ser mot det
+  lag(BG.fjern, .08, .25, 1, fjernForskyv(lw));
+  // et rødt varsellys blinker fortsatt på pipa til kraftverket langt borte
+  { const b = .5 + .5 * Math.sin(S.t * 2.4), y = lagY(.25) + 349 * k; ctx.globalCompositeOperation = 'lighter';
+    for (let x = lagX0(.08, fjernForskyv(lw)) + 1467 * k; x < cw + 40; x += lw) if (x > -40) { glod(SPR.r, x, y, 44 * k, .5 + .5 * b); glod(SPR.h, x, y, 4 * k, .6 + .4 * b); }
+    ctx.globalCompositeOperation = 'source-over'; }
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < 3; i++) { ctx.save(); ctx.translate(cw * (.55 + i * .16) - (kx * skala * dpr * .05) % cw, -ch * .1); ctx.rotate(.42 + Math.sin(S.t * .2 + i) * .03);
     ctx.globalAlpha = .045 + .02 * Math.sin(S.t * .5 + i * 2); ctx.drawImage(STRALE, -ch * .12, 0, ch * (.18 + i * .06), ch * 1.6); ctx.restore(); }
@@ -192,6 +197,7 @@ function figur(lean, pose, bakke) {
     ctx.strokeStyle = farge; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, hy - 10); ctx.lineTo(ex, ey); ctx.lineTo(hx2, hy2); ctx.stroke();
     ctx.fillStyle = S.ev.hansker ? '#ffcf3a' : '#e9b88e'; ctx.beginPath(); ctx.arc(hx2, hy2, 2.6, 0, 7); ctx.fill(); };
   const kropp = () => { ctx.translate(0, hy); ctx.rotate(lean + pose.lean); ctx.translate(0, -hy); };
+  if (ANIM.drakt === 'vandrer') { vandrer(pose, hy, ben, arm, kropp); return; }
   ben(pose.b1[0], pose.b1[1], '#22335a', true);
   ctx.save(); kropp(); arm(pose.a1[0], pose.a1[1], '#b8641f');
   // verktøyet i beltet henger og dingler etter bevegelsen
@@ -216,9 +222,26 @@ function figur(lean, pose, bakke) {
   if (pose.hjelm > .5) { ctx.translate(0, -(hy + 12.5)); arm(pose.a2[0], pose.a2[1], '#e07a22'); }
   ctx.restore();
 }
+// introens vandrer: slitt frakk og hette, uten hjelm, vest og verktøy
+function vandrer(pose, hy, ben, arm, kropp) {
+  ben(pose.b1[0], pose.b1[1], '#2b2a2c', true);
+  ctx.save(); kropp(); arm(pose.a1[0], pose.a1[1], '#3a3633'); ctx.restore();
+  ben(pose.b2[0], pose.b2[1], '#333134', false);
+  ctx.save(); kropp(); ctx.translate(0, hy + 12.5);
+  ctx.fillStyle = '#4a433b'; ctx.beginPath(); ctx.moveTo(-7, -24); ctx.lineTo(7, -24); ctx.lineTo(8.5, -7); ctx.lineTo(3, -5.5); ctx.lineTo(-1, -7.5); ctx.lineTo(-8.5, -6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-1, -24, 1.6, 17); ctx.fillStyle = '#2c2824'; ctx.fillRect(-7, -14, 14, 2);
+  ctx.translate(0, -(hy + 12.5)); arm(pose.a2[0], pose.a2[1], '#47403a'); ctx.translate(0, hy + 12.5);
+  ctx.save(); ctx.translate(0, pose.hode); ctx.translate(1, -29); ctx.rotate(pose.tilt || 0); ctx.translate(-1, 29);
+  const bl = pose.blikk || 0;
+  ctx.fillStyle = '#3d3732'; ctx.beginPath(); ctx.arc(.4, -31.4, 7.4, 0, 7); ctx.fill(); ctx.fillRect(-7, -31, 7, 8);
+  ctx.fillStyle = '#d9b08c'; ctx.beginPath(); ctx.arc(2, -30.6, 4.4, -1.4, 1.9); ctx.fill();
+  ctx.fillStyle = '#1d1d24'; if (pose.blunk) ctx.fillRect(3 + bl, -31.4, 2, .9); else { ctx.beginPath(); ctx.arc(3.8 + bl, -31.2 - Math.abs(bl) * .3, .95, 0, 7); ctx.fill(); }
+  ctx.restore(); ctx.restore();
+}
 // målposen for øyeblikket; tegnSpiller blander mot den
 function poseFor(p) {
   const A = ANIM, fart = Math.min(1, Math.abs(p.vx) / RUN), ph = p.anim;
+  if (A.overstyr) return A.overstyr;
   if (p.inv > .95 && S.dod <= 0) { const r = Math.sin(S.t * 30) * .15; return { b1: [-.6, .7], b2: [.5, 1.0], a1: [-2.5 + r, .5], a2: [-2.1 - r, .6], bob: -1, hode: .6, lean: -.15, tilt: -.2, fart: 40 }; }
   if (p.dashT > 0) return { b1: [-.9, .5], b2: [-.4, 1.1], a1: [-1.3, .3], a2: [-1.6, .2], bob: 0, hode: 0, fart: 40 };
   if (p.piskT > -.06) { const k = clamp(1 - p.piskT / .2, 0, 1), sl = 2.7 - k * 1.6;
@@ -489,7 +512,8 @@ function tegnDynamiskeFliser() {
 function samleLys() {
   lys.length = 0;
   const L = (x, y, r, i) => lys.push({ x, y, r, i });
-  if (S.dod <= 0) { L(P.x + P.w / 2 + P.face * 8, P.y + 2, S.kjop.lykt ? 330 : 220, .95); if (S.kjop.lykt) L(P.x + P.w / 2 + P.face * 120, P.y + 20, 160, .6); L(GN.x, GN.y, 130 + GN.flare * 80, .8); }
+  if (S.dod <= 0 && ANIM.drakt !== 'vandrer') { L(P.x + P.w / 2 + P.face * 8, P.y + 2, S.kjop.lykt ? 330 : 220, .95); if (S.kjop.lykt) L(P.x + P.w / 2 + P.face * 120, P.y + 20, 160, .6); }
+  if (S.dod <= 0 && !GN.skjult) L(GN.x, GN.y, 130 + GN.flare * 80, .8);
   SJEKK.forEach((c, i) => { const X = c.x * T + T / 2, Y = (c.y + 1) * T - 30; if (synlig(X, Y, 250)) L(X, Y, S.cpLit.has(i) ? 230 : 60, S.cpLit.has(i) ? .95 : .4); });
   ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const X = x * T + T / 2, Y = y * T + T / 2; if (synlig(X, Y, 60)) L(X, Y, 55, .6); });
   FAG.forEach((f, i) => { if (S.fag.has(i)) return; const X = f.x * T + T / 2, Y = f.y * T + T / 2; if (synlig(X, Y, 60)) L(X, Y, 70, .7); });
@@ -621,10 +645,10 @@ function tegnGlod() {
   if (S.dod <= 0) {
     // hodelykt med en myk lyskjegle
     const lx = P.x + P.w / 2 + P.face * 8, ly = P.y + 2;
-    glod(SPR.w, lx, ly, 16, .7);
-    ctx.save(); ctx.translate(lx, ly); ctx.rotate(-P.face * Math.PI / 2 + P.face * .12); ctx.globalAlpha = S.kjop.lykt ? .13 : .09; if (S.kjop.lykt) ctx.drawImage(KJEGLE, -70, 0, 140, 250); else ctx.drawImage(KJEGLE, -50, 0, 100, 170); ctx.restore();
+    if (ANIM.drakt !== 'vandrer') { glod(SPR.w, lx, ly, 16, .7);
+      ctx.save(); ctx.translate(lx, ly); ctx.rotate(-P.face * Math.PI / 2 + P.face * .12); ctx.globalAlpha = S.kjop.lykt ? .13 : .09; if (S.kjop.lykt) ctx.drawImage(KJEGLE, -70, 0, 140, 250); else ctx.drawImage(KJEGLE, -50, 0, 100, 170); ctx.restore(); }
     const gs = 36 + 4 * Math.sin(S.t * 6) + GN.flare * 30;
-    glod(SPR.c, GN.x, GN.y, gs, .75 + GN.flare * .25); glod(SPR.h, GN.x, GN.y, 8 + GN.flare * 6, 1);
+    if (!GN.skjult) { glod(SPR.c, GN.x, GN.y, gs, .75 + GN.flare * .25); glod(SPR.h, GN.x, GN.y, 8 + GN.flare * 6, 1); }
   }
   for (const f of TEGN_GLOD) f();
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;

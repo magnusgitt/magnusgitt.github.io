@@ -280,7 +280,8 @@ function oppdaterHale(dt) {
 }
 function tegnHale() {
   if (S.dod > 0) return; ctx.lineCap = 'round';
-  for (let i = 1; i < HALE.length; i++) { const a = HALE[i - 1], b = HALE[i]; ctx.strokeStyle = i < 3 ? '#e07a22' : '#ff962c'; ctx.lineWidth = 3.6 - i * .28; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+  for (let i = 1; i < HALE.length; i++) { const a = HALE[i - 1], b = HALE[i]; ctx.strokeStyle = ANIM.drakt === 'vandrer' ? (i < 3 ? '#3a3430' : '#4a423a') : i < 3 ? '#e07a22' : '#ff962c'; ctx.lineWidth = 3.6 - i * .28; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+  if (ANIM.drakt === 'vandrer') { ctx.lineCap = 'butt'; return; }
   ctx.strokeStyle = 'rgba(240,248,255,.75)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(HALE[2].x, HALE[2].y); for (let i = 3; i < 6; i++) ctx.lineTo(HALE[i].x, HALE[i].y); ctx.stroke();
   ctx.lineCap = 'butt';
 }
