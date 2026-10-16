@@ -182,61 +182,95 @@ function blandPose(a, b, k) { for (const f of POSE_FELT) { a[f][0] += (b[f][0] -
   for (const f of ['bob', 'hode', 'lean', 'tilt', 'blikk']) a[f] += ((b[f] || 0) - (a[f] || 0)) * k; return a; }
 const kopiPose = p => ({ b1: [...p.b1], b2: [...p.b2], a1: [...p.a1], a2: [...p.a2], bob: p.bob || 0, hode: p.hode || 0, lean: p.lean || 0, tilt: p.tilt || 0, blikk: p.blikk || 0 });
 const mix = (a, b, k) => a + (b - a) * k, glatt = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-function figur(lean, pose, bakke) {
+// ---------- menneskefiguren: montøren, vandreren og folkene du møter ----------
+// Proporsjoner nærmere et ekte menneske: lengre bein, mindre hode, avsmalnende lemmer,
+// arbeidsklær med refleks, støvler med såle og ansikt med nese, øre og øyebryn.
+const KROPP = { hofte: -15, laar: 7.6, legg: 7.4, overarm: 5.8, underarm: 5.4 };
+const MONTOR = { bukse: '#25324f', jakke: '#ff8a1e', refleks: true, hjelm: '#ffd23f', sko: '#4a3424', hud: '#e7b48f', har: '#3a2a20', lykt: true, knepute: true, belte: true };
+const VANDRER = { bukse: '#2b2a2c', jakke: '#4a433b', refleks: false, hette: '#3d3732', sko: '#2a2420', hud: '#d9ab86', frakk: true, skjerf: true };
+function lem(x1, y1, x2, y2, w1, w2) {
+  const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+  ctx.beginPath(); ctx.moveTo(x1 + nx * w1 / 2, y1 + ny * w1 / 2); ctx.lineTo(x2 + nx * w2 / 2, y2 + ny * w2 / 2); ctx.lineTo(x2 - nx * w2 / 2, y2 - ny * w2 / 2); ctx.lineTo(x1 - nx * w1 / 2, y1 - ny * w1 / 2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(x1, y1, w1 / 2, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(x2, y2, w2 / 2, 0, 7); ctx.fill();
+}
+const morkere = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c * k); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; };
+function benLedd(bak, hy, a1, a2) { return ledd(bak ? -1.3 : 1.3, hy, a1, a2, KROPP.laar, KROPP.legg); }
+// tegner et menneske med føttene ved y = 0. lean vipper overkroppen rundt hofta.
+function menneske(pose, d, lean, bakke, ekstra) {
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const hy = -12.5 + pose.bob;
-  // på bakken: hele figuren senkes til den laveste foten står på bakken, så bøyde knær gir en ekte huk
-  if (bakke) { const f1 = ledd(-1.5, hy, pose.b1[0], pose.b1[1], 6.5, 6.5)[3], f2 = ledd(1.5, hy, pose.b2[0], pose.b2[1], 6.5, 6.5)[3]; ANIM.dy = .5 - Math.max(f1, f2); }
-  else ANIM.dy += (0 - ANIM.dy) * .3;
-  ctx.translate(0, ANIM.dy);
-  const ben = (a1, a2, farge, bak) => { const hx = bak ? -1.5 : 1.5, [kx, ky, fx, fy] = ledd(hx, hy, a1, a2, 6.5, 6.5);
-    ctx.strokeStyle = farge; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
-    // foten flater ut mot bakken når den står, og peker ned når beinet svinger
-    ctx.fillStyle = S.ev.dobbel ? '#e08a2c' : '#20242e'; ctx.save(); ctx.translate(fx, fy); ctx.rotate(bakke && fy > -1.5 ? 0 : -(a1 - a2) * .6); rr(ctx, -3, -2, 8.5, 4.2, 2); ctx.fill(); ctx.restore(); };
-  const arm = (a1, a2, farge) => { const [ex, ey, hx2, hy2] = ledd(0, hy - 10, a1, -a2, 5.5, 5);
-    ctx.strokeStyle = farge; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, hy - 10); ctx.lineTo(ex, ey); ctx.lineTo(hx2, hy2); ctx.stroke();
-    ctx.fillStyle = S.ev.hansker ? '#ffcf3a' : '#e9b88e'; ctx.beginPath(); ctx.arc(hx2, hy2, 2.6, 0, 7); ctx.fill(); };
+  const hy = KROPP.hofte + pose.bob, hoftY = hy;
+  const ben = (a1, a2, bak) => { const hx = bak ? -1.3 : 1.3, [kx, ky, fx, fy] = benLedd(bak, hy, a1, a2);
+    ctx.fillStyle = bak ? morkere(d.bukse, .72) : d.bukse; lem(hx, hy, kx, ky, 5.6, 4.4); lem(kx, ky, fx, fy - 1, 4.4, 3.4);
+    if (!bak) { ctx.fillStyle = 'rgba(255,255,255,.07)'; lem(hx + 1.2, hy, kx + 1, ky, 1.6, 1.2); }
+    if (d.knepute) { ctx.fillStyle = morkere(d.bukse, bak ? .5 : .62); ctx.beginPath(); ctx.ellipse(kx + Math.cos(a1) * .9, ky - Math.sin(a1) * .9, 1.5, 2, -a1, 0, 7); ctx.fill(); }
+    if (d.refleks) { const t = .55, bx = kx + (fx - kx) * t, by = ky + (fy - ky) * t, l = Math.hypot(fx - kx, fy - ky) || 1, nx = -(fy - ky) / l, ny = (fx - kx) / l;
+      ctx.strokeStyle = bak ? 'rgba(200,214,230,.6)' : 'rgba(232,242,255,.9)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx + nx * 2, by + ny * 2); ctx.lineTo(bx - nx * 2, by - ny * 2); ctx.stroke(); }
+    // støvelen: flat mot bakken når den står, peker ned når beinet svinger
+    ctx.save(); ctx.translate(fx, fy); ctx.rotate(bakke && fy > -1.8 ? 0 : -(a1 - a2) * .6);
+    const sko = S.ev && S.ev.dobbel && d === MONTOR ? '#c4702a' : d.sko;
+    ctx.fillStyle = bak ? morkere(sko, .7) : sko;
+    ctx.beginPath(); ctx.moveTo(-2.4, -3.6); ctx.lineTo(1.6, -3.6); ctx.lineTo(2.4, -1.6); ctx.quadraticCurveTo(6.4, -1.5, 6.6, .2); ctx.lineTo(-2.8, .2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#121214'; ctx.fillRect(-2.9, .1, 9.7, 1.2); ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(2.6, -1.4, 3, .6); ctx.restore(); };
+  const arm = (a1, a2, bak) => { const sx = .4, sy = hy - 12, [ex, ey, hx2, hy2] = ledd(sx, sy, a1, -a2, KROPP.overarm, KROPP.underarm);
+    ctx.fillStyle = bak ? morkere(d.jakke, .75) : d.jakke; lem(sx, sy, ex, ey, 3.9, 3.3); lem(ex, ey, hx2, hy2, 3.3, 2.8);
+    const hanske = d === MONTOR && S.ev && S.ev.hansker; ctx.fillStyle = hanske ? '#f2c23c' : d.hud; ctx.beginPath(); ctx.arc(hx2, hy2, 1.9, 0, 7); ctx.fill();
+    ctx.fillStyle = hanske ? '#c99a20' : morkere(d.hud, .82); ctx.beginPath(); ctx.arc(hx2 + .6, hy2 - .8, .9, 0, 7); ctx.fill(); };
   const kropp = () => { ctx.translate(0, hy); ctx.rotate(lean + pose.lean); ctx.translate(0, -hy); };
-  if (ANIM.drakt === 'vandrer') { vandrer(pose, hy, ben, arm, kropp); return; }
-  ben(pose.b1[0], pose.b1[1], '#22335a', true);
-  ctx.save(); kropp(); arm(pose.a1[0], pose.a1[1], '#b8641f');
-  // verktøyet i beltet henger og dingler etter bevegelsen
-  ctx.save(); ctx.translate(-5.5, hy + .5); ctx.rotate(ANIM.verk); ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 7.5); ctx.stroke();
-  ctx.fillStyle = '#9aa3ad'; ctx.fillRect(-2.6, 6.5, 5.2, 2.4); ctx.restore();
+  ben(pose.b1[0], pose.b1[1], true);
+  ctx.save(); kropp(); arm(pose.a1[0], pose.a1[1], true); if (ekstra && ekstra.bak) ekstra.bak(hy); ctx.restore();
+  ben(pose.b2[0], pose.b2[1], false);
+  ctx.save(); kropp();
+  // overkroppen: jakke med skuldre, krage, glidelås og refleksbånd
+  const torso = () => { ctx.beginPath(); ctx.moveTo(-5.4, hy + (d.frakk ? 6 : .8)); if (d.frakk) { ctx.lineTo(-3, hy + 4.6); ctx.lineTo(-.6, hy + 6.4); ctx.lineTo(2.4, hy + 4.8); ctx.lineTo(5.6, hy + 6.2); } else ctx.lineTo(5.2, hy + .8);
+    ctx.lineTo(6.3, hy - 6); ctx.lineTo(5.5, hy - 11.2); ctx.lineTo(3.2, hy - 13.4); ctx.lineTo(-3.8, hy - 13.4); ctx.lineTo(-6.2, hy - 10.5); ctx.lineTo(-6.4, hy - 4); ctx.closePath(); };
+  const jg = ctx.createLinearGradient(-6.4, 0, 6.4, 0); jg.addColorStop(0, morkere(d.jakke, .78)); jg.addColorStop(.6, d.jakke); jg.addColorStop(1, d.jakke);
+  ctx.fillStyle = jg; torso(); ctx.fill();
+  ctx.save(); torso(); ctx.clip();
+  if (d.refleks) { ctx.fillStyle = '#e8f2ff'; ctx.fillRect(-7, hy - 4.6, 14, 1.5); ctx.fillRect(-7, hy - 8.6, 14, 1.5); ctx.fillStyle = 'rgba(120,140,170,.35)'; ctx.fillRect(-7, hy - 3.4, 14, .4); ctx.fillRect(-7, hy - 7.4, 14, .4); }
+  ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(4.6, hy - 11, 1.2, 11); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(-7, hy - 13.6, 3, 14);
+  if (d.frakk) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-.6, hy - 12, 1.4, 19); ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(-7, hy - .6, 14, 1.8); }
+  else { ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(5.3, hy - .6); ctx.lineTo(5, hy - 12.4); ctx.stroke(); }
   ctx.restore();
-  ben(pose.b2[0], pose.b2[1], '#2a3d66', false);
-  ctx.save(); kropp(); ctx.translate(0, hy + 12.5);
-  ctx.fillStyle = '#ff962c'; rr(ctx, -7, -26, 14, 15, 4); ctx.fill();
-  ctx.fillStyle = '#e8f2ff'; ctx.fillRect(-7, -20, 14, 2); ctx.fillRect(-7, -15.5, 14, 2);
-  ctx.fillStyle = '#3a3226'; ctx.fillRect(-7, -12.5, 14, 2.5); ctx.fillStyle = '#c9a23a'; ctx.fillRect(3, -12.5, 2, 2.5);
-  ctx.translate(0, -(hy + 12.5)); arm(pose.a2[0], pose.a2[1], '#e07a22'); ctx.translate(0, hy + 12.5);
-  ctx.save(); ctx.translate(0, pose.hode); ctx.translate(1, -29); ctx.rotate(pose.tilt || 0); ctx.translate(-1, 29);
+  if (d.belte) { ctx.fillStyle = '#2b241c'; ctx.fillRect(-5.6, hy - 1, 11.2, 2.2); ctx.fillStyle = '#b0a080'; ctx.fillRect(3, hy - 1, 2, 2.2); ctx.fillStyle = '#5a4028'; rr(ctx, -7.6, hy - .6, 4.2, 5, 1); ctx.fill(); }
+  // hals og krage
+  ctx.fillStyle = morkere(d.hud, .85); ctx.fillRect(-.4, hy - 16.6, 3, 3.6);
+  ctx.fillStyle = d.skjerf ? '#5a4a3c' : '#24262c'; ctx.beginPath(); ctx.moveTo(-3.4, hy - 12.8); ctx.lineTo(3.4, hy - 12.8); ctx.lineTo(2.6, hy - 14.8); ctx.lineTo(-2.2, hy - 14.8); ctx.closePath(); ctx.fill();
+  arm(pose.a2[0], pose.a2[1], false);
+  // hodet
+  ctx.save(); const hx0 = 1.4, hy0 = hy - 18.8; ctx.translate(0, pose.hode); ctx.translate(1, hy0 + 2); ctx.rotate(pose.tilt || 0); ctx.translate(-1, -(hy0 + 2));
   const bl = pose.blikk || 0;
-  ctx.fillStyle = '#f0c39a'; ctx.beginPath(); ctx.arc(1, -31, 5.6, 0, 7); ctx.fill();
-  ctx.fillStyle = '#1d1d24'; if (pose.blunk) ctx.fillRect(2.4 + bl, -31.6, 2.2, .9); else { ctx.beginPath(); ctx.arc(3.4 + bl, -31.5 - Math.abs(bl) * .3, 1, 0, 7); ctx.fill(); }
-  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(1, -33, 6.6, Math.PI, 0); ctx.fill(); ctx.fillRect(-6, -33.6, 15, 2.4);
-  ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.arc(-1, -36, 2, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = '#fff7d0'; ctx.beginPath(); ctx.arc(7.4, -34.6, 1.7, 0, 7); ctx.fill();
+  if (d.hette) { ctx.fillStyle = d.hette; ctx.beginPath(); ctx.ellipse(hx0 - .8, hy0 - .2, 5.8, 6.2, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(-5, hy0); ctx.lineTo(-6.4, hy0 + 6); ctx.lineTo(-1, hy0 + 5); ctx.closePath(); ctx.fill(); }
+  else { ctx.fillStyle = d.har || '#3a2a20'; ctx.beginPath(); ctx.ellipse(hx0 - 2, hy0 + .4, 2.8, 3.6, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = d.hud; ctx.beginPath(); ctx.ellipse(hx0 + (d.hette ? 1 : 0), hy0, d.hette ? 3.5 : 4.2, 4.6, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(hx0 + 3.6, hy0 - .8); ctx.lineTo(hx0 + 5.1, hy0 + .9); ctx.lineTo(hx0 + 3.6, hy0 + 1.4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(120,60,40,.18)'; ctx.beginPath(); ctx.ellipse(hx0 - 1.6, hy0 + .6, 2, 3.4, 0, 0, 7); ctx.fill();
+  if (!d.hette) { ctx.fillStyle = morkere(d.hud, .8); ctx.beginPath(); ctx.ellipse(hx0 - 1.2, hy0 + .2, 1.1, 1.6, 0, 0, 7); ctx.fill(); }
+  if (d.skjegg) { ctx.fillStyle = d.skjegg === true ? '#e8e8ea' : d.skjegg; ctx.beginPath(); ctx.moveTo(hx0 - 1, hy0 + 1); ctx.quadraticCurveTo(hx0 + 1, hy0 + 6.4, hx0 + 4.6, hy0 + 2.6); ctx.lineTo(hx0 + 3.4, hy0 + 1.4); ctx.closePath(); ctx.fill(); }
+  else if (d.hette) { ctx.fillStyle = 'rgba(40,30,25,.35)'; ctx.beginPath(); ctx.ellipse(hx0 + 2.4, hy0 + 2.6, 2.2, 1.6, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#1d1d24'; if (pose.blunk) ctx.fillRect(hx0 + 2 + bl * .6, hy0 - .9, 1.8, .6); else { ctx.beginPath(); ctx.ellipse(hx0 + 2.7 + bl * .6, hy0 - .8 - Math.abs(bl) * .2, .65, .8, 0, 0, 7); ctx.fill(); }
+  ctx.strokeStyle = 'rgba(40,26,20,.75)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(hx0 + 1.6, hy0 - 2.2); ctx.lineTo(hx0 + 3.8, hy0 - 2.3); ctx.stroke();
+  ctx.strokeStyle = 'rgba(90,40,30,.5)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(hx0 + 2.3, hy0 + 2.6); ctx.lineTo(hx0 + 3.6, hy0 + 2.5); ctx.stroke();
+  if (d.hette) { ctx.strokeStyle = morkere(d.hette, .7); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(hx0 + 1, hy0, 4.2, 5.2, 0, -1.6, 1.7); ctx.stroke(); }
+  if (d.hjelm) { const hg = ctx.createLinearGradient(hx0 - 5, 0, hx0 + 5, 0); hg.addColorStop(0, morkere(d.hjelm, .78)); hg.addColorStop(1, d.hjelm);
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(hx0 - .2, hy0 - 2.1, 5.5, 4.8, 0, Math.PI, 0); ctx.fill(); rr(ctx, hx0 - 5.8, hy0 - 2.6, 13.4, 1.8, .9); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.ellipse(hx0 - .2, hy0 - 2.4, 3.4, 3.8, 0, Math.PI * 1.15, Math.PI * 1.75); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(hx0 - .2, hy0 - 6.8); ctx.lineTo(hx0 - .2, hy0 - 2.6); ctx.stroke();
+    if (d.lykt) { ctx.fillStyle = '#2a2a30'; rr(ctx, hx0 + 4, hy0 - 5.4, 2.6, 2.6, .8); ctx.fill(); ctx.fillStyle = '#fff7d0'; ctx.beginPath(); ctx.arc(hx0 + 6.3, hy0 - 4.1, .9, 0, 7); ctx.fill(); } }
   ctx.restore();
   // hånden som retter på hjelmen ligger foran hodet
-  if (pose.hjelm > .5) { ctx.translate(0, -(hy + 12.5)); arm(pose.a2[0], pose.a2[1], '#e07a22'); }
+  if (pose.hjelm > .5) arm(pose.a2[0], pose.a2[1], false);
   ctx.restore();
 }
-// introens vandrer: slitt frakk og hette, uten hjelm, vest og verktøy
-function vandrer(pose, hy, ben, arm, kropp) {
-  ben(pose.b1[0], pose.b1[1], '#2b2a2c', true);
-  ctx.save(); kropp(); arm(pose.a1[0], pose.a1[1], '#3a3633'); ctx.restore();
-  ben(pose.b2[0], pose.b2[1], '#333134', false);
-  ctx.save(); kropp(); ctx.translate(0, hy + 12.5);
-  ctx.fillStyle = '#4a433b'; ctx.beginPath(); ctx.moveTo(-7, -24); ctx.lineTo(7, -24); ctx.lineTo(8.5, -7); ctx.lineTo(3, -5.5); ctx.lineTo(-1, -7.5); ctx.lineTo(-8.5, -6); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-1, -24, 1.6, 17); ctx.fillStyle = '#2c2824'; ctx.fillRect(-7, -14, 14, 2);
-  ctx.translate(0, -(hy + 12.5)); arm(pose.a2[0], pose.a2[1], '#47403a'); ctx.translate(0, hy + 12.5);
-  ctx.save(); ctx.translate(0, pose.hode); ctx.translate(1, -29); ctx.rotate(pose.tilt || 0); ctx.translate(-1, 29);
-  const bl = pose.blikk || 0;
-  ctx.fillStyle = '#3d3732'; ctx.beginPath(); ctx.arc(.4, -31.4, 7.4, 0, 7); ctx.fill(); ctx.fillRect(-7, -31, 7, 8);
-  ctx.fillStyle = '#d9b08c'; ctx.beginPath(); ctx.arc(2, -30.6, 4.4, -1.4, 1.9); ctx.fill();
-  ctx.fillStyle = '#1d1d24'; if (pose.blunk) ctx.fillRect(3 + bl, -31.4, 2, .9); else { ctx.beginPath(); ctx.arc(3.8 + bl, -31.2 - Math.abs(bl) * .3, .95, 0, 7); ctx.fill(); }
-  ctx.restore(); ctx.restore();
+function figur(lean, pose, bakke) {
+  const hy = KROPP.hofte + pose.bob;
+  // på bakken: hele figuren senkes til den laveste foten står på bakken, så bøyde knær gir en ekte huk
+  if (bakke) { ANIM.dy = .4 - Math.max(benLedd(true, hy, pose.b1[0], pose.b1[1])[3], benLedd(false, hy, pose.b2[0], pose.b2[1])[3]); }
+  else ANIM.dy += (0 - ANIM.dy) * .3;
+  ctx.translate(0, ANIM.dy);
+  const vandrer = ANIM.drakt === 'vandrer';
+  // verktøyet i beltet henger og dingler etter bevegelsen
+  menneske(pose, vandrer ? VANDRER : MONTOR, lean, bakke, vandrer ? null : { bak: hy => { ctx.save(); ctx.translate(-5.8, hy + .8); ctx.rotate(ANIM.verk);
+    ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 7.5); ctx.stroke(); ctx.fillStyle = '#9aa3ad'; ctx.fillRect(-2.6, 6.5, 5.2, 2.2); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-2.6, 6.5, 5.2, .6); ctx.restore(); } });
 }
 // målposen for øyeblikket; tegnSpiller blander mot den
 function poseFor(p) {

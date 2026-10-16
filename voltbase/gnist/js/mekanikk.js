@@ -73,18 +73,12 @@ function tegnFigurer() {
     if (f.tegn) { f.tegn(X, Y); if (figurNaer === f && S.mode === 'spill') { ctx.fillStyle = 'rgba(255,233,168,.95)'; ctx.font = 'bold 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText('↓', X, Y - 46 + Math.sin(S.t * 4) * 2); } continue; }
     tegnSkygge(X, Y, 16);
     ctx.save(); ctx.translate(X, Y); ctx.scale(P.x + P.w / 2 < X ? -1 : 1, 1);
+    // folkene tegnes med samme kropp som montøren, i sine egne klær
     const d = f.drakt, pust = Math.sin(S.t * 2 + f.x) * .6;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = d.bukse; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-2, -12); ctx.lineTo(-3, 0); ctx.moveTo(2, -12); ctx.lineTo(3, 0); ctx.stroke();
-    ctx.fillStyle = '#22252e'; rr(ctx, -6, -2, 6, 3.5, 1.5); ctx.fill(); rr(ctx, 1, -2, 6, 3.5, 1.5); ctx.fill();
-    ctx.fillStyle = d.jakke; rr(ctx, -7, -26 + pust * .3, 14, 15, 4); ctx.fill();
-    if (d.refleks) { ctx.fillStyle = '#e8f2ff'; ctx.fillRect(-7, -20 + pust * .3, 14, 2); }
-    ctx.strokeStyle = d.jakke; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(5, -22); ctx.lineTo(8, -15 + pust); ctx.stroke();
-    ctx.fillStyle = '#e9b88e'; ctx.beginPath(); ctx.arc(8.5, -14 + pust, 2.4, 0, 7); ctx.fill();
-    ctx.fillStyle = '#f0c39a'; ctx.beginPath(); ctx.arc(1, -31 + pust * .3, 5.6, 0, 7); ctx.fill();
-    if (d.skjegg) { ctx.fillStyle = '#e8e8ea'; ctx.beginPath(); ctx.arc(1.5, -28.5 + pust * .3, 4.5, .1, Math.PI - .1); ctx.fill(); }
-    ctx.fillStyle = '#1d1d24'; ctx.beginPath(); ctx.arc(3.4, -31.8 + pust * .3, .9, 0, 7); ctx.fill();
-    ctx.fillStyle = d.hjelm; ctx.beginPath(); ctx.arc(1, -33 + pust * .3, 6.6, Math.PI, 0); ctx.fill(); ctx.fillRect(-6, -33.6 + pust * .3, 15, 2.4);
+    if (!d.hud) Object.assign(d, { hud: '#e7b48f', sko: '#2a2622', har: d.skjegg ? '#d8d8dc' : '#3a2a20', knepute: true, belte: true });
+    const pose = { b1: [-.07, .1], b2: [.07, .1], a1: [-.12, .22], a2: [.3 + pust * .04, .55], bob: pust * .25, hode: 0, lean: 0, tilt: 0 };
+    ctx.translate(0, .4 - Math.max(benLedd(true, KROPP.hofte + pose.bob, ...pose.b1)[3], benLedd(false, KROPP.hofte + pose.bob, ...pose.b2)[3]));
+    menneske(pose, d, 0, true);
     ctx.restore(); ctx.lineCap = 'butt';
     if (figurNaer === f && S.mode === 'spill') { ctx.fillStyle = 'rgba(255,233,168,.95)'; ctx.font = 'bold 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText('💬', X, Y - 50 + Math.sin(S.t * 4) * 2); }
     else if (f.harNytt && f.harNytt()) { ctx.fillStyle = '#ffc56b'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center'; ctx.fillText('!', X, Y - 48 + Math.sin(S.t * 3) * 3); } }
