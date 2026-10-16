@@ -83,6 +83,7 @@ function lyd(n) {
     case 'vind': sus(1.8, 900, 300, .07, 0, 'bandpass'); sus(1.4, 2400, 800, .03, .2, 'bandpass'); break;
     case 'glid': sus(.3, 1800, 600, .04, 0, 'bandpass'); tone(300, 380, .2, 'sine', .015); break;
     case 'jager': tone(700, 1100, .18, 'sawtooth', .015); tone(1100, 900, .12, 'square', .01, .1); break;
+    case 'spiker': sus(.05, 7000, 1800, .07, 0, 'highpass'); tone(420, 160, .07, 'square', .03); tone(2400, 1800, .04, 'triangle', .015, .02); break;
     case 'prell': tone(1600, 1200, .1, 'square', .03); sus(.08, 6000, 2500, .05, 0, 'highpass'); tone(800, 600, .12, 'triangle', .03, .03); break;
     case 'lynfugl': tone(1400, 2200, .25, 'sawtooth', .025); tone(2200, 900, .35, 'square', .015, .2); sus(.3, 8000, 3000, .04, .1, 'highpass'); break;
     case 'torden': sus(1.6, 600, 60, .14); tone(60, 35, 1.2, 'sawtooth', .04); sus(.2, 8000, 2000, .06, 0, 'highpass'); break;

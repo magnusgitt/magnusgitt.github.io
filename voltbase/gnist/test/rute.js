@@ -593,6 +593,32 @@ async function dam(b) {
   await ctx.close();
 }
 
+async function spiker(b) {
+  console.log('Spikerpistolen');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 4, ev: { dobbel: true, hansker: true, stot: true, krok: true }, cp: 2, cpLit: [0, 1, 2], orb: [], boss: false, tid: 60 })), KEY);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
+  sjekk('spikerpistolen finnes i verkstedet', await page.evaluate(() => OPPGRADERINGER.some(o => o.id === 'spiker')));
+  sjekk('uten spikerpistol skjer ingenting', await page.evaluate(() => { I.spikerP = true; oppdaterVerden(1 / 60); return SPIKER.length === 0; }));
+  const kjopt = await page.evaluate(() => { for (let i = 0; i < 12; i++) S.orbTatt.add(i); return kjop('spiker'); });
+  sjekk('kan kjøpe spikerpistolen', kjopt && await page.evaluate(() => S.kjop.spiker));
+  // en fiende foran montøren dør av en spiker
+  { const r = await page.evaluate(() => { fiender.length = 0; const e = { type: 'rele', x: 0, y: 0, w: 22, h: 22, dir: 1, liv: true, t: 0, lad: 0, pause: 9 }; fiender.push(e); e.x = P.x + 160; e.y = P.y + P.h - e.h; e.dir = 1; P.face = 1; P.inv = 99;
+      I.spikerP = true; for (let i = 0; i < 30; i++) oppdaterVerden(1 / 60); return { dod: !e.liv }; });
+    sjekk('spikeren dreper en fiende på avstand', r.dod, r); }
+  { const r = await page.evaluate(() => { fiender.length = 0; const e = nyFiende2({ type: 'skjold', x0: 40, x1: 60, y: 18 }); fiender.push(e); e.x = P.x + 160; e.x0 = e.x - 300; e.x1 = e.x + 300; e.y = P.y + P.h - e.h; e.dir = -1; P.face = 1; e.snu = 0;
+      I.spikerP = true; for (let i = 0; i < 30; i++) { oppdaterVerden(1 / 60); e.dir = -1; } const forfra = e.liv; e.dir = 1; e.x = P.x + 160; SPIKER.length = 0; I.spikerP = true; for (let i = 0; i < 30; i++) { oppdaterVerden(1 / 60); e.dir = 1; } return { forfra, bakfra: e.liv }; });
+    sjekk('skjoldet stopper spikeren forfra', r.forfra === true, r); sjekk('skjoldfienden faller bakfra', r.bakfra === false, r); }
+  sjekk('spiker kan ikke skytes uendelig fort', await page.evaluate(() => { SPIKER.length = 0; fiender.length = 0; I.spikerP = true; oppdaterVerden(1 / 60); I.spikerP = true; oppdaterVerden(1 / 60); return SPIKER.length === 1; }));
+  await page.evaluate(() => { SPIKER.length = 0; for (let i = 0; i < 40; i++) oppdaterVerden(1 / 60); });
+  await page.keyboard.press('KeyG'); await vent(page, 60);
+  sjekk('G skyter på PC', await page.evaluate(() => SPIKER.length + FASTE_SPIKER.length > 0));
+  await page.evaluate(() => lagre());
+  sjekk('spikerpistolen lagres', await page.evaluate(() => hentLagret().kjop.spiker === true));
+  sjekk('ingen JS-feil (spiker)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
   const { ctx, page, errs } = await nySide(b, opts);
@@ -704,6 +730,7 @@ async function grafikk(b) {
     if (med('grafikk')) await grafikk(b);
     if (med('linja')) await linja(b);
     if (med('dam')) await dam(b);
+    if (med('spiker')) await spiker(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

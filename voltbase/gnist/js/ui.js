@@ -20,6 +20,7 @@ function hud() {
   sistKlar = null;
   $('#tStot').classList.toggle('skjult', !S.ev.stot);
   $('#tKrok').classList.toggle('skjult', !S.ev.krok);
+  $('#tSpiker').classList.toggle('skjult', !S.kjop.spiker);
   $('#bFag').textContent = `Fagkort: ${S.fag.size} av ${FAG.length}`;
   const b2 = B2.aktiv && B2.fase !== 'intro', b3 = B3.aktiv && B3.fase !== 'intro', b4 = B4.aktiv && B4.fase !== 'intro', eb = ekstraBoss();
   $('#boss').classList.toggle('vis', (B.aktiv && B.fase === 'kamp') || b2 || b3 || b4 || !!eb);
@@ -199,7 +200,7 @@ function startTidsmodus() { lydInit(); S.tidsmodus = true; nyttSpill(null); S.mo
 // ---------- input ----------
 let erTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
 document.documentElement.classList.toggle('touch', erTouch);
-const PISK = ['KeyF', 'KeyV'];
+const PISK = ['KeyF', 'KeyV'], SPIKERTAST = ['KeyG', 'KeyR'];
 const HOPP = ['ArrowUp', 'KeyW', 'Space', 'KeyZ', 'KeyK'], STOT = ['ShiftLeft', 'ShiftRight', 'KeyX', 'KeyJ', 'KeyL'], KROK = ['KeyC', 'KeyE'];
 function oppdaterTaster() {
   I.left = !!(K.ArrowLeft || K.KeyA || TS.left); I.right = !!(K.ArrowRight || K.KeyD || TS.right); I.down = !!(K.ArrowDown || K.KeyS);
@@ -223,6 +224,7 @@ addEventListener('keydown', e => {
   if ((c === 'ArrowDown' || c === 'KeyS') && P.onGround) { if (figurNaer) snakk(figurNaer); else if (S.verkNaer >= 0) visVerk(); }
   if (STOT.includes(c)) I.dashP = true;
   if (PISK.includes(c)) I.piskP = true;
+  if (SPIKERTAST.includes(c)) I.spikerP = true;
 });
 addEventListener('keyup', e => { K[e.code] = false; oppdaterTaster(); });
 addEventListener('blur', () => { nullInput(); if (S.mode === 'spill') pauseBytt(); });
@@ -245,6 +247,7 @@ function trykkKnapp(el, ned, opp) {
 trykkKnapp($('#tHopp'), () => { if (S.mode === 'evne') { primar(); return; } if (S.mode === 'dialog') { nesteDialog(); return; } TS.jump = true; I.jumpP = true; oppdaterTaster(); }, () => { TS.jump = false; oppdaterTaster(); });
 trykkKnapp($('#tStot'), () => { I.dashP = true; }, () => {});
 trykkKnapp($('#tPisk'), () => { I.piskP = true; }, () => {});
+trykkKnapp($('#tSpiker'), () => { I.spikerP = true; }, () => {});
 trykkKnapp($('#tKrok'), () => { TS.krok = true; oppdaterTaster(); }, () => { TS.krok = false; oppdaterTaster(); });
 addEventListener('contextmenu', e => e.preventDefault());
 
@@ -334,7 +337,7 @@ $('#bTips').addEventListener('click', () => { INNST.tips = !INNST.tips; lagreInn
 settLyd(lydPa); visInnst();
 
 // egne knappeplasseringer: flyttes med translate/scale, så treffområdet følger knappen
-const KNAPPER = ['pad', 'tHopp', 'tStot', 'tKrok', 'tPisk'];
+const KNAPPER = ['pad', 'tHopp', 'tStot', 'tKrok', 'tPisk', 'tSpiker'];
 function knappRetning() { return innerWidth > innerHeight ? 'ligg' : 'staa'; }
 function knappOppsett() { const r = knappRetning(); return INNST.knapper[r] || (INNST.knapper[r] = {}); }
 function brukKnapper() {

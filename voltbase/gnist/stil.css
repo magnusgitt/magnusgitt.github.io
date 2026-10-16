@@ -82,11 +82,13 @@ button { font-family:inherit; touch-action:manipulation; }
 #tKrok { width:72px; height:72px; margin-bottom:12px; border-color:rgba(143,227,255,.55); color:#bfefff; }
 #tKrok.skjult { display:none; }
 #tPisk { width:64px; height:64px; margin-bottom:24px; border-color:rgba(190,170,255,.55); color:#ddd2ff; }
+#tSpiker { width:58px; height:58px; margin-bottom:40px; border-color:rgba(220,228,236,.55); color:#e8eef3; font-size:13px; }
+#tSpiker.skjult { display:none; }
 #tKrok.klar { background:rgba(143,227,255,.2); box-shadow:0 0 16px rgba(143,227,255,.45); }
 @media (max-width:520px) {
-  .hoyreKnapper { display:grid; grid-template-columns:auto auto; grid-template-areas:". krok" "pisk stot" ". hopp"; align-items:center; justify-items:center; gap:14px 12px; }
-  #tKrok { grid-area:krok; } #tStot { grid-area:stot; } #tHopp { grid-area:hopp; } #tPisk { grid-area:pisk; }
-  #tStot, #tKrok, #tPisk { margin-bottom:0; }
+  .hoyreKnapper { display:grid; grid-template-columns:auto auto; grid-template-areas:"spiker krok" "pisk stot" ". hopp"; align-items:center; justify-items:center; gap:14px 12px; }
+  #tKrok { grid-area:krok; } #tStot { grid-area:stot; } #tHopp { grid-area:hopp; } #tPisk { grid-area:pisk; } #tSpiker { grid-area:spiker; }
+  #tStot, #tKrok, #tPisk, #tSpiker { margin-bottom:0; }
   #boss { top:calc(100px + env(safe-area-inset-top)); }
   .touch #toast { top:calc(152px + env(safe-area-inset-top)); }
 }
@@ -183,7 +185,7 @@ a.knapp { text-decoration:none; text-align:center; }
 #tilpassBar button { min-width:48px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#fff; font-size:16px; font-weight:600; }
 #tilpassBar button.hoved { background:var(--glod); color:#06121f; border-color:transparent; }
 .tilpasser #hud, .tilpasser #maal, .tilpasser #boss, .tilpasser #hint, .tilpasser #toast, .tilpasser #verkKnapp, .tilpasser #tidtaker { display:none !important; }
-.tilpasser #touch #tStot.skjult, .tilpasser #touch #tKrok.skjult { display:flex; }
+.tilpasser #touch #tStot.skjult, .tilpasser #touch #tKrok.skjult, .tilpasser #touch #tSpiker.skjult { display:flex; }
 .tilpasser #touch #pad, .tilpasser #touch .rund { outline:2px dashed rgba(143,227,255,.45); outline-offset:4px; cursor:grab; }
 .tilpasser #touch .valgt { outline:3px solid var(--glod); }
 

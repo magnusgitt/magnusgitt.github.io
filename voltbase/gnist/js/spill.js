@@ -99,7 +99,7 @@ function kjop(id) { const o = OPPGRADERINGER.find(o => o.id === id); if (!o || S
 const orbIgjen = () => S.orbTatt.size - S.brukt;
 function lukkEvne() { if (S.mode !== 'evne') return; S.mode = 'spill'; sist = performance.now(); nullInput(); visLag(null); sjekkMaal(true);
   if (S.ev.stot && !S.hintSett.has('stotbruk')) hint('stotbruk', 'Hovedtavla er på andre siden av sjakten.'); }
-function nullInput() { I.jumpP = I.dashP = I.piskP = false; for (const k in K) K[k] = false; TS.left = TS.right = TS.jump = TS.dash = TS.krok = false; oppdaterTaster();
+function nullInput() { I.jumpP = I.dashP = I.piskP = I.spikerP = false; for (const k in K) K[k] = false; TS.left = TS.right = TS.jump = TS.dash = TS.krok = false; oppdaterTaster();
   $('#pad').dataset.dir = ''; document.querySelectorAll('.rund').forEach(b => b.classList.remove('trykk')); }
 
 // ---------- lynpisken ----------
