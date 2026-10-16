@@ -389,7 +389,8 @@ function rustRenner(x, y, w, h, fro, n) {
     g.addColorStop(0, 'rgba(140,66,28,.6)'); g.addColorStop(1, 'rgba(140,66,28,0)'); ctx.fillStyle = g; ctx.fillRect(rx, y, 1.4 + hs(fro, i, 9) * 2, l); }
 }
 function nagler(pkt, r) { r = r || 1.5; for (const [x, y] of pkt) { ctx.fillStyle = '#12151c'; ctx.beginPath(); ctx.arc(x, y + .7, r + .4, 0, 7); ctx.fill(); ctx.fillStyle = '#8d93a0'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); } }
-function bossBlink(a) { if (a <= 0) return; ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fillRect(-400, -400, 800, 800); ctx.globalCompositeOperation = 'source-over'; }
+// treffblink: et mykt, rundt hvitt lys over bossen (source-atop på hovedlerretet farget hele firkanten rundt den hvit)
+function bossBlink(a) { if (a <= 0) return; ctx.globalCompositeOperation = 'lighter'; glod(SPR.h, 0, -4, 44, a * .7); glod(SPR.c, 0, -4, 70, a * .4); ctx.globalCompositeOperation = 'source-over'; }
 function tegnBoss() {
   if (!B.aktiv) return;
   const X = B.x, Y = B.y, a = B.fase === 'dod' ? clamp(B.dod / 2.4, 0, 1) : 1, flimmer = B.stun > 0 && Math.sin(S.t * 40) > 0;
