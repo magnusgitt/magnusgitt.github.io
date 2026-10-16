@@ -10,18 +10,19 @@ function ring(x, y, n, f, fart, flat) { for (let i = 0; i < n; i++) { const a = 
 
 // ---------- spillets gang ----------
 function lagFiender() { fiender.length = 0; bolter.length = 0;
-  for (const f of FIENDE_DEF) {
-    if (f.type === 'sveve') fiender.push({ type: 'sveve', cx: f.x * T + T / 2, cy: f.y * T + T / 2, ax: f.ax * T, ay: f.ay * T, x: f.x * T, y: f.y * T, w: 20, h: 18, dir: 1, liv: true, t: Math.random() * 6 });
+  for (const f of FIENDE_DEF) { const ny = nyFiende2(f);
+    if (ny) fiender.push(ny);
+    else if (f.type === 'sveve') fiender.push({ type: 'sveve', cx: f.x * T + T / 2, cy: f.y * T + T / 2, ax: f.ax * T, ay: f.ay * T, x: f.x * T, y: f.y * T, w: 20, h: 18, dir: 1, liv: true, t: Math.random() * 6 });
     else if (f.type === 'rele') fiender.push({ type: 'rele', x: f.x * T + 5, y: (f.y + 1) * T - 22, w: 22, h: 22, dir: 1, liv: true, t: 0, lad: 0, pause: 1 });
     else fiender.push({ type: 'lus', x: (f.x0 + f.x1) / 2 * T, y: (f.y + 1) * T - 14, w: 22, h: 14, x0: f.x0 * T, x1: (f.x1 + 1) * T, dir: 1, liv: true, t: Math.random() * 6 });
   } }
-const maksLiv = () => 4 + (S.ev.liv ? 1 : 0) + (S.ev.liv2 ? 1 : 0) + (S.kjop.liv3 ? 1 : 0) + (S.ev.liv4 ? 1 : 0) + (S.ev.liv5 ? 1 : 0);
+const maksLiv = () => 4 + (S.ev.liv ? 1 : 0) + (S.ev.liv2 ? 1 : 0) + (S.kjop.liv3 ? 1 : 0) + (S.ev.liv4 ? 1 : 0) + (S.ev.liv5 ? 1 : 0) + (S.ev.liv6 ? 1 : 0);
 function nyttSpill(lagret) {
   byggKart();
-  S.ev = nyeEvner(); S.fag = new Set(); S.sett.fill(0); S.brukt = 0; S.kjop = {}; S.knust = new Set(); S.boss3 = false; S.boss4 = false; S.helt = false; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
+  S.ev = nyeEvner(); S.fag = new Set(); S.sett.fill(0); S.brukt = 0; S.kjop = {}; S.knust = new Set(); S.boss3 = false; S.boss4 = false; S.boss5 = false; S.oppdrag = {}; S.helt = false; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
   S.ending = 0; S.ending2 = 0; S.power = 0; S.dod = 0; S.hintSett = new Set(); S.dodsfall = 0; S.omr = ''; S.maal = ''; S.hallLys = 0; S.slow = 0; S.evneVent = 0; S.laas = 0;
   if (lagret) { Object.assign(S.ev, lagret.ev); S.cp = lagret.cp; S.cpLit = new Set([0, ...lagret.cpLit, lagret.cp]); S.orbTatt = new Set(lagret.orb);
-    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.fag = new Set(lagret.fag); S.sett.set(lagret.sett); S.brukt = lagret.brukt; Object.assign(S.kjop, lagret.kjop); S.knust = new Set(lagret.knust); S.boss3 = lagret.boss3; S.boss4 = lagret.boss4; S.helt = lagret.helt; S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
+    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.fag = new Set(lagret.fag); S.sett.set(lagret.sett); S.brukt = lagret.brukt; Object.assign(S.kjop, lagret.kjop); S.knust = new Set(lagret.knust); S.boss3 = lagret.boss3; S.boss4 = lagret.boss4; S.helt = lagret.helt; S.boss5 = !!lagret.boss5; Object.assign(S.oppdrag, lagret.oppdrag || {}); S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
   BRYTERE.forEach(b => b.av = S.bossDone);
   if (S.bossDone) { rect(101, 13, 101, 18, AIR); S.hallLys = 1; }
   if (S.ferdig) { S.power = 1; if (!BG.midtLys) BG.midtLys = lagMidt(true); rect(125, 19, 128, 19, AIR); }
@@ -30,6 +31,7 @@ function nyttSpill(lagret) {
   for (const i of S.knust) { const v = SVAKE[i]; if (v) rect(v.x0, v.y0, v.x1, v.y1, AIR); }
   B3.aktiv = false; B3.fase = ''; B3.hp = S.boss3 ? 0 : 6;
   B4.aktiv = false; B4.fase = ''; B4.hp = S.boss4 ? 0 : 4; B4.borste = -1;
+  B5.aktiv = false; B5.fase = ''; B5.hp = S.boss5 ? 0 : 4; B5.lyn.length = 0; S.overgang = null;
   P.max = maksLiv();
   B2.aktiv = false; B2.fase = ''; B2.hp = S.boss2 ? 0 : 3; bolter.length = 0; sveip.length = 0;
   B.aktiv = false; B.fase = ''; B.hp = S.bossDone ? 0 : 3; B.dod = 0; prosj.length = 0; bolger.length = 0; striker.length = 0; partikler.length = 0;
@@ -45,6 +47,7 @@ function respawn(stille) {
   if (B2.aktiv && !S.boss2) resetBoss2();
   if (B3.aktiv && !S.boss3) resetBoss3();
   if (B4.aktiv && !S.boss4) resetBoss4();
+  for (const f of TILBAKESTILL) f();
   lagFiender();
   GN.x = P.x; GN.y = P.y - 30; GN.vx = GN.vy = 0;
   cam.anker = P.y; oppdaterKamera(0, true); oppdaterStemning(0, true); hud();
@@ -88,7 +91,7 @@ function faaFag(i) {
   hud(); S.evneVent = .5; nullInput();
 }
 // hurtigreise: til et tent sjekkpunkt fra kartet
-function reiseTil(i) { if (!S.cpLit.has(i) || B.aktiv || B2.aktiv || B3.aktiv || B4.aktiv || S.dod > 0) return false;
+function reiseTil(i) { if (!S.cpLit.has(i) || anyBoss() || S.dod > 0 || S.overgang) return false;
   S.cp = i; respawn(true); lagre(); lyd('gjenoppstaa'); ring(P.x + P.w / 2, P.y + P.h / 2, 18, 'c', 160); S.hintSett.add('omr-' + omraade(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T))); return true; }
 function kjop(id) { const o = OPPGRADERINGER.find(o => o.id === id); if (!o || S.kjop[id] || orbIgjen() < o.pris) return false;
   S.kjop[id] = true; S.brukt += o.pris; if (id === 'liv3') { P.max = maksLiv(); P.hp = P.max; } lagre(); lyd('evne'); hud(); return true; }
@@ -99,7 +102,7 @@ function nullInput() { I.jumpP = I.dashP = I.piskP = false; for (const k in K) K
   $('#pad').dataset.dir = ''; document.querySelectorAll('.rund').forEach(b => b.classList.remove('trykk')); }
 
 // ---------- lynpisken ----------
-const PISK_LENGDE = 92;
+let PISK_LENGDE = 92;   // lengre med belønningen fra Gamle Ivar (settes i hud)
 function piskOmraade() { const cx = P.x + P.w / 2, cy = P.y + P.h / 2;
   return P.face > 0 ? { x0: cx - 8, x1: cx + PISK_LENGDE, y0: cy - 34, y1: cy + 24 } : { x0: cx - PISK_LENGDE, x1: cx + 8, y0: cy - 34, y1: cy + 24 }; }
 
@@ -185,6 +188,7 @@ function oppdaterSpiller(dt) {
     if (Math.abs(p.vy) < 90 && I.jumpHeld) gm *= .55;   // litt «sveve» på toppen av hoppet
     const maksFall = I.down ? 980 : 820;
     p.vy = Math.min(p.vy + 2000 * gm * dt, maksFall);
+    luftKrefter(p, dt);
     if (glir) { p.vy = Math.min(p.vy, I.down ? 420 : 160); if (Math.random() < dt * 25) part(p.x + p.w / 2 + vegg * p.w / 2, p.y + p.h - 4, -vegg * 30, -20, .3, 3, 'd', 60); }
     if (p.buf > 0) {
       if (p.coyote > 0) { p.vy = -640; p.coyote = 0; p.buf = 0; p.onGround = false; p.sy = 1.28; p.sx = .78; lyd('hopp'); stov(p.x + p.w / 2, p.y + p.h, 5, .8); GN.vy += 140; p.paKran = false; }
@@ -247,7 +251,7 @@ function oppdaterVerden(dt) {
   FAG.forEach((f, i) => { if (S.fag.has(i)) return; const fx = f.x * T + T / 2, fy = f.y * T + T / 2 + Math.sin(S.t * 2 + i) * 3;
     if (Math.abs(pcx - fx) < 22 && Math.abs(pcy - fy) < 26) faaFag(i); });
   // verksted ved sjekkpunktet
-  S.verkNaer = -1; if (!B.aktiv && !B2.aktiv && !B4.aktiv) for (const i of VERKSTED) { const c = SJEKK[i]; if (Math.abs(pcx - (c.x + 1.5) * T) < T * 2.2 && Math.abs(pcy - (c.y + .5) * T) < T * 1.5) S.verkNaer = i; }
+  S.verkNaer = -1; if (!anyBoss()) for (const i of VERKSTED) { const c = SJEKK[i]; if (Math.abs(pcx - (c.x + 1.5) * T) < T * 2.2 && Math.abs(pcy - (c.y + .5) * T) < T * 1.5) S.verkNaer = i; }
   // funn
   for (const f of FUNN) { if (!funnSynlig(f)) continue; const fx = f.x * T + T / 2, fy = f.y * T + T / 2;
     if (Math.abs(pcx - fx) < 22 && Math.abs(pcy - fy) < 26) { faaEvne(f); return; } }
@@ -268,11 +272,14 @@ function oppdaterVerden(dt) {
       else if (Math.abs(dx) < 10 * T && Math.abs(dy) < 3 * T) { if (e.lad === 0) lyd('relelad'); e.lad += dt;
         if (e.lad > .75) { e.lad = 0; e.pause = 1.7; lyd('releskudd'); bolter.push({ x: e.x + e.w / 2 + e.dir * 12, y: e.y + 9, vx: e.dir * 270, liv: 5 }); } }
       else e.lad = Math.max(0, e.lad - dt); }
-    else { e.x += e.dir * 46 * dt; if (e.x < e.x0) { e.x = e.x0; e.dir = 1; } if (e.x + e.w > e.x1) { e.x = e.x1 - e.w; e.dir = -1; } }
+    else if (!oppdaterFiende2(e, dt, pcx, pcy)) { e.x += e.dir * 46 * dt; if (e.x < e.x0) { e.x = e.x0; e.dir = 1; } if (e.x + e.w > e.x1) { e.x = e.x1 - e.w; e.dir = -1; } }
     if (pisk && e.x + e.w > pisk.x0 && e.x < pisk.x1 && e.y + e.h > pisk.y0 && e.y < pisk.y1) {
+      if (skjoldForan(e, pcx)) { if (!P.piskTraff) { P.piskTraff = true; prellAv(e); } continue; }
       drepFiende(e); P.piskTraff = true; lyd('piskTreff'); vib(20); S.shake = Math.max(S.shake, .15); sprut(e.x + e.w / 2, e.y + e.h / 2, 22, 'c', 240); gnister(e.x + e.w / 2, e.y + e.h / 2, 10, 'w'); continue; }
     if (P.x + P.w > e.x && P.x < e.x + e.w && P.y + P.h > e.y && P.y < e.y + e.h) {
-      if (P.dashT > 0 || (P.vy > 0 && P.y + P.h - e.y < 14)) { drepFiende(e); lyd('trakk'); vib(15); sprut(e.x + e.w / 2, e.y + e.h / 2, 18, 'c', 200); S.shake = .15;
+      const trakk = P.vy > 0 && P.y + P.h - e.y < 14;
+      if (P.dashT > 0 && !trakk && skjoldForan(e, pcx)) { prellAv(e); continue; }
+      if (P.dashT > 0 || trakk) { drepFiende(e); lyd('trakk'); vib(15); sprut(e.x + e.w / 2, e.y + e.h / 2, 18, 'c', 200); S.shake = .15;
         if (P.dashT <= 0) { P.vy = -470; P.air = S.ev.dobbel ? 1 : 0; P.canDash = true; P.sy = 1.2; P.sx = .85; } }
       else skade(e.x + e.w / 2, false); } }
   if (!S.hintSett.has('pisk') && !S.tidsmodus && fiender.some(e => e.liv && Math.abs(e.x - pcx) < 6 * T && Math.abs(e.y - pcy) < 3 * T))
@@ -291,6 +298,7 @@ function oppdaterVerden(dt) {
   oppdaterBoss2(dt);
   oppdaterBoss3(dt);
   oppdaterBoss4(dt);
+  for (const f of OPPDATER) f(dt);
   // område og hint
   const tx = Math.floor(pcx / T), ty = Math.floor(pcy / T);
   const omr = omraade(tx, ty); if (omr !== S.omr) { S.omr = omr; if (!S.hintSett.has('omr-' + omr)) { S.hintSett.add('omr-' + omr); if (omr !== 'Trafohallen') banner(omr, '', 1.8, true); } }
@@ -377,7 +385,7 @@ function knusVegg(i) { const v = SVAKE[i]; if (S.knust.has(i)) return;
   lyd('slipe'); S.shake = .45; vib([40, 30, 60]);
   for (let y = v.y0; y <= v.y1; y++) { gnister((v.x0 + v.x1 + 1) / 2 * T, y * T + T / 2, 8, 'o'); stov((v.x0 + v.x1 + 1) / 2 * T, (y + 1) * T, 3, 1.2); }
   toast('Veggen er skåret opp!'); }
-function funnSynlig(f) { return !S.ev[f.id] && !(f.boss && !S.bossDone) && !(f.boss2 && !S.boss2) && !(f.boss4 && !S.boss4); }
+function funnSynlig(f) { return !S.ev[f.id] && !(f.boss && !S.bossDone) && !(f.boss2 && !S.boss2) && !(f.boss4 && !S.boss4) && !(f.boss5 && !S.boss5); }
 
 // ---------- Kortslutningen (bossen i koblingsrommet) ----------
 const ARENA2 = { x0: 141, x1: 165, gulv: 57, midt: 153.5 };
@@ -611,8 +619,8 @@ function oppdaterProsj(dt) {
   for (let i = striker.length - 1; i >= 0; i--) { const s = striker[i];
     if (s.varsel > 0) { s.varsel -= dt; if (s.varsel <= 0) { s.aktiv = .28; lyd('nedslag'); S.shake = Math.max(S.shake, .25); gnister(s.x, 19 * T - 4, 12, 'p'); } }
     else { s.aktiv -= dt; if (Math.abs(s.x - pcx) < 13 + P.w / 2 && P.y + P.h > 6 * T) skade(s.x, false); if (s.aktiv <= 0) striker.splice(i, 1); } }
-  for (let i = bolter.length - 1; i >= 0; i--) { const q = bolter[i]; q.x += q.vx * dt; q.liv -= dt;
-    if (Math.random() < .5) part(q.x, q.y, -q.vx * .1, 0, .25, 6, 'c', 0);
+  for (let i = bolter.length - 1; i >= 0; i--) { const q = bolter[i]; q.x += q.vx * dt; q.y += (q.vy || 0) * dt; q.liv -= dt;
+    if (Math.random() < .5) part(q.x, q.y, -q.vx * .1, -(q.vy || 0) * .1, .25, 6, q.f || 'c', 0);
     if (fast(Math.floor(q.x / T), Math.floor(q.y / T)) || q.liv <= 0) { gnister(q.x, q.y, 6, 'c'); bolter.splice(i, 1); continue; }
     if (Math.abs(q.x - pcx) < 6 + P.w / 2 && Math.abs(q.y - pcy) < 6 + P.h / 2) { skade(q.x, false); gnister(q.x, q.y, 8, 'c'); bolter.splice(i, 1); } }
   for (let i = sveip.length - 1; i >= 0; i--) { const q = sveip[i], y = ((q.rad || ARENA2.gulv) - .55) * T, ax0 = q.x0 || ARENA2.x0, ax1 = q.x1 || ARENA2.x1;
@@ -650,10 +658,12 @@ function oppdaterKamera(dt, snap) {
   const iGard = B3.aktiv || (erGard(ptx, pty) && ptx >= 133);
   const iTurbin = B4.aktiv || erTurbin(ptx, pty);
   const iArena2 = B2.aktiv || erArena2(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T));
+  const sone = SONER[soneFor(pty)], iArena5 = B5.aktiv || (soneFor(pty) === 1 && ptx >= ARENA5.x0 && ptx <= ARENA5.x1);
   const zMaal = iHall ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 23 : 29) * T * grunnSkala), cssH / ((erTouch ? 19.5 : 15) * T * grunnSkala))
     : iArena2 ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 20 : 27) * T * grunnSkala), cssH / ((erTouch ? 20 : 16) * T * grunnSkala))
     : iGard ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 29) * T * grunnSkala), cssH / ((erTouch ? 21 : 19) * T * grunnSkala))
     : iTurbin ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 35) * T * grunnSkala), cssH / ((erTouch ? 19 : 16) * T * grunnSkala))
+    : iArena5 ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 30) * T * grunnSkala), cssH / ((erTouch ? 20 : 17) * T * grunnSkala))
     : iSal2 ? Math.min(1, cssH / (16 * T * grunnSkala)) : 1;
   cam.zoom = snap ? zMaal : cam.zoom + (zMaal - cam.zoom) * Math.min(1, dt * 2.5);
   skala = grunnSkala * cam.zoom;
@@ -671,7 +681,10 @@ function oppdaterKamera(dt, snap) {
   if (B2.aktiv) { tx = lerp(tx, ARENA2.midt * T - vw / 2, B2.fase === 'intro' ? 1 : .7); ty = erTouch ? gulvY : Math.min(57.6 * T - vh, 50 * T - vh / 2); }
   if (iGard) { tx = lerp(tx, GARD.midt * T - vw / 2, B3.aktiv ? (B3.fase === 'intro' ? 1 : .75) : .5); ty = erTouch ? 27.4 * T - .8 * vh : 28.3 * T - vh; }
   if (iTurbin) { tx = lerp(tx, TURBIN.midt * T - vw / 2, B4.aktiv ? (B4.fase === 'intro' ? 1 : .7) : .5); ty = erTouch ? 61.4 * T - .8 * vh : 62.3 * T - vh; }
-  tx = clamp(tx, 0, MW * T - vw); ty = vh >= MH * T ? (MH * T - vh) / 2 : clamp(ty, 0, MH * T - vh);
+  if (iArena5) { tx = lerp(tx, ARENA5.midt * T - vw / 2, B5.aktiv ? (B5.fase === 'intro' ? 1 : .8) : .5); ty = erTouch ? (ARENA5.gulv + .4) * T - .72 * vh : (ARENA5.gulv + 1.3) * T - vh; }
+  // kameraet holder seg innenfor sonen montøren er i
+  const sy0 = sone.y0 * T, sh = (sone.y1 + 1 - sone.y0) * T;
+  tx = clamp(tx, 0, MW * T - vw); ty = vh >= sh ? sy0 + (sh - vh) / 2 : clamp(ty, sy0, sy0 + sh - vh);
   if (snap) { cam.x = tx; cam.y = ty; return; }
   cam.x += (tx - cam.x) * (1 - Math.exp(-dt * 6)); cam.y += (ty - cam.y) * (1 - Math.exp(-dt * 5));
 }

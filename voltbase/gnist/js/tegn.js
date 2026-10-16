@@ -9,6 +9,7 @@ function jagget(x1, y1, x2, y2, utslag, n, seed) { const r = rng(seed); ctx.begi
 function synlig(x, y, m) { const vw = cssW / skala, vh = cssH / skala; return x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m; }
 
 function tegnBakgrunn(kx, ky) {
+  if (ky >= LY0 * T - 1) return tegnLinjaBg(kx, ky);
   const cw = cv.width, ch = cv.height;
   const maxY = Math.max(1, 34 * T - cssH / skala), t = clamp(ky / maxY, 0, 1);
   const hk = Math.max(cw / LW, ch / LH) * 1.08;
@@ -97,6 +98,7 @@ function tegnFunn(f) {
 function tegnFiende(e) {
   if (e.type === 'sveve') return tegnSveve(e);
   if (e.type === 'rele') return tegnRele(e);
+  if (tegnFiende2(e)) return;
   // gnistlus: varme farger og lysende øyne, så den skiller seg fra bakgrunnen
   const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t, v = e.varsel || 0;
   ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25); ctx.rotate(-v * .14 + (v > .5 ? Math.sin(t * 40) * .03 : 0));
@@ -195,6 +197,7 @@ function poseFor(p) {
     return { ...ben, a1: [-.9, .4], a2: [sl, .15], bob: p.onGround ? 1 : 0, hode: -.3 }; }
   if (p.krok) { const sv = Math.sin(S.t * 6) * .12, sl = clamp(p.vx / 700, -1, 1) * p.face * .7;
     return { b1: [-.3 + sv - sl, .5 + Math.abs(sl) * .4], b2: [.25 - sv - sl, .8], a1: [3.0, .1], a2: [2.9, .15], bob: 0, hode: 0 }; }
+  if (p.glir) { const sv = Math.sin(S.t * 5) * .1; return { b1: [-.2 + sv, .4], b2: [.25 - sv, .6], a1: [2.85, .15], a2: [3.05, .1], bob: 0, hode: -.2 }; }
   if (!p.onGround && p.vegg) return { b1: [.5, .9], b2: [-.2, .5], a1: [2.6, .3], a2: [2.2, .6], bob: 0, hode: .2 };
   if (!p.onGround) {
     if (p.vy < -80) return { b1: [-.35, 1.0], b2: [.75, 1.4], a1: [-2.5, .5], a2: [2.3, .4], bob: 0, hode: -.5 };
@@ -360,9 +363,11 @@ function tegnLuke(kx, ky, b) { kx = kx || 125; ky = ky || 19; const X = kx * T, 
     ctx.save(); ctx.translate(X + W + 6, Y); ctx.rotate(-1.25); ctx.fillStyle = '#4a5470'; ctx.fillRect(0, -6, W * .55, 6); ctx.restore(); } }
 function tegnKroker() {
   for (const k of KROKER) { const X = k[0] * T + T / 2, Y = k[1] * T; if (!synlig(X, Y, 80)) continue;
-    let top = k[1] - 1; while (top > 0 && !fast(k[0], top)) top--; const Y0 = (top + 1) * T;
-    ctx.strokeStyle = '#3a4558'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, Y0); ctx.lineTo(X, Y - 6); ctx.stroke();
-    ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 7, Y0 - 1, 14, 4);
+    if (k.linje) { ctx.strokeStyle = '#2a3242'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, k.ly); ctx.lineTo(X, Y - 6); ctx.stroke();
+      ctx.fillStyle = '#9fb7a8'; for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.ellipse(X, k.ly + 7 + i * 5, 4, 1.8, 0, 0, 7); ctx.fill(); } }
+    else { let top = k[1] - 1; while (top > 0 && !fast(k[0], top)) top--; const Y0 = (top + 1) * T;
+      ctx.strokeStyle = '#3a4558'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, Y0); ctx.lineTo(X, Y - 6); ctx.stroke();
+      ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 7, Y0 - 1, 14, 4); }
     const maal = S.krokMaal === k, i = P.krok && P.krok.k === k;
     ctx.strokeStyle = maal || i ? '#bff4ff' : '#9aa3b5'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(X, Y, 5.5, 0, 7); ctx.stroke(); }
   if (P.krok && S.dod <= 0) { const hx = P.x + P.w / 2 + P.face * 2, hy = P.y + 4;
@@ -433,6 +438,7 @@ function samleLys() {
   for (const [x, y] of KJELLERLYS) if (synlig(x * T, y * T, 200)) L(x * T + T / 2, y * T + 8, 150, .45);
   if (lyn) L((lyn.x1 + lyn.x2) / 2, (lyn.y1 + lyn.y2) / 2, 260, .8);
   detaljLys(L);
+  for (const f of LYSKILDER) f(L);
   if (S.power > 0) { const vw = cssW / skala; for (let x = 0; x < MW * T; x += 260) if (x > cam.x - 300 && x < cam.x + vw + 300) L(x, 10 * T, 600, S.power * .6); }
   if (S.hallLys > 0 && synlig(87 * T, 12 * T, 600)) for (let x = 76; x <= 99; x += 6) L(x * T, 9 * T, 300, .55 * S.hallLys);
 }
@@ -474,7 +480,8 @@ function tegnGlod() {
     if (B.varsel > 0) { ctx.globalAlpha = B.varsel * .6; ctx.fillStyle = 'rgba(200,140,255,1)'; const col = Math.floor(B.x / T); let row = Math.floor(B.y / T) + 1; while (row < MH && tile(col, row) !== SOL) row++;
       ctx.fillRect(B.x - 60, row * T - 3, 120, 3); } }
   for (const q of prosj) { glod(SPR[q.f || 'p'], q.x, q.y, 28, .9); glod(SPR.h, q.x, q.y, 7, 1); }
-  for (const q of bolter) { glod(SPR.c, q.x, q.y, 24, .95); glod(SPR.h, q.x, q.y, 6, 1); }
+  for (const q of bolter) { glod(SPR[q.f || 'c'], q.x, q.y, 24, .95); glod(SPR.h, q.x, q.y, 6, 1); }
+  for (const e of fiender) if (e.liv && synlig(e.x, e.y, 60)) fiende2Glod(e);
   for (const e of fiender) if (e.liv && e.type === 'rele' && e.lad > 0) glod(SPR.c, e.x + e.w / 2 + e.dir * 8, e.y + 13, 14 + e.lad * 40, .5 + e.lad * .5);
   // vann: små utladninger i det strømførende vannet, og hele gulvet i koblingsrommet når det er strøm på
   for (const [x, y] of vannListe) { const X = x * T + T / 2; if (!synlig(X, y * T, 40)) continue;
@@ -538,6 +545,7 @@ function tegnGlod() {
     const gs = 36 + 4 * Math.sin(S.t * 6) + GN.flare * 30;
     glod(SPR.c, GN.x, GN.y, gs, .75 + GN.flare * .25); glod(SPR.h, GN.x, GN.y, 8 + GN.flare * 6, 1);
   }
+  for (const f of TEGN_GLOD) f();
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 }
 function tegnStov() { ctx.fillStyle = 'rgba(150,160,180,.35)'; for (const q of partikler) if (q.farge === 'd') { ctx.globalAlpha = q.liv / q.max * .6; ctx.beginPath(); ctx.arc(q.x, q.y, q.str * (1.4 - q.liv / q.max * .6), 0, 7); ctx.fill(); } ctx.globalAlpha = 1; }
@@ -582,6 +590,7 @@ function tegn() {
   tegnSpesialFliser();
   tegnLysbue();
   tegnKran();
+  for (const f of TEGN_VERDEN) f();
   SJEKK.forEach((c, i) => { if (synlig(c.x * T, c.y * T, 100)) tegnLampe(c, i); });
   if (synlig(TAVLE.x * T, TAVLE.y * T, 200)) tegnTavle();
   if (B.aktiv || !S.bossDone) BRYTERE.forEach(b => { if (synlig(b.x * T, b.y * T, 100)) tegnBryter(b); });
@@ -597,6 +606,7 @@ function tegn() {
   tegnBoss4();
   if (S.dod <= 0 && !P.krok) tegnSkygge(P.x + P.w / 2, P.y + P.h, P.w);
   tegnSpiller();
+  tegnSkjerm(P);
   tegnVann();
   tegnStov();
   samleLys();
@@ -605,9 +615,11 @@ function tegn() {
   tegnGlod();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   tegnForgrunn();
+  for (const f of TEGN_FORAN) f();
   tegnMotes(true);
   tegnBloom();
   if (vign) ctx.drawImage(vign, 0, 0, cv.width, cv.height);
   if (S.flash > 0) { ctx.fillStyle = `rgba(${S.flashF},${Math.min(1, S.flash) * (INNST.rist ? .55 : .2)})`; ctx.fillRect(0, 0, cv.width, cv.height); }
   if (S.dod > 0) { ctx.fillStyle = `rgba(2,4,12,${clamp((1.2 - S.dod) / .6, 0, 1) * .85})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+  tegnOvergang();
 }

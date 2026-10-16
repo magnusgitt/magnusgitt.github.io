@@ -402,6 +402,117 @@ async function fase7(b) {
   await ctx.close();
 }
 
+// fase 2 i Gnist 2.0: Høyspentlinja
+// kjører montøren i fast tidssteg inne i siden, så rutene kan sjekkes uten at timingen i nettleseren spiller inn
+const SIM = `window.__sim = (steg, pol) => { const h = 1 / 120; for (let i = 0; i < steg; i++) { pol(i); oppdaterTaster(); velgKrok(); const hp = P.hp; oppdaterSpiller(h);
+  if (P.hp < hp) return { fall: true, x: P.x / 32, y: (P.y + P.h) / 32 }; } return { x: P.x / 32, y: (P.y + P.h) / 32, bakke: P.onGround }; };
+window.__sett = (x, y) => { P.x = x * 32 + 7; P.y = (y + 1) * 32 - P.h; P.vx = P.vy = 0; P.onGround = true; P.krok = null; P.inv = 0; P.air = 1; P.canDash = true; S.dod = 0; TS.left = TS.right = TS.jump = TS.krok = false; };`;
+async function linja(b) {
+  console.log('Fase 2: Høyspentlinja');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  const ev = { dobbel: true, hansker: true, stot: true, krok: true, liv: true, liv2: true, tester: true, sliper: true, liv4: true, klatre: true, liv5: true };
+  const lagring = boss4 => ({ v: 4, ev, cp: 11, cpLit: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], orb: [], boss: true, boss2: true, boss3: true, boss4, helt: true, ferdig: true, tid: 900 });
+  await page.evaluate(([k, l]) => localStorage.setItem(k, JSON.stringify(l)), [KEY, lagring(false)]);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
+  await page.evaluate(SIM);
+  // porten er låst før Generatoren er stanset
+  await pos(page, 64, 60); await page.keyboard.down('ArrowRight'); await vent(page, 700); await page.keyboard.up('ArrowRight'); await vent(page, 300);
+  sjekk('porten til linja er låst før Generatoren', await page.evaluate(() => !S.overgang && P.y < 72 * 32 && P.x / 32 < 66), await tilstand(page));
+  // med Generatoren slått åpnes porten, og montøren havner i den nye sonen
+  await page.evaluate(([k, l]) => localStorage.setItem(k, JSON.stringify(l)), [KEY, lagring(true)]);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600); await page.evaluate(SIM);
+  await pos(page, 64, 60); await page.keyboard.down('ArrowRight'); await vent(page, 600); await page.keyboard.up('ArrowRight'); await vent(page, 1100);
+  { const s = await page.evaluate(() => ({ sone: spillerSone(), x: P.x / 32, omr: S.omr, cam: cam.y / 32, st: ST.navn })); sjekk('porten tar montøren til Høyspentlinja', s.sone === 1 && s.x < 8 && s.omr === 'Fjellfoten', s);
+    sjekk('kameraet holder seg i sonen', s.cam >= 72, s); sjekk('fjellet har sin egen stemning', s.st === 'linja', s); }
+  // Gamle Ivar: snakk, og få oppdraget
+  await pos(page, 11, 104); await vent(page, 300);
+  sjekk('snakkeknappen vises ved Ivar', await page.evaluate(() => !document.querySelector('#verkKnapp').classList.contains('skjult') && document.querySelector('#verkKnapp').textContent.includes('Ivar')));
+  await page.keyboard.press('ArrowDown'); await vent(page, 350);
+  sjekk('samtalen åpnes', await page.evaluate(() => S.mode === 'dialog' && document.querySelector('#dialog').classList.contains('vis') && document.querySelector('#dlgNavn').textContent === 'Gamle Ivar'));
+  for (let i = 0; i < 3; i++) { await page.keyboard.press('Enter'); await vent(page, 320); }
+  sjekk('samtalen lukkes og oppdraget er gitt', await page.evaluate(() => S.mode === 'spill' && S.oppdrag.jord === 1 && !document.querySelector('#dialog').classList.contains('vis')), await page.evaluate(() => [S.mode, S.oppdrag]));
+  // juvet: kroker i linja tar montøren over
+  { const r = await page.evaluate(() => { S.mode = 'pause'; fiender.length = 0; __sett(61, 99); let sist = null;
+      const r = __sim(2400, i => { TS.right = true; if (i === 0) { I.jumpP = true; TS.jump = true; } if (i === 20) TS.jump = false;
+        if (P.krok) TS.krok = !(P.x + P.w / 2 > P.krok.x + 30 && P.vy < 0); else TS.krok = !!S.krokMaal && !P.onGround; if (P.x / 32 > 98 && P.onGround) { TS.right = false; TS.krok = false; } });
+      TS.right = TS.krok = false; return r; });
+    sjekk('kan svinge seg over juvet i kroker', !r.fall && r.x > 97 && r.bakke, r); }
+  { const r = await page.evaluate(() => { __sett(61, 99); const r = __sim(600, i => { TS.right = true; TS.jump = true; if (i === 0) I.jumpP = true; if (i === 40) I.jumpP = true; }); TS.right = TS.jump = false; return r; });
+    sjekk('juvet er for bredt uten kroker', !!r.fall, r); }
+  // glideskjermen på toppen av den høye masta
+  { const r = await page.evaluate(() => { __sett(113, 99); return __sim(1500, i => { TS.jump = true; if (P.onGround && i % 40 === 0) I.jumpP = true; if (!P.onGround && P.vy > 0 && P.air > 0) I.jumpP = true; }); });
+    sjekk('kan klatre opp masta på armene', r.y < 85, r); }
+  await page.evaluate(() => { S.mode = 'spill'; TS.jump = false; oppdaterTaster(); }); await pos(page, 113, 83); await lukkKort(page);
+  sjekk('glideskjermen plukkes opp', await page.evaluate(() => S.ev.glid && !!document.querySelector('#ev-glid')));
+  // Vindskaret: for bredt uten glideskjerm, mulig med
+  { const r = await page.evaluate(() => { S.mode = 'pause'; fiender.length = 0; VIND.styrke = 0; S.ev.glid = false; __sett(131, 99); let f = 0;
+      const r = __sim(900, i => { TS.right = true; TS.jump = true; if (i === 0) I.jumpP = true; if (f === 0 && P.vy > 0 && i > 5) { I.jumpP = true; f = 1; } }); S.ev.glid = true; return r; });
+    sjekk('Vindskaret kan ikke krysses uten glideskjerm', !!r.fall, r); }
+  { const r = await page.evaluate(() => { __sett(131, 99); let f = 0;
+      const r = __sim(900, i => { TS.right = true; TS.jump = true; if (i === 0) I.jumpP = true; if (f === 0 && P.vy > 0 && i > 5) { I.jumpP = true; f = 1; } if (P.x / 32 > 147.5 && P.onGround) TS.right = false; }); TS.right = TS.jump = false; return r; });
+    sjekk('seiler over Vindskaret med glideskjermen', !r.fall && r.x > 147, r); }
+  { const g = await page.evaluate(() => { __sett(137, 85); P.onGround = false; P.vy = 400; TS.jump = true; __sim(60, () => {}); const fall = P.vy; __sett(142, 100); P.onGround = false; P.vy = 100; TS.jump = true; __sim(60, () => {}); const opp = P.vy; TS.jump = false; return { fall, opp }; });
+    sjekk('glideskjermen bremser fallet', g.fall <= 96, g); sjekk('oppvinden løfter skjermen', g.opp < -100, g); }
+  // vindkast skyver
+  { const v = await page.evaluate(() => { __sett(70, 99); P.onGround = false; VIND.styrke = 1; __sim(30, () => {}); const vx = P.vx; VIND.styrke = 0; return vx; });
+    sjekk('vindkastet skyver montøren', v > 100, v); }
+  // jordingsstanga i Vindskaret, og belønningen fra Ivar
+  await page.evaluate(() => { S.mode = 'spill'; TS.left = TS.right = TS.jump = TS.krok = false; oppdaterTaster(); }); await pos(page, 163, 109); await vent(page, 300);
+  sjekk('jordingsstanga plukkes opp', await page.evaluate(() => S.oppdrag.jord === 2));
+  sjekk('målet peker tilbake til Ivar', await page.evaluate(() => { const b = S.boss5, l = S.ev.liv6; S.boss5 = S.ev.liv6 = true; const m = maalTekst(); S.boss5 = b; S.ev.liv6 = l; return m.includes('Ivar'); }));
+  await pos(page, 11, 104); await vent(page, 300); await page.keyboard.press('ArrowDown'); await vent(page, 350);
+  for (let i = 0; i < 3; i++) { await page.keyboard.press('Space'); await vent(page, 320); }
+  sjekk('Ivar gir lengre lynpisk', await page.evaluate(() => S.oppdrag.jord === 3 && S.kjop.pisk2 && PISK_LENGDE === 120), await page.evaluate(() => [S.oppdrag, PISK_LENGDE]));
+  // nye fiender
+  { const r = await page.evaluate(() => { S.mode = 'pause'; lagFiender(); const typer = new Set(fiender.map(e => e.type)); fiender.length = 0;
+      const sk = nyFiende2({ type: 'skjold', x0: 30, x1: 45, y: 99 }); fiender.push(sk); sk.x = 40 * 32; sk.dir = -1; P.x = sk.x - 60; P.y = sk.y + sk.h - P.h; P.face = 1; P.piskT = .2; P.piskTraff = false; P.vx = P.vy = 0; P.inv = 99;
+      oppdaterVerden(1 / 60); const forfra = sk.liv; sk.dir = 1; P.piskT = .2; P.piskTraff = false; oppdaterVerden(1 / 60); const bakfra = sk.liv;
+      fiender.length = 0; const sy = nyFiende2({ type: 'skytter', x: 40, y: 99 }); fiender.push(sy); P.x = 46 * 32; P.y = 96 * 32; bolter.length = 0; for (let i = 0; i < 200; i++) oppdaterVerden(1 / 60);
+      const skudd = bolter.length > 0 && bolter.some(q => q.vy && q.vx > 0);
+      fiender.length = 0; const j = nyFiende2({ type: 'jager', x: 40, y: 95 }); fiender.push(j); P.x = 45 * 32; P.y = 95 * 32; const d0 = Math.hypot(j.x - P.x, j.y - P.y); for (let i = 0; i < 60; i++) oppdaterVerden(1 / 60);
+      const d1 = Math.hypot(j.x - P.x, j.y - P.y); fiender.length = 0; bolter.length = 0; S.mode = 'spill'; return { typer: [...typer], forfra, bakfra, skudd, d0, d1 }; });
+    sjekk('linja har de nye fiendetypene', ['jager', 'skytter', 'skjold'].every(t => r.typer.includes(t)), r.typer);
+    sjekk('skjoldet tar slaget forfra', r.forfra === true, r); sjekk('skjoldfienden kan slås bakfra', r.bakfra === false, r);
+    sjekk('skytteren sikter og skyter', r.skudd, r); sjekk('jageren jager montøren', r.d1 < r.d0 - 40, r); }
+  // Lynfuglen
+  await page.evaluate(() => { P.inv = 0; P.hp = P.max; }); await pos(page, 180, 99); await vent(page, 500);
+  sjekk('Lynfuglen våkner og arenaen stenges', await page.evaluate(() => B5.aktiv && tile(171, 99) === 5 && tile(197, 99) === 5));
+  sjekk('hurtigreise er stengt under bosskamp', await page.evaluate(() => !reiseTil(0)));
+  await page.waitForFunction(() => B5.fase === 'kamp', null, { timeout: 5000 }).catch(() => {});
+  sjekk('bosslinja viser Lynfuglen', await page.evaluate(() => document.querySelector('#boss').classList.contains('vis') && document.querySelector('#bossNavn').textContent === 'Lynfuglen' && document.querySelectorAll('#bossSik i').length === 4));
+  // dør montøren, nullstilles kampen og dørene åpnes
+  await page.evaluate(() => { P.inv = 0; P.hp = 1; skade(P.x + 50, false); }); await vent(page, 1800);
+  sjekk('døden nullstiller Lynfuglen og åpner arenaen', await page.evaluate(() => !B5.aktiv && tile(171, 99) === 0 && tile(197, 99) === 0 && S.mode === 'spill'), await page.evaluate(() => [B5.aktiv, B5.fase, tile(171, 99)]));
+  await pos(page, 180, 99); await vent(page, 300); await page.waitForFunction(() => B5.fase === 'kamp', null, { timeout: 5000 }).catch(() => {});
+  // den kan bare skades når den ligger ør på bakken; slå den fire ganger
+  const f0 = await page.evaluate(() => { P.inv = 999; B5.tilstand = 'sirkel'; B5.tT = 9; const hp = B5.hp; B5.x = P.x + 40; B5.y = P.y; P.face = 1; P.piskT = .2; oppdaterVerden(1 / 60); return hp - B5.hp; });
+  sjekk('Lynfuglen tåler pisken i lufta', f0 === 0, f0);
+  for (let i = 0; i < 4; i++) { await page.evaluate(() => { B5.tilstand = 'bakke'; B5.tT = 2; B5.x = P.x + P.w / 2 + 40; B5.y = 100 * 32 - 18; P.face = 1; P.piskT = .2; P.piskCd = 0; }); await vent(page, 120); }
+  await page.waitForFunction(() => __gnist.S.boss5, null, { timeout: 6000 }).catch(() => {});
+  sjekk('Lynfuglen er slått', await page.evaluate(() => S.boss5 && !B5.aktiv && tile(171, 99) === 0), await page.evaluate(() => [B5.hp, B5.fase, S.boss5]));
+  await page.evaluate(() => { P.inv = 0; }); await pos(page, 184, 99); await vent(page, 400);
+  sjekk('livsgnist 6 etter Lynfuglen', await page.evaluate(() => S.ev.liv6 && P.max === maksLiv()));
+  // stup og lyn gjør vondt, men varsles først
+  { const r = await page.evaluate(() => { const l = { x: P.x + P.w / 2, varsel: .95, aktiv: 0, seed: 1 }; B5.lyn.push(l); B5.aktiv = true; B5.fase = 'kamp'; B5.tilstand = 'opp'; B5.tT = 5; B5.x = 0; B5.y = 0; P.inv = 0; const hp0 = P.hp;
+      oppdaterVerden(1 / 60); const forVarsel = P.hp; for (let i = 0; i < 70; i++) oppdaterVerden(1 / 60); const etter = P.hp; B5.aktiv = false; B5.lyn.length = 0; P.hp = P.max; return { hp0, forVarsel, etter }; });
+    sjekk('lyn varsles før det slår ned', r.forVarsel === r.hp0 && r.etter < r.hp0, r); }
+  // lagring: oppdrag, boss og belønning blir med videre
+  await page.evaluate(() => lagre()); const l = await page.evaluate(() => hentLagret());
+  sjekk('lagringen tar med Lynfuglen og oppdraget', l.boss5 === true && l.oppdrag.jord === 3 && l.kjop.pisk2 === true && l.ev.glid && l.ev.liv6, l && { b: l.boss5, o: l.oppdrag, k: l.kjop });
+  // kartet: faner per sone og hurtigreise mellom sonene
+  await page.evaluate(() => { for (const i of [12, 13, 14, 15, 16]) S.cpLit.add(i); }); await page.keyboard.press('Tab'); await vent(page, 300);
+  sjekk('kartet har faner for sonene', await page.evaluate(() => document.querySelectorAll('#kartSoner button').length === 2 && kartSone === 1));
+  await page.click('#kartSoner button[data-sone="0"]'); await vent(page, 200);
+  sjekk('kan bytte til byen i kartet', await page.evaluate(() => kartSone === 0));
+  await page.keyboard.press('Tab'); await vent(page, 200);
+  sjekk('hurtigreise fra fjellet til byen', await page.evaluate(() => reiseTil(4) && spillerSone() === 0 && cam.y / 32 < 72));
+  sjekk('hurtigreise fra byen til fjellet', await page.evaluate(() => reiseTil(14) && spillerSone() === 1 && cam.y / 32 >= 72 && S.verkNaer === -1 || spillerSone() === 1));
+  // tilbake gjennom porten
+  await pos(page, 5, 104); await page.keyboard.down('ArrowLeft'); await vent(page, 500); await page.keyboard.up('ArrowLeft'); await vent(page, 1100);
+  sjekk('porten tilbake til byen', await page.evaluate(() => spillerSone() === 0 && Math.abs(P.x / 32 - 65) < 2.5), await tilstand(page));
+  sjekk('ingen JS-feil (linja)', errs.length === 0, errs);
+  await ctx.close();
+}
 
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
@@ -512,6 +623,7 @@ async function grafikk(b) {
     if (med('fase6')) await fase6(b);
     if (med('fase7')) await fase7(b);
     if (med('grafikk')) await grafikk(b);
+    if (med('linja')) await linja(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

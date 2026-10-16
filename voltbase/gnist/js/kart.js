@@ -106,7 +106,7 @@ const OMRAADER = [
 ];
 function byggKart() {
   map.fill(SOL);
-  for (const o of OMRAADER) for (const [x0, y0, x1, y1, v] of o.kart) rect(x0, y0, x1, y1, v);
+  for (const o of OMRAADER) { for (const [x0, y0, x1, y1, v] of o.kart) rect(x0, y0, x1, y1, v); if (o.bygg) o.bygg(); }
 }
 const iSkjult = (x, y) => x >= SKJULT.x0 && x <= SKJULT.x1 && y >= SKJULT.y0 && y <= SKJULT.y1;
 // «Malt fast»: det som tegnes som stein. Det hemmelige rommet ser fast ut til det er funnet.
@@ -117,17 +117,18 @@ function beregnDyp() {
   let h = 0;
   while (h < q.length) { const i = q[h++], x = i % MW, y = (i / MW) | 0, d = dyp[i];
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= MW || ny >= MH) continue; const j = ny * MW + nx; if (dyp[j] > d + 1) { dyp[j] = d + 1; q.push(j); } } }
+      if (nx < 0 || ny < 0 || nx >= MW || ny >= MH || soneFor(ny) !== soneFor(y)) continue; const j = ny * MW + nx; if (dyp[j] > d + 1) { dyp[j] = d + 1; q.push(j); } } }
 }
 const dypAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? 6 : Math.min(6, dyp[y * MW + x]);
-const iKraft = (x, y) => x <= 71 && y >= 33 && !(x >= 70 && y < 52);
+const iKraft = (x, y) => x <= 71 && y >= 33 && y < 72 && !(x >= 70 && y < 52);
 const erTurbin = (x, y) => x >= 20 && x <= 52 && y >= 48 && y <= 61;
-const iKjeller2 = (x, y) => !iKraft(x, y) && y >= 20 && x >= 70 && x <= 171 && !(y < 36 && (x < 123 || x > 130)) && !(x >= 167 && y <= 27);
-function inne(x, y) { return iKraft(x, y) || iKjeller2(x, y) || (x >= 49 && x <= 56 && y >= 20 && y <= 23) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
+const iKjeller2 = (x, y) => !iKraft(x, y) && y >= 20 && y < 72 && x >= 70 && x <= 171 && !(y < 36 && (x < 123 || x > 130)) && !(x >= 167 && y <= 27);
+function inne(x, y) { if (y >= 72) return false; return iKraft(x, y) || iKjeller2(x, y) || (x >= 49 && x <= 56 && y >= 20 && y <= 23) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
 const erHall = (x, y) => x >= 73 && x <= 101 && y >= 5 && y <= 19;
 const erGard = (x, y) => x >= 132 && x <= 159 && y >= 4 && y <= 27;
 const erArena2 = (x, y) => x >= 140 && x <= 166 && y >= 42 && y <= 58;
 function omraade(tx, ty) {
+  if (ty >= 72) return tx <= 62 ? 'Fjellfoten' : tx <= 96 ? 'Juvet' : tx <= 131 ? 'Mastene' : tx <= 166 ? 'Vindskaret' : 'Toppmasta';
   if (iKraft(tx, ty)) return erTurbin(tx, ty) || (tx <= 19 && ty >= 56) ? 'Turbinhallen' : tx >= 59 ? 'Fallrøret' : tx <= 27 ? 'Verktøyrommet' : 'Inntaket';
   if (tx >= 132 && ty <= 26) return erGard(tx, ty) ? 'Stasjonsgården' : 'Trafostasjonen';
   if (iKjeller2(tx, ty)) {

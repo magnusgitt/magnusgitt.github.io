@@ -186,3 +186,16 @@ a.knapp { text-decoration:none; text-align:center; }
 .tilpasser #touch #tStot.skjult, .tilpasser #touch #tKrok.skjult { display:flex; }
 .tilpasser #touch #pad, .tilpasser #touch .rund { outline:2px dashed rgba(143,227,255,.45); outline-offset:4px; cursor:grab; }
 .tilpasser #touch .valgt { outline:3px solid var(--glod); }
+
+/* samtaler med figurer: én kort replikk om gangen */
+#dialog { position:fixed; left:50%; bottom:calc(150px + env(safe-area-inset-bottom)); transform:translate(-50%,10px); width:min(92vw,520px); z-index:3;
+  padding:14px 18px 12px; border-radius:16px; border:1px solid rgba(255,214,150,.45); background:rgba(14,16,28,.92); color:#f3ecdf; box-shadow:0 10px 40px rgba(0,0,0,.5);
+  opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; }
+#dialog.vis { opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+#dialog .navn { color:var(--varm); font-size:20px; margin-bottom:4px; }
+#dialog #dlgTekst { font-size:16px; line-height:1.45; }
+#dialog .videre { font-size:12px; color:var(--dempet); margin-top:8px; text-align:right; }
+.touch #dialog { bottom:auto; top:calc(70px + env(safe-area-inset-top)); }
+#kartSoner { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
+#kartSoner button { padding:6px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.05); color:#dfe6f3; font-size:14px; cursor:pointer; }
+#kartSoner button.valgt { border-color:rgba(255,197,107,.7); background:rgba(255,197,107,.15); color:#ffe2ad; }

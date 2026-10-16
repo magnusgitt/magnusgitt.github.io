@@ -171,8 +171,9 @@ const PAL = {
 };
 PAL.kabel = { c: ['#000', '#2e3a3f', '#253035', '#1d272b', '#172024', '#12191c', '#0e1416'], mose: '#3f5559', stra: ['#56707a', '#68848d', '#4a6168'] };
 PAL.kraft = { c: ['#000', '#33402f', '#293427', '#202a1f', '#192119', '#141a14', '#0f140f'], mose: '#4d6340', stra: ['#6f8a5c', '#86a26f', '#5b7349'] };
+PAL.fjell = { c: ['#000', '#36404f', '#2b3443', '#222a37', '#1b212c', '#151a23', '#10141b'], mose: '#dfe8f2', stra: ['#7d8f86', '#97a89c', '#66786e'], gress: true, rim: 'rgba(230,245,255,.5)' };
 PAL.ute.rim = 'rgba(190,255,225,.4)'; PAL.kjeller.rim = 'rgba(255,215,170,.3)'; PAL.hall.rim = 'rgba(205,190,255,.32)'; PAL.kabel.rim = 'rgba(150,240,250,.3)'; PAL.kraft.rim = 'rgba(190,255,170,.32)';
-const palAt = (x, y) => iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
+const palAt = (x, y) => y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
 const chunks = new Map();
@@ -235,8 +236,8 @@ function bakvegg(g, x, y) {
 }
 function topp(g, x, y, pal) {
   const X = x * T, Y = y * T, hv = k => hs(x, y, k);
-  if (pal === PAL.ute) {
-    const d = hv(1);
+  if (pal === PAL.ute || pal.gress) {
+    const d = pal === PAL.ute ? hv(1) : 1;
     if (d < .1) { g.strokeStyle = '#8a5236'; g.lineWidth = 2; g.beginPath(); const bx = X + 6 + hv(2) * 18;
       g.moveTo(bx, Y + 2); g.lineTo(bx - 3 + hv(3) * 6, Y - 10 - hv(4) * 10); g.moveTo(bx + 5, Y + 2); g.lineTo(bx + 4 + hv(5) * 6, Y - 8 - hv(6) * 8); g.stroke(); }
     else if (d < .16) { g.fillStyle = '#4b566c'; rr(g, X + 5, Y - 9, 18, 11, 2); g.fill(); g.fillStyle = 'rgba(200,220,255,.18)'; g.fillRect(X + 6, Y - 9, 16, 1.5); }
@@ -246,11 +247,11 @@ function topp(g, x, y, pal) {
     g.lineTo(X - 1, Y - 1); for (let i = 1; i <= 4; i++) g.quadraticCurveTo(X + (i - .5) * 8, Y - 2.5 - hv(20 + i) * 3, X + i * 8 + (i === 4 ? 1 : 0), Y - .5);
     g.lineTo(X + T + 1, Y + 8); g.closePath(); g.fill();
     const gr = g.createLinearGradient(0, Y, 0, Y + 12); gr.addColorStop(0, 'rgba(20,40,40,0)'); gr.addColorStop(1, 'rgba(10,20,30,.35)'); g.fillStyle = gr; g.fillRect(X, Y + 3, T, 9);
-    g.strokeStyle = 'rgba(160,240,210,.4)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X, Y - 1); g.lineTo(X + T, Y - 1); g.stroke();
+    g.strokeStyle = pal.gress ? pal.rim : 'rgba(160,240,210,.4)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X, Y - 1); g.lineTo(X + T, Y - 1); g.stroke();
     const n = 4 + (hv(30) * 6 | 0);
     for (let i = 0; i < n; i++) { const bx = X + hv(40 + i) * T, bh = 5 + hv(50 + i) * 12, l = (hv(60 + i) - .5) * 9;
       g.strokeStyle = pal.stra[i % 3]; g.lineWidth = 1.4; g.beginPath(); g.moveTo(bx, Y + 1); g.quadraticCurveTo(bx + l * .3, Y - bh * .6, bx + l, Y - bh); g.stroke(); }
-    if (hv(70) < .13) { const px = X + 8 + hv(71) * 16, ph = 10 + hv(72) * 10;
+    if (pal === PAL.ute && hv(70) < .13) { const px = X + 8 + hv(71) * 16, ph = 10 + hv(72) * 10;
       g.strokeStyle = '#3f8f7c'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(px, Y); g.quadraticCurveTo(px + 4, Y - ph * .5, px, Y - ph); g.stroke();
       const gb = g.createRadialGradient(px, Y - ph, 0, px, Y - ph, 8); gb.addColorStop(0, '#effeff'); gb.addColorStop(.35, 'rgba(120,230,255,.9)'); gb.addColorStop(1, 'rgba(120,230,255,0)');
       g.fillStyle = gb; g.beginPath(); g.arc(px, Y - ph, 8, 0, 7); g.fill(); }
@@ -265,7 +266,7 @@ function topp(g, x, y, pal) {
 }
 function heng(g, x, y, pal) {
   const X = x * T, Y = (y + 1) * T, hv = k => hs(x, y, k);
-  if (pal === PAL.ute) {
+  if (pal === PAL.ute || pal.gress) {
     if (hv(80) < .5) { const n = 1 + (hv(81) * 3 | 0); g.strokeStyle = '#0d1524'; for (let i = 0; i < n; i++) { const bx = X + hv(82 + i) * T, l = 8 + hv(85 + i) * 24;
       g.lineWidth = 1 + hv(88 + i) * 1.5; g.beginPath(); g.moveTo(bx, Y - 2); g.quadraticCurveTo(bx + 4, Y + l * .5, bx - 2, Y + l); g.stroke(); } }
   } else {
@@ -319,7 +320,7 @@ function lagChunk(cx, cy) {
     if (!erSol(x, y + 1)) { g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x * T, y * T + T - 8, T, 8); } });
   alle((x, y) => { if (erSol(x, y) && !erSol(x, y - 1)) topp(g, x, y, palAt(x, y)); });
   alle((x, y) => { if (erSol(x, y) && !erSol(x, y + 1)) heng(g, x, y, palAt(x, y)); });
-  alle((x, y) => { if (tile(x, y) === ONE) planke(g, x, y); });
+  alle((x, y) => { if (tile(x, y) === ONE && !STAAL.has(x + ',' + y)) planke(g, x, y); });
   return c;
 }
 function hentChunk(cx, cy) {
@@ -338,7 +339,7 @@ function resize() {
   cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
   // stående mobil: litt nærmere, så montøren ikke blir for liten
   grunnSkala = cssH > cssW * 1.15 ? cssW / (T * 14) : Math.min(cssW / (T * 24), cssH / (T * 14));
-  grunnSkala = clamp(Math.max(grunnSkala, cssH / (T * (MH - 1)), cssW / (T * MW)), .45, 3);
+  grunnSkala = clamp(Math.max(grunnSkala, cssH / (T * 45), cssW / (T * MW)), .45, 3);
   skala = grunnSkala * cam.zoom;
   const nr = clamp(grunnSkala * dpr, .75, 2);
   if (Math.abs(nr - chunkRes) > .15) { chunkRes = nr; chunks.clear(); }
