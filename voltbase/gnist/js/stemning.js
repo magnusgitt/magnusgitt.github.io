@@ -265,7 +265,7 @@ function fotspor(x, y) { if (FOTSPOR.length > 26) FOTSPOR.shift(); FOTSPOR.push(
 function drepFiende(e) { e.liv = false; DODE.push({ e: Object.assign({}, e), t: .5 }); }
 // refleksskjerfet: en kort kjede av punkter som henger etter hjelmen
 const HALE = Array.from({ length: 9 }, () => ({ x: 0, y: 0, px: 0, py: 0 }));
-function haleAnker() { return [P.x + P.w / 2 - P.face * 4 * P.sx, P.y + P.h - 31 * P.sy]; }
+function haleAnker() { const f = ANIM.face || P.face; return [P.x + P.w / 2 - f * 4 * P.sx, P.y + P.h + (ANIM.dy - 31) * P.sy]; }
 function oppdaterHale(dt) {
   const [ax, ay] = haleAnker();
   if (Math.hypot(HALE[0].x - ax, HALE[0].y - ay) > 60) for (const p of HALE) { p.x = p.px = ax; p.y = p.py = ay; }

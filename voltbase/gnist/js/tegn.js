@@ -164,65 +164,142 @@ function tegnLysbue() {
 }
 // montøren tegnes av enkle ledd, slik at løp, hopp, fall, landing og støt får hver sin positur
 function ledd(hx, hy, a1, a2, l1, l2) { const kx = hx + Math.sin(a1) * l1, ky = hy + Math.cos(a1) * l1; return [kx, ky, kx + Math.sin(a1 - a2) * l2, ky + Math.cos(a1 - a2) * l2]; }
-function figur(lean, pose) {
+// ---------- montøren: figur, poser og animasjon ----------
+// Posene blandes mykt over tid (uavhengig av bildefrekvens), føttene holdes nede på bakken,
+// og verktøyet i beltet, hodet og snuingen har litt etterslep så figuren ikke føles stiv.
+const ANIM = { sist: -1, p: null, face: 1, bakke: true, vy: 0, vxF: 0, acc: 0, hoppT: 0, flipT: 0, flipDir: 1, air: 0, landT: 0, landK: 0,
+  stille: 0, blunkT: 2, blunk: 0, verk: 0, verkV: 0, dy: 0, skli: 0 };
+const POSE_FELT = ['b1', 'b2', 'a1', 'a2'];
+function blandPose(a, b, k) { for (const f of POSE_FELT) { a[f][0] += (b[f][0] - a[f][0]) * k; a[f][1] += (b[f][1] - a[f][1]) * k; }
+  for (const f of ['bob', 'hode', 'lean', 'tilt', 'blikk']) a[f] += ((b[f] || 0) - (a[f] || 0)) * k; return a; }
+const kopiPose = p => ({ b1: [...p.b1], b2: [...p.b2], a1: [...p.a1], a2: [...p.a2], bob: p.bob || 0, hode: p.hode || 0, lean: p.lean || 0, tilt: p.tilt || 0, blikk: p.blikk || 0 });
+const mix = (a, b, k) => a + (b - a) * k, glatt = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+function figur(lean, pose, bakke) {
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const ben = (a1, a2, farge, bak) => { const hx = bak ? -1.5 : 1.5, [kx, ky, fx, fy] = ledd(hx, -12.5, a1, a2, 6.5, 6.5);
-    ctx.strokeStyle = farge; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, -12.5); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
-    ctx.fillStyle = S.ev.dobbel ? '#e08a2c' : '#20242e'; ctx.save(); ctx.translate(fx, fy); ctx.rotate(-(a1 - a2) * .6); rr(ctx, -3, -2, 8.5, 4.2, 2); ctx.fill(); ctx.restore(); };
-  const arm = (a1, a2, farge) => { const [ex, ey, hx, hy] = ledd(0, -22.5, a1, -a2, 5.5, 5);
-    ctx.strokeStyle = farge; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, -22.5); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-    ctx.fillStyle = S.ev.hansker ? '#ffcf3a' : '#e9b88e'; ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, 7); ctx.fill(); };
-  const kropp = () => { ctx.translate(0, -12.5 + pose.bob); ctx.rotate(lean); ctx.translate(0, 12.5); };
+  const hy = -12.5 + pose.bob;
+  // på bakken: hele figuren senkes til den laveste foten står på bakken, så bøyde knær gir en ekte huk
+  if (bakke) { const f1 = ledd(-1.5, hy, pose.b1[0], pose.b1[1], 6.5, 6.5)[3], f2 = ledd(1.5, hy, pose.b2[0], pose.b2[1], 6.5, 6.5)[3]; ANIM.dy = .5 - Math.max(f1, f2); }
+  else ANIM.dy += (0 - ANIM.dy) * .3;
+  ctx.translate(0, ANIM.dy);
+  const ben = (a1, a2, farge, bak) => { const hx = bak ? -1.5 : 1.5, [kx, ky, fx, fy] = ledd(hx, hy, a1, a2, 6.5, 6.5);
+    ctx.strokeStyle = farge; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+    // foten flater ut mot bakken når den står, og peker ned når beinet svinger
+    ctx.fillStyle = S.ev.dobbel ? '#e08a2c' : '#20242e'; ctx.save(); ctx.translate(fx, fy); ctx.rotate(bakke && fy > -1.5 ? 0 : -(a1 - a2) * .6); rr(ctx, -3, -2, 8.5, 4.2, 2); ctx.fill(); ctx.restore(); };
+  const arm = (a1, a2, farge) => { const [ex, ey, hx2, hy2] = ledd(0, hy - 10, a1, -a2, 5.5, 5);
+    ctx.strokeStyle = farge; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, hy - 10); ctx.lineTo(ex, ey); ctx.lineTo(hx2, hy2); ctx.stroke();
+    ctx.fillStyle = S.ev.hansker ? '#ffcf3a' : '#e9b88e'; ctx.beginPath(); ctx.arc(hx2, hy2, 2.6, 0, 7); ctx.fill(); };
+  const kropp = () => { ctx.translate(0, hy); ctx.rotate(lean + pose.lean); ctx.translate(0, -hy); };
   ben(pose.b1[0], pose.b1[1], '#22335a', true);
-  ctx.save(); kropp(); arm(pose.a1[0], pose.a1[1], '#b8641f'); ctx.restore();
+  ctx.save(); kropp(); arm(pose.a1[0], pose.a1[1], '#b8641f');
+  // verktøyet i beltet henger og dingler etter bevegelsen
+  ctx.save(); ctx.translate(-5.5, hy + .5); ctx.rotate(ANIM.verk); ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 7.5); ctx.stroke();
+  ctx.fillStyle = '#9aa3ad'; ctx.fillRect(-2.6, 6.5, 5.2, 2.4); ctx.restore();
+  ctx.restore();
   ben(pose.b2[0], pose.b2[1], '#2a3d66', false);
-  ctx.save(); kropp();
+  ctx.save(); kropp(); ctx.translate(0, hy + 12.5);
   ctx.fillStyle = '#ff962c'; rr(ctx, -7, -26, 14, 15, 4); ctx.fill();
   ctx.fillStyle = '#e8f2ff'; ctx.fillRect(-7, -20, 14, 2); ctx.fillRect(-7, -15.5, 14, 2);
   ctx.fillStyle = '#3a3226'; ctx.fillRect(-7, -12.5, 14, 2.5); ctx.fillStyle = '#c9a23a'; ctx.fillRect(3, -12.5, 2, 2.5);
-  arm(pose.a2[0], pose.a2[1], '#e07a22');
-  ctx.translate(0, pose.hode);
+  ctx.translate(0, -(hy + 12.5)); arm(pose.a2[0], pose.a2[1], '#e07a22'); ctx.translate(0, hy + 12.5);
+  ctx.save(); ctx.translate(0, pose.hode); ctx.translate(1, -29); ctx.rotate(pose.tilt || 0); ctx.translate(-1, 29);
+  const bl = pose.blikk || 0;
   ctx.fillStyle = '#f0c39a'; ctx.beginPath(); ctx.arc(1, -31, 5.6, 0, 7); ctx.fill();
-  ctx.fillStyle = '#1d1d24'; if (pose.blunk) ctx.fillRect(2.4, -31.6, 2.2, .9); else { ctx.beginPath(); ctx.arc(3.4, -31.5, 1, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#1d1d24'; if (pose.blunk) ctx.fillRect(2.4 + bl, -31.6, 2.2, .9); else { ctx.beginPath(); ctx.arc(3.4 + bl, -31.5 - Math.abs(bl) * .3, 1, 0, 7); ctx.fill(); }
   ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(1, -33, 6.6, Math.PI, 0); ctx.fill(); ctx.fillRect(-6, -33.6, 15, 2.4);
   ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.arc(-1, -36, 2, Math.PI, 0); ctx.fill();
   ctx.fillStyle = '#fff7d0'; ctx.beginPath(); ctx.arc(7.4, -34.6, 1.7, 0, 7); ctx.fill();
   ctx.restore();
+  // hånden som retter på hjelmen ligger foran hodet
+  if (pose.hjelm > .5) { ctx.translate(0, -(hy + 12.5)); arm(pose.a2[0], pose.a2[1], '#e07a22'); }
+  ctx.restore();
 }
+// målposen for øyeblikket; tegnSpiller blander mot den
 function poseFor(p) {
-  const fart = Math.min(1, Math.abs(p.vx) / RUN), ph = p.anim;
-  if (p.inv > .95 && S.dod <= 0) { const r = Math.sin(S.t * 30) * .15; return { b1: [-.6, .7], b2: [.5, 1.0], a1: [-2.5 + r, .5], a2: [-2.1 - r, .6], bob: -1, hode: .6 }; }
-  if (p.dashT > 0) return { b1: [-.9, .5], b2: [-.4, 1.1], a1: [-1.3, .3], a2: [-1.6, .2], bob: 0, hode: 0 };
+  const A = ANIM, fart = Math.min(1, Math.abs(p.vx) / RUN), ph = p.anim;
+  if (p.inv > .95 && S.dod <= 0) { const r = Math.sin(S.t * 30) * .15; return { b1: [-.6, .7], b2: [.5, 1.0], a1: [-2.5 + r, .5], a2: [-2.1 - r, .6], bob: -1, hode: .6, lean: -.15, tilt: -.2, fart: 40 }; }
+  if (p.dashT > 0) return { b1: [-.9, .5], b2: [-.4, 1.1], a1: [-1.3, .3], a2: [-1.6, .2], bob: 0, hode: 0, fart: 40 };
   if (p.piskT > -.06) { const k = clamp(1 - p.piskT / .2, 0, 1), sl = 2.7 - k * 1.6;
     const ben = p.onGround ? { b1: [-.35, .25], b2: [.45, .35] } : { b1: [-.3, .6], b2: [.4, .9] };
-    return { ...ben, a1: [-.9, .4], a2: [sl, .15], bob: p.onGround ? 1 : 0, hode: -.3 }; }
+    return { ...ben, a1: [-.9, .4], a2: [sl, .15], bob: p.onGround ? 1 : 0, hode: -.3, lean: .08 * (1 - k), fart: 45 }; }
   if (p.krok) { const sv = Math.sin(S.t * 6) * .12, sl = clamp(p.vx / 700, -1, 1) * p.face * .7;
-    return { b1: [-.3 + sv - sl, .5 + Math.abs(sl) * .4], b2: [.25 - sv - sl, .8], a1: [3.0, .1], a2: [2.9, .15], bob: 0, hode: 0 }; }
-  if (p.glir) { const sv = Math.sin(S.t * 5) * .1; return { b1: [-.2 + sv, .4], b2: [.25 - sv, .6], a1: [2.85, .15], a2: [3.05, .1], bob: 0, hode: -.2 }; }
-  if (!p.onGround && p.vegg) return { b1: [.5, .9], b2: [-.2, .5], a1: [2.6, .3], a2: [2.2, .6], bob: 0, hode: .2 };
+    return { b1: [-.3 + sv - sl, .5 + Math.abs(sl) * .4], b2: [.25 - sv - sl, .8], a1: [3.0, .1], a2: [2.9, .15], bob: 0, hode: 0, tilt: -.15, fart: 20 }; }
+  if (p.glir) { const sv = Math.sin(S.t * 5) * .1; return { b1: [-.2 + sv, .4], b2: [.25 - sv, .6], a1: [2.85, .15], a2: [3.05, .1], bob: 0, hode: -.2, fart: 14 }; }
+  if (p.iVann) { const s = S.t * (4 + fart * 3), k = Math.sin(S.t * 7) * .35;
+    return { b1: [-.2 + k, .5], b2: [.1 - k, .6], a1: [s % (Math.PI * 2), .5], a2: [(s + Math.PI) % (Math.PI * 2), .5], bob: 0, hode: -.3, lean: .35 * fart, tilt: -.2, fart: 10 }; }
+  if (!p.onGround && p.vegg) { const r = Math.sin(S.t * 40) * .04; return { b1: [.5, .9], b2: [-.2, .5], a1: [2.6 + r, .3], a2: [2.2 - r, .6], bob: 0, hode: .2, tilt: .15, blikk: -1.6, fart: 25 }; }
   if (!p.onGround) {
-    if (p.vy < -80) return { b1: [-.35, 1.0], b2: [.75, 1.4], a1: [-2.5, .5], a2: [2.3, .4], bob: 0, hode: -.5 };
-    const fl = Math.sin(S.t * 18) * .18;
-    return { b1: [-.25, .35], b2: [.3, .5], a1: [-1.9 + fl, .3], a2: [1.9 - fl, .3], bob: 0, hode: 0 };
+    // dobbelthopp: en rask salto med knærne trukket inn
+    if (A.flipT > 0) return { b1: [1.4, 2.4], b2: [1.6, 2.5], a1: [.6, 1.6], a2: [.9, 1.8], bob: 2, hode: .8, fart: 40 };
+    // avspark: beina strekkes ned, armene kastes opp
+    if (A.hoppT > 0) return { b1: [-.45, .15], b2: [.15, .2], a1: [-.8, .3], a2: [2.7, .2], bob: -1, hode: -.6, lean: .05, tilt: -.15, fart: 35 };
+    // fra stigning, over toppen, til fall: glidende overgang styrt av vertikal fart
+    const stig = { b1: [-.35, .9], b2: [.95, 1.6], a1: [-1.2, .5], a2: [2.4, .45], bob: 0, hode: -.5, lean: .06, tilt: -.12 };
+    const topp = { b1: [.15, 1.3], b2: [.75, 1.4], a1: [-1.7, .3], a2: [1.8, .3], bob: .5, hode: -.2, lean: 0, tilt: 0 };
+    const fl = Math.sin(S.t * (8 + Math.min(10, p.fallT * 14))) * Math.min(.35, .08 + p.fallT * .4);
+    const fall = { b1: [-.25, .35], b2: [.35, .45], a1: [-2.4 + fl, .45], a2: [2.6 - fl, .4], bob: 0, hode: .3, lean: -.1, tilt: .12 };
+    const k = clamp((p.vy + 420) / 840, 0, 1), m = k < .5 ? kopiPose(stig) : kopiPose(topp);
+    blandPose(m, k < .5 ? topp : fall, k < .5 ? k * 2 : (k - .5) * 2); m.fart = 16; return m;
   }
+  // landing: en huk som er dypere jo høyere fallet var
+  if (A.landT > 0) { const k = A.landK * clamp(A.landT / .22, 0, 1);
+    return { b1: [.55 * k + .05, 1.35 * k + .1], b2: [.8 * k, 1.5 * k + .1], a1: [.5 * k, .4], a2: [.9 * k, .6], bob: 0, hode: .8 * k, lean: .22 * k, tilt: .15 * k, fart: 40 }; }
+  // brems og snu: lener seg bakover og setter foten foran
+  if (A.skli > 0) return { b1: [-.5, .6], b2: [.75, .15], a1: [-1.0, .5], a2: [-.6, .6], bob: 0, hode: .2, lean: -.28, tilt: -.1, fart: 26 };
   if (fart > .05) {
-    const s = Math.sin(ph), s2 = Math.sin(ph + Math.PI);
-    return { b1: [s * .8 * fart, (Math.max(0, -Math.cos(ph)) * 1.2 + .1) * fart], b2: [s2 * .8 * fart, (Math.max(0, -Math.cos(ph + Math.PI)) * 1.2 + .1) * fart],
-      a1: [s2 * .9 * fart, .7 * fart], a2: [s * .9 * fart, .7 * fart], bob: -Math.abs(Math.cos(ph)) * 1.4 * fart, hode: 0 };
+    // gange og løp: løpet får mer knelløft, bøyde albuer og fremoverlent kropp
+    const r = glatt(.45, .95, fart), sv = Math.min(1, fart * 2.5);
+    const s1 = Math.sin(ph), s2 = Math.sin(ph + Math.PI);
+    const loft = x => Math.pow(Math.max(0, Math.cos(x + .35)), 1.4);
+    const aks = clamp(A.acc / 2600, -1, 1);
+    return { b1: [s1 * (.55 + .3 * r) * sv, .12 + loft(ph) * (.6 + .9 * r) * sv], b2: [s2 * (.55 + .3 * r) * sv, .12 + loft(ph + Math.PI) * (.6 + .9 * r) * sv],
+      a1: [s2 * (.5 + .4 * r) * sv - .1 * r, .25 + 1.05 * r], a2: [s1 * (.5 + .4 * r) * sv - .1 * r, .3 + 1.05 * r],
+      bob: 0, hode: Math.abs(Math.cos(ph)) * .4 * r, lean: .02 + .05 * r + Math.max(0, aks) * .08 - Math.max(0, -aks) * .06, tilt: -.05 * r, fart: 22 };
   }
-  const pust = Math.sin(S.t * 2.2) * .5, land = Math.max(0, p.landT) * 30;
-  return { b1: [-.06 - land * .03, .1 + land * .08], b2: [.06 + land * .03, .1 + land * .08], a1: [-.15, .2], a2: [.15, .25], bob: pust * .3 + land, hode: pust * .3, blunk: (S.t % 4) < .12 };
+  // stille: pust, vekt over på ett bein, og små handlinger etter en stund
+  const pust = Math.sin(S.t * 2.2), vekt = A.stille > 2 ? Math.sin(A.stille * .7) : 0;
+  const base = { b1: [-.06 + vekt * .05, .12 + Math.max(0, vekt) * .18], b2: [.06 + vekt * .05, .12 + Math.max(0, -vekt) * .18], a1: [-.15, .2 + pust * .04], a2: [.15, .25 + pust * .04],
+    bob: pust * .25, hode: pust * .25, lean: 0, tilt: 0, blikk: 0, blunk: A.blunk > 0, fart: 9 };
+  const syk = A.stille > 3 ? (A.stille - 3) % 9 : -1;
+  if (syk >= 0 && syk < 1.6) { base.a2 = [2.4, .32]; base.hjelm = 1; base.tilt = -.08; }                               // retter på hjelmen
+  else if (syk >= 3.5 && syk < 6) { base.tilt = -.22 + Math.sin(syk * 1.8) * .1; base.blikk = syk < 4.8 ? .8 : -1.6; base.hode = -.4; }  // ser seg rundt og opp
+  return base;
+}
+function oppdaterAnim(p) {
+  const A = ANIM; let dt = A.sist < 0 ? 0 : S.t - A.sist; A.sist = S.t; dt = clamp(dt, 0, .05);
+  const bakke = p.onGround;
+  // overganger som oppdages fra spilltilstanden
+  if (A.bakke && !bakke && p.vy < -300 && !p.krok) A.hoppT = .14;
+  if (!bakke && p.air < A.air && p.vy < -300) { A.flipT = .34; A.hoppT = 0; }
+  if (!A.bakke && bakke && A.vy > 250) { A.landK = clamp(A.vy / 820, .3, 1); A.landT = .1 + .14 * A.landK; }
+  A.bakke = bakke; A.vy = p.vy; A.air = p.air;
+  A.hoppT -= dt; A.flipT -= dt; A.landT -= dt;
+  const aks = dt > 0 ? (p.vx - A.vxF) / dt : 0; A.vxF = p.vx; A.acc += (aks - A.acc) * Math.min(1, dt * 10);
+  const dir = (I.right ? 1 : 0) - (I.left ? 1 : 0);
+  A.skli = bakke && dir && Math.sign(p.vx) === -dir && Math.abs(p.vx) > 110 && p.dashT <= 0 ? .12 : A.skli - dt;
+  A.stille = bakke && Math.abs(p.vx) < 20 && !dir && p.piskT <= 0 ? A.stille + dt : 0;
+  A.blunkT -= dt; A.blunk -= dt; if (A.blunkT <= 0) { A.blunk = .12; A.blunkT = 2 + Math.random() * 3.5; }
+  // verktøyet: en dempet pendel som reagerer på fartsendringer
+  A.verkV += (-A.verk * 140 - A.verkV * 7 + clamp(A.acc * p.face, -3000, 3000) * .018 + (bakke ? 0 : clamp(p.vy, -800, 800) * .01)) * dt; A.verk = clamp(A.verk + A.verkV * dt, -1.1, 1.1);
+  // snuing: figuren klemmes kort sammen i stedet for å speile seg på ett bilde
+  A.face = mot(A.face, p.face, dt / .09);
+  const maal = poseFor(p);
+  if (!A.p) A.p = kopiPose(maal);
+  blandPose(A.p, maal, 1 - Math.exp(-(maal.fart || 18) * dt)); A.p.blunk = maal.blunk; A.p.hjelm = maal.hjelm && Math.abs(A.p.a2[0] - 2.4) < .25 ? 1 : 0;
+  return A.p;
 }
 function tegnSpiller() {
   const p = P; if (S.dod > 0) return;
+  const pose = oppdaterAnim(p), A = ANIM;
   // etterbilder fra strømstøtet
   ctx.globalCompositeOperation = 'lighter';
   for (const s of p.spor) { ctx.globalAlpha = s.t / .28 * .5; ctx.fillStyle = '#5fd8ff'; rr(ctx, s.x - 1, s.y + 2, p.w + 2, p.h - 2, 7); ctx.fill(); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   if (!(p.inv > 0 && Math.floor(p.inv * 18) % 2)) tegnHale();
-  ctx.save(); ctx.translate(p.x + p.w / 2, p.y + p.h); ctx.scale(p.face * p.sx, p.sy);
+  const fs = Math.sign(A.face) || p.face, fx = fs * Math.max(.3, Math.abs(A.face));
+  ctx.save(); ctx.translate(p.x + p.w / 2, p.y + p.h); ctx.scale(fx * p.sx, p.sy);
+  if (A.flipT > 0) { ctx.translate(0, -16); ctx.rotate((1 - A.flipT / .34) * Math.PI * 2); ctx.translate(0, 16); }
   if (p.inv > 0 && Math.floor(p.inv * 18) % 2) ctx.globalAlpha = .45;
-  figur(p.lean * p.face, poseFor(p));
+  figur(p.lean * p.face, pose, p.onGround && A.flipT <= 0);
   ctx.restore(); ctx.globalAlpha = 1;
 }
 function tegnBoss() {

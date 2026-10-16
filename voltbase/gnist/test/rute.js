@@ -619,6 +619,41 @@ async function spiker(b) {
   await ctx.close();
 }
 
+async function anim(b) {
+  console.log('Animasjon: poser, overganger og bildefrekvens');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 4, ev: { dobbel: true, hansker: true }, cp: 2, cpLit: [0, 1, 2], orb: [], boss: false, tid: 60 })), KEY);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600);
+  const r = await page.evaluate(() => {
+    S.mode = 'pause'; const nullstill = () => { ANIM.p = null; ANIM.sist = -1; ANIM.face = 1; ANIM.landT = ANIM.flipT = ANIM.hoppT = 0; ANIM.bakke = true; ANIM.air = 1; ANIM.vy = 0; };
+    const kjor = (fps, sek, f) => { const t0 = S.t; for (let i = 0; i < Math.round(sek * fps); i++) { S.t = t0 + (i + 1) / fps; f && f(i); oppdaterAnim(P); } return JSON.parse(JSON.stringify(ANIM.p)); };
+    const ut = {};
+    // samme bevegelse i 30 og 120 bilder i sekundet skal gi nesten samme pose
+    Object.assign(P, { vx: 0, vy: 0, onGround: true, piskT: -1, inv: 0, dashT: 0, krok: null, iVann: false, vegg: 0, face: 1, air: 1 }); I.left = I.right = false;
+    nullstill(); kjor(60, .5); P.vx = 255; P.anim = 0; const a = kjor(30, .3, i => { P.anim += 13.3 / 30; });
+    nullstill(); P.vx = 0; kjor(60, .5); P.vx = 255; P.anim = 0; const c = kjor(120, .3, i => { P.anim += 13.3 / 120; });
+    ut.fps = Math.max(...['b1', 'b2', 'a1', 'a2'].flatMap(k => [Math.abs(a[k][0] - c[k][0]), Math.abs(a[k][1] - c[k][1])]));
+    // ingen brå hopp mellom stå og løp: første bilde etter start endrer posen lite
+    nullstill(); P.vx = 0; kjor(60, .5); const for_ = JSON.parse(JSON.stringify(ANIM.p)); P.vx = 255; P.anim = 1.2; const etter = kjor(60, 1 / 60);
+    ut.myk = Math.max(...['b1', 'b2', 'a1', 'a2'].flatMap(k => [Math.abs(for_[k][0] - etter[k][0]), Math.abs(for_[k][1] - etter[k][1])]));
+    // landing gir huk: kroppen senkes litt etter et fall
+    nullstill(); Object.assign(P, { onGround: false, vx: 0, vy: 700 }); kjor(60, .1); P.onGround = true; P.vy = 0; kjor(60, 3 / 60);
+    const fx = document.createElement('canvas').getContext('2d'); ut.huk = (() => { const f1 = ledd(-1.5, -12.5 + ANIM.p.bob, ANIM.p.b1[0], ANIM.p.b1[1], 6.5, 6.5)[3], f2 = ledd(1.5, -12.5 + ANIM.p.bob, ANIM.p.b2[0], ANIM.p.b2[1], 6.5, 6.5)[3]; return .5 - Math.max(f1, f2); })();
+    ut.land = ANIM.landT > 0;
+    // dobbelthopp gir salto
+    nullstill(); Object.assign(P, { onGround: false, vy: -100, air: 1 }); kjor(60, .05); P.air = 0; P.vy = -600; kjor(60, 1 / 60); ut.salto = ANIM.flipT > 0;
+    // snuing klemmer figuren i stedet for å speile den på ett bilde
+    nullstill(); Object.assign(P, { onGround: true, vy: 0, vx: 0, face: 1 }); kjor(60, .2); P.face = -1; kjor(60, 2 / 60); ut.snu = ANIM.face; kjor(60, .2); ut.snuFerdig = ANIM.face;
+    S.mode = 'spill'; return ut; });
+  sjekk('animasjonen er lik i 30 og 120 bilder per sekund', r.fps < .2, r.fps);
+  sjekk('overgangen fra stå til løp er myk', r.myk < .5, r.myk);
+  sjekk('landing gir en huk', r.land && r.huk > .4, r);
+  sjekk('dobbelthopp gir salto', r.salto, r);
+  sjekk('snuingen går over noen bilder', Math.abs(r.snu) < 1 && r.snuFerdig === -1, r);
+  sjekk('ingen JS-feil (animasjon)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
   const { ctx, page, errs } = await nySide(b, opts);
@@ -731,6 +766,7 @@ async function grafikk(b) {
     if (med('linja')) await linja(b);
     if (med('dam')) await dam(b);
     if (med('spiker')) await spiker(b);
+    if (med('anim')) await anim(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });
