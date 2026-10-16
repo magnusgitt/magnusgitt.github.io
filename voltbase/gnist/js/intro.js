@@ -6,8 +6,8 @@ const INTRO = { aktiv: false, t: 0, tekst: -1, tatt: true, kam: null };
 const INTRO_TEKST = [
   [1, 5.2, 'For hundre år siden forsvant strømmen fra verden.'],
   [6, 9.6, 'Ingen husker lenger hvorfor. Lys er blitt en myte.'],
-  [10.4, 14, 'Her ble en elektriker fra den gamle tiden liggende.'],
-  [15, 18.6, 'Vandreren tok med seg det som var igjen: verktøyet, lykta og gnisten.'],
+  [10.4, 14, 'Her ble den siste elektrikeren liggende. Men noe av ham var fortsatt her.'],
+  [15, 18.6, 'Sjelen hans steg opp som et lite lys. Den skal vise vandreren veien.'],
   [20, 24.4, 'Langt der borte står kraftverket fortsatt. Kanskje kan lyset komme tilbake.'],
 ];
 const INTRO_SLUTT = 25.6;
@@ -19,10 +19,10 @@ function startIntro() {
   cam.x = INTRO.kam.x; cam.y = INTRO.kam.y; nullInput();
 }
 function introTa() {
-  // gnisten våkner i verktøykassa, og vandreren blir montøren
+  // sjelen til elektrikeren stiger opp fra brystet hans som et lite lys, og vandreren tar utstyret og blir montøren
   INTRO.tatt = true; ANIM.drakt = 'montor'; GN.skjult = false; ANIM.overstyr = null;
-  const bx = (ELEKTRIKER.x + .9) * T, by = (ELEKTRIKER.y + 1) * T - 8; GN.x = bx; GN.y = by; GN.vx = 0; GN.vy = -160; GN.flare = 1.4;
-  S.flash = .7; S.flashF = '170,230,255'; ring(bx, by, 26, 'c', 220); sprut(bx, by, 40, 'c', 260); lyd('evne'); vib([20, 40, 20]);
+  const [bx, by] = sjelPunkt(); GN.x = bx; GN.y = by; GN.vx = -10; GN.vy = -70; GN.flare = 1.1;
+  S.flash = .35; S.flashF = '170,230,255'; ring(bx, by, 20, 'c', 120); sprut(bx, by, 18, 'c', 90); lyd('evne'); vib([15, 30, 15]);
 }
 function sluttIntro() {
   if (!INTRO.aktiv) return; INTRO.aktiv = false; document.documentElement.classList.remove('iIntro');
@@ -33,6 +33,7 @@ function sluttIntro() {
   if (erTouch && cssH > cssW && !snuVist) { snuVist = true; S.mode = 'snu'; visLag('#lagSnu'); }
   banner('Gnist', 'Byggeplassen'); S.hintSett.add('omr-Byggeplassen');
   setTimeout(() => hint(null, erTouch ? 'Gå med venstre tommel. Hopp med høyre. Hold inne for høyere hopp.' : 'Gå med piltastene. Hopp med mellomrom. Hold inne for høyere hopp.', 5), 1600);
+  setTimeout(() => { if (S.mode === 'spill') hint(null, 'Lyset er sjelen til elektrikeren. Står du stille, viser det deg veien videre.', 5); }, 8500);
 }
 function oppdaterIntro(dt) {
   const t = (INTRO.t += dt), vw = cssW / skala, vh = cssH / skala, kx = ELEKTRIKER.x * T;
@@ -60,6 +61,14 @@ function oppdaterIntro(dt) {
   if (i !== INTRO.tekst) { INTRO.tekst = i; const el = $('#introTekst'); el.classList.remove('vis'); if (i >= 0) setTimeout(() => { if (INTRO.tekst === i) { el.textContent = INTRO_TEKST[i][2]; el.classList.add('vis'); } }, 380); }
   if (t >= INTRO_SLUTT) sluttIntro();
 }
+// brystet til skjelettet, der sjelen hans ennå lyser svakt
+function sjelPunkt() { return [ELEKTRIKER.x * T + 29, (ELEKTRIKER.y + 1) * T - 15]; }
+function sjelGlod() {
+  if (!INTRO.aktiv || INTRO.tatt || INTRO.t < 9.5) return; const [x, y] = sjelPunkt(); if (!synlig(x, y, 80)) return;
+  const k = glatt(9.5, 15, INTRO.t), p = .75 + .25 * Math.sin(INTRO.t * 2.6);
+  glod(SPR.c, x, y, 10 + 22 * k, (.15 + .55 * k) * p); glod(SPR.h, x, y, 2 + 3 * k, (.3 + .6 * k) * p);
+}
+TEGN_GLOD.push(sjelGlod);
 function fjernForskyv(lw) {
   const vw = cssW / grunnSkala, kxF = clamp(ELEKTRIKER.x * T - 1.6 * T + 12 - vw * .42 + 10 * T, 0, MW * T - vw);
   return .66 * cv.width - 1380 * lw / LW + kxF * grunnSkala * dpr * .08;

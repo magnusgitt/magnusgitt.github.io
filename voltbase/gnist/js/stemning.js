@@ -270,8 +270,8 @@ function haleAnker() { const f = ANIM.face || P.face; return [P.x + P.w / 2 - f 
 function oppdaterHale(dt) {
   const [ax, ay] = haleAnker();
   if (Math.hypot(HALE[0].x - ax, HALE[0].y - ay) > 60) for (const p of HALE) { p.x = p.px = ax; p.y = p.py = ay; }
-  const dt2 = dt * dt, vind = Math.sin(S.t * 3.3) * 40;
-  for (let i = 1; i < HALE.length; i++) { const p = HALE[i], vx = (p.x - p.px) * .94, vy = (p.y - p.py) * .94; p.px = p.x; p.py = p.y; p.x += vx + (vind - P.face * 30) * dt2; p.y += vy + 500 * dt2; }
+  const dt2 = dt * dt, vind = Math.sin(S.t * 3.3) * 28;
+  for (let i = 1; i < HALE.length; i++) { const p = HALE[i], vx = (p.x - p.px) * .9, vy = (p.y - p.py) * .9; p.px = p.x; p.py = p.y; p.x += vx + (vind - P.face * 30) * dt2; p.y += vy + 500 * dt2; }
   HALE[0].x = ax; HALE[0].y = ay;
   for (let k = 0; k < 3; k++) for (let i = 1; i < HALE.length; i++) { const a = HALE[i - 1], b = HALE[i], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, l = 4;
     if (d > l) { b.x = a.x + dx / d * l; b.y = a.y + dy / d * l; } }

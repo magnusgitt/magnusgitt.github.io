@@ -177,7 +177,7 @@ function ledd(hx, hy, a1, a2, l1, l2) { const kx = hx + Math.sin(a1) * l1, ky = 
 // Posene blandes mykt over tid (uavhengig av bildefrekvens), føttene holdes nede på bakken,
 // og verktøyet i beltet, hodet og snuingen har litt etterslep så figuren ikke føles stiv.
 const ANIM = { sist: -1, p: null, face: 1, bakke: true, vy: 0, vxF: 0, acc: 0, hoppT: 0, flipT: 0, flipDir: 1, air: 0, landT: 0, landK: 0,
-  stille: 0, blunkT: 2, blunk: 0, verk: 0, verkV: 0, dy: 0, skli: 0 };
+  stille: 0, blunkT: 2, blunk: 0, verk: 0, verkV: 0, dy: 0, skli: 0, rullT: 0, vt: 0, tilt: 0, spor: [] };
 const POSE_FELT = ['b1', 'b2', 'a1', 'a2'];
 function blandPose(a, b, k) { for (const f of POSE_FELT) { a[f][0] += (b[f][0] - a[f][0]) * k; a[f][1] += (b[f][1] - a[f][1]) * k; }
   for (const f of ['bob', 'hode', 'lean', 'tilt', 'blikk']) a[f] += ((b[f] || 0) - (a[f] || 0)) * k; return a; }
@@ -301,6 +301,8 @@ function poseFor(p) {
     const k = clamp((p.vy + 420) / 840, 0, 1), m = k < .5 ? kopiPose(stig) : kopiPose(topp);
     blandPose(m, k < .5 ? topp : fall, k < .5 ? k * 2 : (k - .5) * 2); m.fart = 16; return m;
   }
+  // kollbøtte: høyt fall i full fart rulles av, i stedet for å stoppe opp
+  if (A.rullT > 0) return { b1: [1.5, 2.5], b2: [1.7, 2.6], a1: [1.2, 1.8], a2: [1.4, 1.9], bob: 2, hode: 1, lean: .5, tilt: .4, fart: 45 };
   // landing: en huk som er dypere jo høyere fallet var
   if (A.landT > 0) { const k = A.landK * clamp(A.landT / .22, 0, 1);
     return { b1: [.55 * k + .05, 1.35 * k + .1], b2: [.8 * k, 1.5 * k + .1], a1: [.5 * k, .4], a2: [.9 * k, .6], bob: 0, hode: .8 * k, lean: .22 * k, tilt: .15 * k, fart: 40 }; }
@@ -312,9 +314,10 @@ function poseFor(p) {
     const s1 = Math.sin(ph), s2 = Math.sin(ph + Math.PI);
     const loft = x => Math.pow(Math.max(0, Math.cos(x + .35)), 1.4);
     const aks = clamp(A.acc / 2600, -1, 1);
-    return { b1: [s1 * (.55 + .3 * r) * sv, .12 + loft(ph) * (.6 + .9 * r) * sv], b2: [s2 * (.55 + .3 * r) * sv, .12 + loft(ph + Math.PI) * (.6 + .9 * r) * sv],
-      a1: [s2 * (.5 + .4 * r) * sv - .1 * r, .25 + 1.05 * r], a2: [s1 * (.5 + .4 * r) * sv - .1 * r, .3 + 1.05 * r],
-      bob: 0, hode: Math.abs(Math.cos(ph)) * .4 * r, lean: .02 + .05 * r + Math.max(0, aks) * .08 - Math.max(0, -aks) * .06, tilt: -.05 * r, fart: 22 };
+    const fjaer = x => .3 * r * Math.max(0, -Math.cos(x)) * Math.max(0, 1 - Math.abs(Math.sin(x)) * 1.2);
+    return { b1: [s1 * (.55 + .38 * r) * sv, .12 + loft(ph) * (.6 + 1.1 * r) * sv + fjaer(ph)], b2: [s2 * (.55 + .38 * r) * sv, .12 + loft(ph + Math.PI) * (.6 + 1.1 * r) * sv + fjaer(ph + Math.PI)],
+      a1: [s2 * (.5 + .5 * r) * sv - .15 * r, .25 + 1.3 * r], a2: [s1 * (.5 + .5 * r) * sv - .15 * r, .3 + 1.3 * r],
+      bob: 0, hode: Math.abs(Math.cos(ph)) * .5 * r, lean: .03 + .1 * r + Math.max(0, aks) * .1 - Math.max(0, -aks) * .08, tilt: -.08 * r, fart: 24 };
   }
   // stille: pust, vekt over på ett bein, og små handlinger etter en stund
   const pust = Math.sin(S.t * 2.2), vekt = A.stille > 2 ? Math.sin(A.stille * .7) : 0;
@@ -331,7 +334,9 @@ function oppdaterAnim(p) {
   // overganger som oppdages fra spilltilstanden
   if (A.bakke && !bakke && p.vy < -300 && !p.krok) A.hoppT = .14;
   if (!bakke && p.air < A.air && p.vy < -300) { A.flipT = .34; A.hoppT = 0; }
-  if (!A.bakke && bakke && A.vy > 250) { A.landK = clamp(A.vy / 820, .3, 1); A.landT = .1 + .14 * A.landK; }
+  if (!A.bakke && bakke && A.vy > 250) { if (A.vy > 640 && Math.abs(p.vx) > 170 && Math.sign(p.vx) === p.face) A.rullT = .36; else { A.landK = clamp(A.vy / 820, .3, 1); A.landT = .1 + .14 * A.landK; } }
+  if (p.veggT > 0 && A.vt <= 0 && !bakke) { A.flipT = .34; A.hoppT = 0; } A.vt = p.veggT;
+  A.rullT -= dt; if (!bakke) A.rullT = 0;
   A.bakke = bakke; A.vy = p.vy; A.air = p.air;
   A.hoppT -= dt; A.flipT -= dt; A.landT -= dt;
   const aks = dt > 0 ? (p.vx - A.vxF) / dt : 0; A.vxF = p.vx; A.acc += (aks - A.acc) * Math.min(1, dt * 10);
@@ -355,12 +360,23 @@ function tegnSpiller() {
   ctx.globalCompositeOperation = 'lighter';
   for (const s of p.spor) { ctx.globalAlpha = s.t / .28 * .5; ctx.fillStyle = '#5fd8ff'; rr(ctx, s.x - 1, s.y + 2, p.w + 2, p.h - 2, 7); ctx.fill(); }
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  // et mykt lysspor følger montøren når det går fort, som et bånd av strøm
+  { const v = Math.hypot(p.vx, p.vy), sp = A.spor; sp.push({ x: p.x + p.w / 2, y: p.y + p.h * .55, t: S.t, v });
+    while (sp.length && (S.t - sp[0].t > .2 || sp.length > 40)) sp.shift();
+    if (sp.length > 2 && S.kval > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (let i = 1; i < sp.length; i++) { const a = sp[i - 1], b = sp[i], k = 1 - (S.t - b.t) / .2, st = clamp((b.v - 330) / 400, 0, 1); if (st <= 0 || Math.hypot(b.x - a.x, b.y - a.y) > 60) continue;
+        ctx.globalAlpha = k * st * .22; ctx.strokeStyle = '#7fdcff'; ctx.lineWidth = 2 + k * 7; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.lineCap = 'butt'; } }
   if (!(p.inv > 0 && Math.floor(p.inv * 18) % 2)) tegnHale();
   const fs = Math.sign(A.face) || p.face, fx = fs * Math.max(.3, Math.abs(A.face));
   ctx.save(); ctx.translate(p.x + p.w / 2, p.y + p.h); ctx.scale(fx * p.sx, p.sy);
+  // i lufta vipper hele kroppen litt i fartsretningen
+  const vipp = !p.onGround && !p.krok && A.flipT <= 0 ? clamp(p.vx * p.face / RUN, -1, 1.4) * .12 + clamp(p.vy / 900, -1, 1) * .04 : 0; A.tilt += (vipp - A.tilt) * .2;
+  if (Math.abs(A.tilt) > .002) { ctx.translate(0, -15); ctx.rotate(A.tilt); ctx.translate(0, 15); }
   if (A.flipT > 0) { ctx.translate(0, -16); ctx.rotate((1 - A.flipT / .34) * Math.PI * 2); ctx.translate(0, 16); }
+  if (A.rullT > 0) { ctx.translate(0, -9); ctx.rotate((1 - A.rullT / .36) * Math.PI * 2); ctx.translate(0, 9); }
   if (p.inv > 0 && Math.floor(p.inv * 18) % 2) ctx.globalAlpha = .45;
-  figur(p.lean * p.face, pose, p.onGround && A.flipT <= 0);
+  figur(p.lean * p.face, pose, p.onGround && A.flipT <= 0 && A.rullT <= 0);
   ctx.restore(); ctx.globalAlpha = 1;
 }
 // felles for bossene: rust, nagler, rustrenner og glødende sømmer
