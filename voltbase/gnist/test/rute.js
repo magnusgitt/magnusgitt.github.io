@@ -780,6 +780,26 @@ async function intro(b) {
   sjekk('ingen JS-feil (intro mobil)', errs.length === 0, errs); await ctx.close();
 }
 
+// Bossene i ny drakt: alle seks tegnes i alle tilstander uten feil, og kampene virker som før
+async function bosstegning(b) {
+  console.log('Bossene: ny grafikk');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 960, height: 540 } });
+  await page.click('#bNy'); await page.evaluate(() => { if (S.mode === 'intro') sluttIntro(); requestAnimationFrame = () => 0; });
+  const r = await page.evaluate(() => {
+    const steg = sek => { let n = performance.now(); for (let x = 0; x < sek; x += 1 / 60) { n += 1000 / 60; P.inv = 1e9; P.hp = P.max; loop(n); } };
+    const bosser = [[B, 'startBoss', 80, 18], [B2, 'startBoss2', ARENA2.midt - 5, ARENA2.gulv - 1], [B3, 'startBoss3', GARD.midt - 7, GARD.gulv - 1],
+      [B4, 'startBoss4', TURBIN.midt - 8, TURBIN.gulv - 1], [B5, 'startBoss5', ARENA5.midt - 5, ARENA5.gulv - 1], [B6, 'startBoss6', ARENA6.x0 + 6, ARENA6.gulv - 1]];
+    const ut = [];
+    for (const [Bx, f, x, y] of bosser) { P.x = x * T + 7; P.y = (y + 1) * T - P.h; P.vx = P.vy = 0; oppdaterKamera(0, true); window[f](); const hp0 = Bx.hp;
+      steg(4); const kamp = Bx.fase === 'kamp'; Bx.varsel = .8; Bx.lad = .5; steg(.1); Bx.stun = .5; steg(.2); Bx.fase = 'dod'; Bx.dod = 1; steg(.1);
+      ut.push({ f, kamp, hp: Bx.hp === hp0 }); Bx.aktiv = false; Bx.fase = ''; }
+    return ut; });
+  sjekk('alle bossene kommer i kamp med ny grafikk', r.every(x => x.kamp), r);
+  sjekk('ingen boss mister liv av å bare bli tegnet', r.every(x => x.hp), r);
+  sjekk('ingen JS-feil (bossgrafikk)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 (async () => {
   const b = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
   try {
@@ -799,6 +819,7 @@ async function intro(b) {
     if (med('spiker')) await spiker(b);
     if (med('anim')) await anim(b);
     if (med('intro')) await intro(b);
+    if (med('bosser')) await bosstegning(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

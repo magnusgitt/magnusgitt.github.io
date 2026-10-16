@@ -178,12 +178,19 @@ function tegnBoss6() {
   const n = 7, ledd = []; for (let i = 0; i < n; i++) ledd.push([B6.x - B6.dir * i * 15, B6.y + Math.sin(B6.t * (lav ? 9 : 5) - i * .8) * (lav ? 3 : 7)]);
   ctx.lineCap = 'round'; ctx.strokeStyle = '#123247'; ctx.lineWidth = 24; ctx.beginPath(); ledd.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
   ctx.strokeStyle = '#2a6f8f'; ctx.lineWidth = 16; ctx.stroke();
+  for (let i = 1; i < n; i++) { const [x0, y0] = ledd[i - 1], [x1, y1] = ledd[i], mx = (x0 + x1) / 2, my = (y0 + y1) / 2, nx = -(y1 - y0), ny = x1 - x0, l = Math.hypot(nx, ny) || 1, w = 10 - i * .6;
+    ctx.strokeStyle = 'rgba(8,24,34,.7)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(mx + nx / l * w, my + ny / l * w); ctx.lineTo(mx - nx / l * w, my - ny / l * w); ctx.stroke();
+    ctx.fillStyle = 'rgba(150,80,40,.45)'; ctx.beginPath(); ctx.ellipse(x1 + 2, y1 + 4, 3 + hs(i, 6, 1) * 3, 2, 0, 0, 7); ctx.fill(); nagler([[x1, y1 - 5]], 1); }
   ctx.strokeStyle = B6.strom === 'aktiv' ? '#e8fbff' : B6.strom === 'varsel' ? '#ffe36b' : '#7fdcff'; ctx.lineWidth = 2; ctx.setLineDash([6, 8]); ctx.lineDashOffset = -S.t * 40; ctx.stroke(); ctx.setLineDash([]);
   // finne langs ryggen
   ctx.fillStyle = 'rgba(127,220,255,.6)'; for (let i = 1; i < n - 1; i++) { const [x, y] = ledd[i]; ctx.beginPath(); ctx.moveTo(x - 6, y - 8); ctx.lineTo(x, y - 18 - Math.sin(B6.t * 8 + i) * 3); ctx.lineTo(x + 6, y - 8); ctx.fill(); }
   ctx.lineCap = 'butt';
   const [hx, hy] = ledd[0]; ctx.save(); ctx.translate(hx, hy); ctx.scale(B6.dir, 1);
-  ctx.fillStyle = '#1d4a66'; ctx.beginPath(); ctx.ellipse(6, 0, 20, 14, 0, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(190,240,255,.8)'; ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.strokeStyle = '#0a1a24'; ctx.lineWidth = 2; ctx.lineCap = 'round'; for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(20, 6); ctx.quadraticCurveTo(30, 10 + k * 4, 36 + Math.sin(B6.t * 4 + k) * 3, 14 + k * 6); ctx.stroke();
+    ctx.strokeStyle = '#d68a3a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(34 + Math.sin(B6.t * 4 + k) * 3, 13 + k * 6); ctx.lineTo(38 + Math.sin(B6.t * 4 + k) * 3, 15 + k * 6); ctx.stroke(); ctx.strokeStyle = '#0a1a24'; ctx.lineWidth = 2; }
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = '#1d4a66'; ctx.beginPath(); ctx.ellipse(6, 0, 20, 14, 0, 0, 7); ctx.fill(); ctx.strokeStyle = B6.strom === 'varsel' ? '#ffe36b' : 'rgba(190,240,255,.8)'; ctx.lineWidth = B6.strom === 'varsel' ? 2 : 1.4; ctx.stroke();
+  ctx.fillStyle = 'rgba(8,24,34,.5)'; ctx.beginPath(); ctx.moveTo(-6, -10); ctx.quadraticCurveTo(0, 0, -6, 11); ctx.lineTo(-10, 8); ctx.quadraticCurveTo(-5, 0, -10, -8); ctx.closePath(); ctx.fill(); nagler([[-2, -8], [-2, 8], [18, -7]], 1.1);
   ctx.fillStyle = '#0a1a24'; ctx.beginPath(); ctx.moveTo(14, 4); ctx.lineTo(27, 2 + (lav ? Math.sin(B6.t * 12) * 3 : 0)); ctx.lineTo(14, 8); ctx.fill();
   ctx.fillStyle = lav ? '#cfe' : '#fff'; ctx.beginPath(); ctx.arc(12, -5, 4, 0, 7); ctx.fill(); ctx.fillStyle = lav ? '#567' : '#ff5a3c'; ctx.beginPath(); ctx.arc(13, -5, 2, 0, 7); ctx.fill();
   ctx.restore();
@@ -191,7 +198,7 @@ function tegnBoss6() {
   ctx.globalAlpha = 1;
 }
 function boss6Glod() { if (!B6.aktiv) return; const a = B6.fase === 'dod' ? clamp(B6.dod / 2.6, 0, 1) : 1;
-  for (let i = 0; i < 7; i += 2) glod(SPR.c, B6.x - B6.dir * i * 15, B6.y, 50, (B6.strom === 'aktiv' ? .8 : .45) * a); glod(SPR.r, B6.x + B6.dir * 12, B6.y - 5, 12, .8 * a); }
+  for (let i = 0; i < 7; i += 2) glod(SPR.c, B6.x - B6.dir * i * 15, B6.y, 46, (B6.strom === 'aktiv' ? .7 : .3) * a); glod(SPR.r, B6.x + B6.dir * 12, B6.y - 5, 12, .8 * a); }
 
 // ---------- registrering ----------
 BOSSER.push({ navn: 'Spenningsålen', aktiv: () => B6.aktiv, hp: () => B6.hp, maks: 3, kamp: () => B6.fase === 'kamp' || B6.fase === 'dod' });

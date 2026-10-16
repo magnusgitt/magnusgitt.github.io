@@ -272,13 +272,18 @@ function tegnBoss5() {
   const vinge = (bak) => { const yTip = -8 - 30 * fl, xTip = -34 + (st === 'stup' ? -10 : 0);
     ctx.fillStyle = bak ? '#14304e' : '#2a6aa0'; ctx.beginPath(); ctx.moveTo(4, -6); ctx.lineTo(-6, yTip * .55 - 6); ctx.lineTo(xTip * .55, yTip - 2); ctx.lineTo(xTip * .7, yTip * .7 + 2); ctx.lineTo(xTip, yTip + 6);
     ctx.lineTo(xTip * .8, yTip * .4 + 6); ctx.lineTo(xTip * .55, 2); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = bak ? 'rgba(120,200,255,.35)' : 'rgba(200,245,255,.9)'; ctx.lineWidth = 1.3; ctx.stroke(); };
+    ctx.strokeStyle = bak ? 'rgba(120,200,255,.35)' : 'rgba(200,245,255,.9)'; ctx.lineWidth = 1.3; ctx.stroke();
+    if (!bak) { ctx.strokeStyle = 'rgba(214,140,70,.75)'; ctx.lineWidth = 1; ctx.beginPath(); for (const k of [.55, .75, 1]) { ctx.moveTo(2, -4); ctx.lineTo(xTip * k, (yTip + 4) * k - 2 * (1 - k)); } ctx.stroke();
+      ctx.fillStyle = '#c9c2b0'; for (const k of [.35, .65]) { ctx.beginPath(); ctx.arc(xTip * k * .9, yTip * k * .8, 1.6, 0, 7); ctx.fill(); } } };
   ctx.save(); ctx.translate(2, -3); ctx.scale(.85, .85); vinge(true); ctx.restore();
   // halen: lynformede fjær
   ctx.fillStyle = '#1d4a78'; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-30, -4); ctx.lineTo(-24, 2); ctx.lineTo(-34, 6); ctx.lineTo(-22, 7); ctx.lineTo(-28, 12); ctx.lineTo(-8, 6); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = 'rgba(170,235,255,.8)'; ctx.lineWidth = 1; ctx.stroke();
+  for (let k = 0; k < 3; k++) { ctx.fillStyle = k % 2 ? '#a77a52' : '#c49468'; ctx.beginPath(); ctx.ellipse(-36 - k * 5, 5 + k * 2 + Math.sin(B5.t * 6 + k) * 1.5, 2.6, 3.4, 0, 0, 7); ctx.fill(); }
   const gr = ctx.createLinearGradient(0, -12, 0, 10); gr.addColorStop(0, '#5fb8ec'); gr.addColorStop(1, '#173a63'); ctx.fillStyle = gr;
-  ctx.beginPath(); ctx.ellipse(rist, 0, 16, 10, -.1, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(220,250,255,.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(rist, 0, 16, 10, -.1, 0, 7); ctx.fill(); ctx.strokeStyle = st === 'varsel' ? `rgba(255,${110 + 80 * Math.sin(S.t * 30)},90,1)` : 'rgba(220,250,255,.85)'; ctx.lineWidth = st === 'varsel' ? 2 : 1.2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(10,30,50,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rist - 6, -9); ctx.quadraticCurveTo(rist - 9, 0, rist - 5, 9); ctx.moveTo(rist + 3, -10); ctx.quadraticCurveTo(rist, 0, rist + 4, 9.5); ctx.stroke();
+  nagler([[rist - 11, -2], [rist - 1, 5], [rist + 8, -2]], 1);
   ctx.fillStyle = '#3d8cc6'; ctx.beginPath(); ctx.arc(14 + rist, -7, 7.5, 0, 7); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#ffd35a'; ctx.beginPath(); ctx.moveTo(20, -9); ctx.lineTo(29, -6); ctx.lineTo(20, -3); ctx.closePath(); ctx.fill();
   ctx.fillStyle = bakke ? '#cfe' : '#fff'; ctx.beginPath(); ctx.arc(16 + rist, -8.5, 2.4, 0, 7); ctx.fill();
@@ -292,7 +297,7 @@ function tegnBoss5() {
 }
 function boss5Glod() {
   if (!B5.aktiv) return; const a = B5.fase === 'dod' ? clamp(B5.dod / 2.6, 0, 1) : 1;
-  glod(SPR.c, B5.x, B5.y, 110 + Math.sin(S.t * 8) * 10, .75 * a); glod(SPR.h, B5.x + 10, B5.y - 6, 18, .7 * a);
+  glod(SPR.c, B5.x, B5.y, 110 + Math.sin(S.t * 8) * 10, .5 * a); glod(SPR.h, B5.x + 10, B5.y - 6, 12, .5 * a);
   if (B5.tilstand === 'stup') for (let i = 1; i < 6; i++) glod(SPR.c, B5.x - B5.vx * .012 * i, B5.y - B5.vy * .012 * i, 50 - i * 6, .5 - i * .07);
   for (const l of B5.lyn) if (l.varsel <= 0) { for (let y = ARENA5.gulv * T; y > cam.y - 40; y -= 90) glod(SPR.c, l.x, y, 80, .6); glod(SPR.h, l.x, ARENA5.gulv * T - 6, 40, 1); }
     else glod(SPR.c, l.x, ARENA5.gulv * T - 4, 30 + (1 - l.varsel) * 30, .5);
