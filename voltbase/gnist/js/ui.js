@@ -150,7 +150,7 @@ function loop(n) {
       oppdaterVerden(dt); oppdaterProsj(dt); hudEvneTilstand(); hudKrok(); }
     else if (S.mode === 'intro') oppdaterIntro(dt);
     else if (S.mode === 'slutt' || S.mode === 'meny') { KRAN.t += dt; KRAN.x = KRAN.x0 + (.5 - .5 * Math.cos(KRAN.t * .55)) * (KRAN.x1 - KRAN.x0); }
-    hudVerk(); oppdaterMusikk();
+    hudVerk(); oppdaterMusikk(); oppdaterLydbilde(rdt);
     if (S.tidsmodus && S.mode === 'spill') { const m = Math.floor(S.tid / 60), sk = S.tid % 60; $('#tidtaker').textContent = `${m}:${sk < 10 ? '0' : ''}${sk.toFixed(1)}`; }
     oppdaterPartikler(dt); oppdaterKamera(rdt); introKamera(); oppdaterStemning(rdt); maalYtelse(rdt);
     S.shake = Math.max(0, S.shake - rdt); S.flash = Math.max(0, S.flash - rdt * 1.4);

@@ -90,6 +90,11 @@ function lyd(n) {
     case 'svom': sus(.25, 1400, 300, .06); tone(300, 180, .15, 'sine', .02); break;
     case 'sluse': tone(90, 60, 1.6, 'sawtooth', .035); sus(1.8, 700, 150, .08); break;
     case 'jord': tone(160, 60, .5, 'square', .05); sus(.4, 3000, 200, .1); tone(900, 1400, .3, 'triangle', .03, .25); break;
+    case 'metallstonn': tone(72, 44, 1.5, 'sawtooth', .03); tone(108, 70, 1.2, 'triangle', .02, .15); sus(1.3, 900, 220, .05, .05, 'bandpass'); break;
+    case 'rele': sus(.02, 6000, 3000, .05, 0, 'highpass'); tone(1800, 1200, .02, 'square', .01); break;
+    case 'stromTilbake': tone(45, 100, 1.8, 'sawtooth', .03); tone(90, 200, 1.8, 'sine', .03); sus(1.6, 300, 1400, .03, 0, 'bandpass');
+      [.3, .5, .62, .8, .9, 1.05].forEach(d => { sus(.025, 6000, 3000, .06, d, 'highpass'); tone(1800, 1200, .02, 'square', .01, d); });
+      [523, 659, 784].forEach((f, i) => tone(f, f, 1.4, 'triangle', .028, 1.3 + i * .05)); break;
     case 'slutt': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 1.6, 'triangle', .04, i * .16)); break;
   }
 }

@@ -40,7 +40,7 @@ function oppdaterIntro(dt) {
   const gaar = t > 7 && P.x < kx - 1.6 * T;
   P.piskT = -1; P.dashT = 0; P.spor.length = 0;
   P.vx = gaar ? 62 : 0; P.face = 1; P.onGround = true; P.vy = 0;
-  if (gaar) { const f = Math.sin(P.anim); P.x += 62 * dt; P.anim += dt * 62 * .075; if (Math.sign(f) !== Math.sign(Math.sin(P.anim))) { lyd('steg'); stov(P.x + P.w / 2, P.y + P.h, 1, .3); } }
+  if (gaar) { const f = Math.sin(P.anim); P.x += 62 * dt; P.anim += dt * 62 * .075; if (Math.sign(f) !== Math.sign(Math.sin(P.anim))) { fottrinn(); stov(P.x + P.w / 2, P.y + P.h, 1, .3); } }
   // han ser ned på skjelettet, kneler og tar utstyret
   if (t > 7 && !gaar && t <= 12.6) ANIM.overstyr = { b1: [-.08, .14], b2: [.08, .14], a1: [-.15, .2], a2: [.15, .25], bob: 0, hode: .4, lean: .06, tilt: .3, fart: 4 };
   else if (t > 12.6 && t < 16.2) ANIM.overstyr = { b1: [.15, 1.6], b2: [1.1, 1.9], a1: [.3, .4], a2: [1.15, .25], bob: 0, hode: 1.2, lean: .38, tilt: .3, fart: 7 };

@@ -800,6 +800,22 @@ async function bosstegning(b) {
   await ctx.close();
 }
 
+// Lydbildet: vind, fottrinn etter underlag og lyden av at strømmen kommer tilbake
+async function lydbilde(b) {
+  console.log('Lydbildet: vind, fottrinn og strøm tilbake');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 960, height: 540 } });
+  await page.click('#bNy'); await page.evaluate(() => { if (S.mode === 'intro') sluttIntro(); }); await vent(page, 600);
+  const u = await page.evaluate(() => [[10, 23], [20, 31], [86, 18]].map(([x, y]) => { P.x = x * T + 7; P.y = (y + 1) * T - P.h; return underlag(); }));
+  sjekk('fottrinn følger underlaget', u[0] === 'gress' && u[1] === 'betong', u);
+  sjekk('vinden er i gang', await page.evaluate(() => !!LB.vind || !A.c));
+  await page.evaluate(() => { for (const n of ['metallstonn', 'rele', 'stromTilbake']) lyd(n); knirk(true); fottrinn(); S.boss = true; });
+  await vent(page, 3200);
+  const r = await page.evaluate(() => ({ niva: LB.niva, strom: LB.stromT }));
+  sjekk('strømmen-tilbake-lyden går når en boss er slått', r.niva > 0 && r.strom <= 0, r);
+  sjekk('ingen JS-feil (lyd)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 (async () => {
   const b = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
   try {
@@ -820,6 +836,7 @@ async function bosstegning(b) {
     if (med('anim')) await anim(b);
     if (med('intro')) await intro(b);
     if (med('bosser')) await bosstegning(b);
+    if (med('lyd')) await lydbilde(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

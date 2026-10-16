@@ -215,7 +215,7 @@ function oppdaterSpiller(dt) {
     if (!varBakke && vyFor > 250) { const k = clamp(vyFor / 820, .3, 1); p.sx = 1 + .32 * k; p.sy = 1 - .3 * k; p.landT = .12 * k; stov(p.x + p.w / 2, p.y + p.h, 4 + (8 * k | 0), k); lyd('land'); if (k > .7) vib(12); } }
   if (!p.onGround && p.vy > 0) p.fallT += dt; else p.fallT = 0;
   p.sx += (1 - p.sx) * Math.min(1, dt * 13); p.sy += (1 - p.sy) * Math.min(1, dt * 13);
-  if (p.onGround && Math.abs(p.vx) > 20) { const for_ = Math.sin(p.anim); p.anim += dt * Math.abs(p.vx) * .052; if (Math.sign(for_) !== Math.sign(Math.sin(p.anim))) { lyd('steg'); fotspor(p.x + p.w / 2 + p.face * 3, p.y + p.h); if (Math.random() < .5) stov(p.x + p.w / 2, p.y + p.h, 1, .3); } }
+  if (p.onGround && Math.abs(p.vx) > 20) { const for_ = Math.sin(p.anim); p.anim += dt * Math.abs(p.vx) * .052; if (Math.sign(for_) !== Math.sign(Math.sin(p.anim))) { fottrinn(); fotspor(p.x + p.w / 2 + p.face * 3, p.y + p.h); if (Math.random() < .5) stov(p.x + p.w / 2, p.y + p.h, 1, .3); } }
   const maalLean = p.krok ? clamp((p.x + p.w / 2 - p.krok.x) / (p.krok.len || 1), -1, 1) * -.9 * p.face : p.dashT > 0 ? .55 * p.face : p.onGround ? clamp(p.vx / RUN, -1, 1) * .13 : clamp(p.vx / RUN, -1, 1) * .08;
   p.lean += (maalLean - p.lean) * Math.min(1, dt * 14);
   // feller (strømførende kabler)
@@ -238,7 +238,7 @@ function oppdaterVerden(dt) {
   // sjekkpunkt
   SJEKK.forEach((c, i) => { const cx = c.x * T + T / 2, cy = c.y * T + T / 2;
     if (Math.abs(pcx - cx) < T * 1.2 && Math.abs(pcy - cy) < T * 1.4) {
-      if (!S.cpLit.has(i)) { S.cpLit.add(i); lyd('lampe'); sprut(cx, cy - 10, 24, 'w', 160); toast('Sjekkpunkt tent'); }
+      if (!S.cpLit.has(i)) { S.cpLit.add(i); lyd('rele'); lyd('lampe'); sprut(cx, cy - 10, 24, 'w', 160); toast('Sjekkpunkt tent'); }
       if (S.cp !== i || P.hp < P.max) { if (P.hp < P.max) pop('#liv'); S.cp = i; P.hp = P.max; hud(); lagre(); } } });
   // lysorber
   ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const ox = x * T + T / 2, oy = y * T + T / 2 + Math.sin(S.t * 2 + i) * 4;
