@@ -432,6 +432,54 @@ textarea.inp.nt{height:auto;min-height:76px;padding:8px 11px;font-family:inherit
   body.printing #printArea{display:block}
   #printArea svg{width:100%;height:auto;display:block}
 }
+
+/* hent fremdriftsplan fra fil */
+.sheet.wide{width:min(1020px,100%)}
+.imdrop{border:2px dashed var(--line);border-radius:12px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--weekend);cursor:pointer}
+.imdrop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card))}
+.imdrop .ib{height:46px;padding:0 26px;font-size:15px;pointer-events:none}
+.imdrop small{color:var(--muted);font-size:12.5px}
+.imbusy{margin:0;font-weight:650;color:var(--accent)}
+.imsum{font-size:14px;line-height:1.7}
+.imsum .sel{height:32px;margin-left:6px}
+.err{color:var(--red);font-weight:650}
+.warn{color:var(--m3);font-weight:600}
+.imcols{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:8px}
+.imcol{border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.imcol.on{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.imcol .h{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imcol .ex{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imcol .sel{width:100%;margin-top:2px}
+.imh{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+.imh b{font-size:15px}
+.imrows{border:1px solid var(--line);border-radius:10px}
+.imr{display:grid;grid-template-columns:24px minmax(0,1fr) 140px 140px minmax(0,1fr);gap:4px 10px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line)}
+.imr:last-child{border-bottom:0}
+.imr.hd{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--weekend);border-radius:10px 10px 0 0}
+.imr .inp{height:36px;font-size:14px;padding:0 8px}
+.imr label>span{display:none}
+.imr .cb{width:18px;height:18px;margin:0;accent-color:var(--primary)}
+.imr.off .nm,.imr.off label,.imr.off .msg{opacity:.55}
+.imr.sum{background:var(--weekend)}
+.imr.sum .nm{font-weight:750;padding:8px 0;font-size:14px}
+.imr .msg{font-size:12px;color:var(--muted);line-height:1.4;min-width:0}
+.immode{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.immode label{display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.immode label:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.immode input{width:18px;height:18px;margin:0;accent-color:var(--primary)}
+.imfoot{position:sticky;bottom:-18px;background:var(--card);margin:0 -18px -18px;padding:12px 18px 18px;border-top:1px solid var(--line)}
+.imfoot .ib.primary[disabled]{opacity:.5;cursor:default}
+@media (max-width:760px){
+  .imr{grid-template-columns:24px 1fr 1fr;padding:10px}
+  .imr.hd{display:none}
+  .imr .cb{grid-row:1}
+  .imr .nm{grid-column:2/4}
+  .imr .d1{grid-column:2}.imr .d2{grid-column:3}
+  .imr label>span{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+  .imr .msg{grid-column:2/4}
+  .imr.sum .d1,.imr.sum .d2{display:none}
+  .imfoot{bottom:calc(-18px - env(safe-area-inset-bottom,0px));padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));margin-bottom:calc(-18px - env(safe-area-inset-bottom,0px))}
+}
 </style>
 
 </head><body>
@@ -510,6 +558,7 @@ textarea.inp.nt{height:auto;min-height:76px;padding:8px 11px;font-family:inherit
       <option value="start">Sorter: startdato</option><option value="end">Sorter: sluttdato</option><option value="name">Sorter: navn</option><option value="status">Sorter: status</option><option value="fag">Sorter: fag</option>
     </select>
     <span class="spacer"></span>
+    <button class="ib" data-import title="Hent aktiviteter fra en fremdriftsplan i Excel, PDF eller MS Project">Hent fra fil</button>
     <button class="ib primary addBtn" data-new>+ Ny aktivitet</button>
   </div>
   <div class="ltab" id="lTab"></div>
@@ -525,6 +574,12 @@ textarea.inp.nt{height:auto;min-height:76px;padding:8px 11px;font-family:inherit
       <label class="field"><span>Prosjektnavn</span><input class="inp" id="sTitle" placeholder="F.eks. Rehabilitering Storgata 12"></label>
       <div class="btnrow"><button class="ib" id="sProj">Bytt prosjekt eller lag nytt</button></div>
       <p>Planen lagres bare i denne nettleseren på denne enheten. Vil du flytte den til en annen PC eller mobil, lager du en sikkerhetskopi og åpner den der.</p>
+    </div>
+    <div class="card">
+      <h3>Hent fremdriftsplan fra fil</h3>
+      <p>Har du fått en fremdriftsplan i Excel, PDF eller fra MS Project? Hent den inn, så havner aktivitetene i kalenderen og fremdriftsplanen. Du ser hva som blir lest, og kan rette det, før noe legges inn.</p>
+      <div class="btnrow"><button class="ib primary" data-import>Velg fil</button></div>
+      <p>Filen leses bare her i nettleseren. Ingenting lastes opp.</p>
     </div>
     <div class="card">
       <h3>Fag og farger</h3>
@@ -860,7 +915,7 @@ function upItem(a,kind){
 function renderSide(){
   const k=sumCounts(),all=S.acts;
   if(!k.n){$('cStrip').innerHTML='';
-    $('cSide').innerHTML=`<div class="box"><h3>Kom i gang</h3><p>Planen er tom. Legg inn den første aktiviteten, så ser du her hva som pågår og hva som kommer.</p><div class="btnrow"><button class="ib primary" data-new>+ Ny aktivitet</button><button class="ib" id="cSeed">Se et eksempel</button></div></div>`;
+    $('cSide').innerHTML=`<div class="box"><h3>Kom i gang</h3><p>Planen er tom. Legg inn den første aktiviteten, så ser du her hva som pågår og hva som kommer.</p><div class="btnrow"><button class="ib primary" data-new>+ Ny aktivitet</button><button class="ib" data-import>Hent plan fra fil</button><button class="ib" id="cSeed">Se et eksempel</button></div></div>`;
     $('cSeed').onclick=()=>{snap('eksempel');S=seedS();fixAll();save();render();toast('Eksempelprosjektet er lastet inn. Du kan tømme det under Innstillinger.')};return}
   let mn=all[0].start,mx=all[0].end;all.forEach(a=>{if(a.start<mn)mn=a.start;if(a.end>mx)mx=a.end});
   let h=`<div class="box"><h3>Prosjekt</h3>${S.title?`<div class="pt">${esc(S.title)}</div>`:''}
@@ -994,7 +1049,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 function openPanel(id,preset){
   const a=id?byId(id):null;if(id&&!a)return;
   const d=a?clone(a):{name:'',start:TODAY,end:TODAY,c:nextColor(),status:'ikke',type:'aktivitet',pct:0,who:'',note:'',preds:[],...preset};
-  ed={id:a?a.id:null,d,more:false,err:'',msg:''};drawPanel();$('sheetbg').hidden=false;$('sheet').scrollTop=0;
+  ed={id:a?a.id:null,d,more:false,err:'',msg:''};$('sheet').classList.remove('wide');drawPanel();$('sheetbg').hidden=false;$('sheet').scrollTop=0;
   setTimeout(()=>{const n=$('pName');if(n&&!a)n.focus()},30);
 }
 function nextColor(){return S.acts.length?(S.acts[S.acts.length-1].c+1)%NCOL:0}
@@ -1085,7 +1140,7 @@ function addFromPanel(){
   if(!d.name){ed.err='Skriv et navn på '+(d.type==='milepael'?'milepælen':'aktiviteten')+'.';drawPanel();$('pName').focus();return}
   snap('ny aktivitet');S.n=(S.n||0)+1;S.acts.push({...clone(d),id:uid()});save();closePanel();toast('«'+d.name+'» er lagt til.');
 }
-function closePanel(){$('sheetbg').hidden=true;ed=null;render()}
+function closePanel(){$('sheetbg').hidden=true;$('sheet').classList.remove('wide');ed=null;IM=null;render()}
 $('sheetbg').onclick=e=>{if(e.target===$('sheetbg'))closePanel()};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-new]');if(!b)return;
   let s=onOrNextWork(TODAY);if(view==='cal'&&calMode==='month'&&(now.getFullYear()!==cy||now.getMonth()!==cm))s=onOrNextWork(iso(new Date(cy,cm,1,12)));
@@ -1238,7 +1293,7 @@ function renderGantt(){
   renderMigr('gMigr');renderFerieAsk('gFerie');
   const rows=gRows(),LW=innerWidth<760?116:260,crit=showCrit?critSet():null;
   $('gScroll').style.setProperty('--gl',LW+'px');
-  if(!rows.length){$('gNames').innerHTML='';$('gTl').innerHTML=`<div class="gempty">${n?'Ingen aktiviteter passer filteret.':'Ingen aktiviteter ennå. Trykk «+ Ny aktivitet», eller legg dem inn i Kalender.'}</div>`;return}
+  if(!rows.length){$('gNames').innerHTML='';$('gTl').innerHTML=`<div class="gempty">${n?'Ingen aktiviteter passer filteret.':'Ingen aktiviteter ennå. Trykk «+ Ny aktivitet», eller hent en fremdriftsplan fra Excel, PDF eller MS Project.<div class="btnrow" style="margin-top:12px"><button class="ib" data-import>Hent plan fra fil</button></div>'}</div>`;return}
   $('gNames').innerHTML='<div class="gnh">Aktivitet</div>'+rows.map(a=>a.grp
     ?`<div class="gr grp" style="--c:var(--m${a.c})"><span class="gq"></span><span class="gn" title="${esc(a.name)}">${esc(a.name)}</span><span class="gd">${a.done} av ${a.n} ferdig</span></div>`
     :`<div class="gr${crit&&crit.has(a.id)?' crit':''}" style="--c:var(--m${a.c})"><button class="sbtn" data-cyc="${a.id}" title="${STL[a.status]} – trykk for å endre" aria-label="Status: ${STL[a.status]}. Trykk for å endre.">${a.type==='milepael'?msIcon(a.status):stIcon(a.status)}</button><span class="gn" data-open="${a.id}" title="${esc(a.name)}">${esc(a.name)}</span>${isLate(a)?'<span class="lt" title="Forsinket">!</span>':''}<span class="gd">${fmt(a.start,1)}${a.end!==a.start?' – '+fmt(a.end,1):''}</span></div>`).join('');
@@ -1574,7 +1629,7 @@ function delProj(){
   IDX.list=IDX.list.filter(x=>x.id!==cur);openProj(IDX.list[0].id,null,false);toast('Prosjektet «'+nm+'» er slettet.');
 }
 function openProjects(){
-  ed=null;const sh=$('sheet');
+  ed=null;const sh=$('sheet');sh.classList.remove('wide');
   const rows=IDX.list.map(p=>{const d=projData(p.id),n=Array.isArray(d.acts)?d.acts.length:0,on=p.id===IDX.active;
     let span='';if(n){let a=d.acts[0].start,b=d.acts[0].end;d.acts.forEach(x=>{if(x.start<a)a=x.start;if(x.end>b)b=x.end});span=' · '+fmt(a,a.slice(0,4)===TODAY.slice(0,4))+' – '+fmt(b)}
     return`<button class="prj${on?' on':''}" data-prj="${p.id}"${on?' aria-current="true"':''}><b>${esc(d.title||'Uten navn')}</b><span>${n} ${n===1?'aktivitet':'aktiviteter'}${span}${on?' · åpent nå':''}</span></button>`}).join('');
@@ -1589,6 +1644,388 @@ function openProjects(){
   sh.querySelector('.prjs').onclick=e=>{const b=e.target.closest('[data-prj]');if(!b)return;if(b.dataset.prj===IDX.active){closePanel();return}
     if(openProj(b.dataset.prj))toast('«'+(S.title||'Uten navn')+'» er åpnet.')};
 }
+
+/* ================= Hent fremdriftsplan fra fil =================
+   Leser Excel (.xlsx/.xls/.ods), CSV/tekst, MS Project XML og PDF med tekst. Alt skjer her i nettleseren; filen lastes aldri opp.
+   Bibliotekene (SheetJS for Excel, pdf.js for PDF) hentes fra cdnjs først når de trengs.
+   Flyt: fil → tabell (rader og kolonner) → gjett hva kolonnene betyr → forhåndsvisning der brukeren kan rette → legg inn. */
+const LIBS={xlsx:'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',pdfw:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'};
+const libP={};
+function loadLib(k){return libP[k]||(libP[k]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=LIBS[k];s.onload=res;s.onerror=()=>{delete libP[k];s.remove();rej(new Error('lib'))};document.head.appendChild(s)}))}
+/* kolonnetyper. Rekkefølgen betyr noe: første treff vinner (f.eks. «Ressursnavn» er ansvarlig, ikke navn) */
+const IMF=[
+  ['skip','Ikke bruk',/modus|mode$|^aktiv$|^active$|indikator|indicator|^info$/],
+  ['id','Nr / ID',/^(id|nr|nr\.|nummer|løpenr|lnr|#|pos|ref)$/],
+  ['lvl','Nivå',/nivå|outline level|^level$|innrykk/],
+  ['wbs','Struktur (WBS)',/wbs|disposisjon|outline number|strukturnr/],
+  ['sum','Overskrift',/sammendrag|summary|overskrift/],
+  ['status','Status / %',/status|%|fremdrift|fullført|complete|progress/],
+  ['who','Ansvarlig',/ansvar|ressurs|resource|utførende|entreprenør|firma|hvem|utføres av/],
+  ['pred','Venter på',/forgjeng|avheng|venter|predecessor|forutset/],
+  ['dur','Varighet',/varighet|duration|lengde|antall dager|arbeidsdager|^dager$|^dgr|^days$/],
+  ['start','Start',/^(start|oppstart|startdato|planlagt start|start date|begin|fra|fra dato|dato fra)$|^start|oppstart/],
+  ['end','Slutt',/^(slutt|ferdig|ferdigdato|sluttdato|til|til dato|finish|end|end date|frist|planlagt slutt)$|slutt|finish/],
+  ['type','Type',/^type$|milepæl|milestone/],
+  ['fag','Fag',/^fag|fagområde|entreprise|disiplin|kategori|gruppe/],
+  ['name','Navn',/navn|aktivitet|oppgave|beskrivelse|task|name|arbeid|tekst|operasjon/],
+  ['note','Notat',/notat|merknad|kommentar|notes?$|anmerkning/]];
+const IML=Object.fromEntries(IMF.map(f=>[f[0],f[1]]));
+const normH=h=>String(h==null?'':h).toLowerCase().replace(/[_\s]+/g,' ').trim();
+function imGuess(h){h=normH(h);if(!h||h.length>40||/^\d/.test(h)&&!/%/.test(h))return '';const f=IMF.find(f=>f[2].test(h));return f?f[0]:''}
+
+/* ---------- tolking av datoer, varighet, status og avhengigheter ---------- */
+const MONN={jan:1,feb:2,mar:3,apr:4,mai:5,may:5,jun:6,jul:7,aug:8,sep:9,okt:10,oct:10,nov:11,des:12,dec:12};
+const MONRE='(jan|feb|mar|apr|mai|may|jun|jul|aug|sep|okt|oct|nov|des|dec)';
+function mkD(y,m,d){if(!(m>=1&&m<=12&&d>=1&&d<=31&&y>1900&&y<2200))return '';const t=new Date(y,m-1,d,12);return t.getMonth()===m-1?iso(t):''}
+/* år mangler: velg året som gir datoen nærmest forrige dato i planen */
+function nearY(m,d,ref,make){const r=parse(ref||TODAY),Y=r.getFullYear();let best='',bd=1e15;[Y-1,Y,Y+1].forEach(y=>{const k=make(y);if(k){const x=Math.abs(parse(k)-r);if(x<bd){bd=x;best=k}}});return best}
+function pDate(v,o={}){
+  if(v==null||v==='')return '';
+  if(typeof v==='number'){if(v>20000&&v<110000&&window.XLSX){const c=XLSX.SSF.parse_date_code(v);return c?mkD(c.y,c.m,c.d):''}return ''}
+  const s=String(v).toLowerCase().trim();if(!s)return '';let m;
+  const Y=y=>y==null||y===''?null:(+y<100?2000+ +y:+y);
+  const fin=(y,mo,d)=>y!=null?mkD(y,mo,d):nearY(mo,d,o.ref,yy=>mkD(yy,mo,d));
+  if(m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/))return mkD(+m[1],+m[2],+m[3]);
+  if(m=s.match(new RegExp('(\\d{1,2})\\.?\\s*'+MONRE+'[a-zæøå]*\\.?,?\\s*(\\d{4}|\\d{2}(?![\\d:.]))?')))return o.strict&&!m[3]?'':fin(Y(m[3]),MONN[m[2]],+m[1]);
+  if(m=s.match(new RegExp(MONRE+'[a-z]*\\.?\\s+(\\d{1,2}),?\\s*(\\d{4})?')))return o.strict&&!m[3]?'':fin(Y(m[3]),MONN[m[1]],+m[2]);
+  if(m=s.match(/(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{4}|\d{2}))?(?![\d.\/-])/)){if(o.strict&&!m[3])return '';let d=+m[1],mo=+m[2];if(o.mdy||(mo>12&&d<=12))[d,mo]=[mo,d];return fin(Y(m[3]),mo,d)}
+  /* «uke 42» eller «U42 2026»: mandag for start, fredag for slutt */
+  if(!o.strict&&(m=s.match(/(?:^|[^a-zæøå])(?:uke|u|v|week|wk)\.?\s*(\d{1,2})(?:\s*[-\/,]?\s*(\d{4}))?/))){const w=+m[1];if(w<1||w>53)return '';
+    const mk=y=>iso(addDays(weekMonday(y,w),o.end?4:0));return m[2]?mk(+m[2]):nearY(0,0,o.ref,mk)}
+  return '';
+}
+/* varighet i arbeidsdager (cal: kalenderdager). «5», «5d», «5 dager», «2 uker», «16 t», «5 kal.dager» */
+function pDur(v){
+  if(v==null||v==='')return null;if(typeof v==='number')return v>=0?{n:Math.ceil(v-1e-9),cal:false}:null;
+  const s=String(v).toLowerCase().replace(/[?~]/g,'').replace(',','.').trim(),m=s.match(/^(\d+(?:\.\d+)?)\s*([a-zæøå.\s]*)$/);if(!m)return null;
+  let n=parseFloat(m[1]),u=m[2].replace(/[.\s]/g,''),cal=false;
+  if(/^(e|kal|kalender|cd)/.test(u)&&u!=='e'){cal=true;u=u.replace(/^(kalender|kal|e|c)/,'')}
+  if(!u||/^(d|dg|dgr|dag|dager|day|days|ad|arbd|arbeidsdag|arbeidsdager|vd)$/.test(u));
+  else if(/^(u|uk|uke|uker|w|wk|wks|week|weeks)$/.test(u))n*=cal?7:5;
+  else if(/^(mnd|md|måned|måneder|mo|mon|mons|month|months)$/.test(u))n*=cal?30:21;
+  else if(/^(t|ti|time|timer|h|hr|hrs|hour|hours)$/.test(u))n/=cal?24:8;
+  else if(/^(m|min|mins|minutt|minutter|minute|minutes)$/.test(u))n/=cal?1440:480;
+  else return null;
+  return{n:Math.ceil(n-1e-9),cal};
+}
+function pStat(v){
+  if(v==null||v==='')return null;let s=String(v).toLowerCase().trim(),p=null;
+  const m=s.match(/^(\d+(?:[.,]\d+)?)\s*%?$/);if(m){p=parseFloat(m[1].replace(',','.'));if(typeof v==='number'&&v>0&&v<1)p=v*100}
+  if(p!=null){p=Math.max(0,Math.min(100,Math.round(p)));return{st:p>=100?'ferdig':p>0?'pagar':'ikke',pct:p}}
+  if(/ferdig|fullført|utført|avslutt|done|complete|finished|^ok$/.test(s))return{st:'ferdig',pct:100};
+  if(/pågår|i gang|igang|startet|påbegynt|progress|ongoing|started/.test(s))return{st:'pagar',pct:0};
+  if(/ikke|planlagt|venter|not|planned/.test(s))return{st:'ikke',pct:0};
+  return null;
+}
+const yes=v=>/^(ja|j|yes|y|x|1|sant|true|sann)$/i.test(String(v==null?'':v).trim());
+/* «3», «3FS+2d», «5SS», «Grunnarbeid», «Grunnarbeid +3 dager». Flere skilles med ; eller , */
+function pPreds(raw){
+  if(raw==null||raw==='')return[];
+  return String(raw).split(/[;,\n]+/).map(t=>t.trim()).filter(Boolean).map(t=>{
+    let m=t.match(/^(\d+(?:\.\d+)*)\s*(FS|SS|FF|SF)?\s*(?:([+-])\s*(\d+(?:[.,]\d+)?\s*[a-zæøå. ]*))?$/i)
+      ||t.match(/^(.+?)(?:\s+(FS|SS|FF|SF))?(?:\s*([+-])\s*(\d+(?:[.,]\d+)?\s*[a-zæøå. ]*))?$/);
+    if(!m)return null;const ty=(m[2]||'FS').toUpperCase(),d=m[4]?pDur(m[4]):null;
+    return{ref:m[1].trim(),ss:ty==='SS'||ty==='SF',lag:d?(m[3]==='-'?-d.n:d.n):0,cal:!!(d&&d.cal)}}).filter(Boolean);
+}
+const keyOf=v=>{const s=String(v==null?'':v).trim();return/^\d+(\.0+)?$/.test(s)?String(parseInt(s)):s.toLowerCase()};
+function startFromWork(end,n){let d=parse(end),c=0;for(let i=0;i<5000;i++){if(workday(d)&&++c>=n)break;d=addDays(d,-1)}return iso(d)}
+
+/* ---------- lese filer til tabeller: [{name, rows:[[celle,…],…]}] ---------- */
+function decodeText(buf){let t=new TextDecoder('utf-8').decode(buf);if(t.includes('�'))t=new TextDecoder('windows-1252').decode(buf);return t.replace(/^﻿/,'')}
+function readCsv(txt){
+  const head=txt.split(/\r?\n/).slice(0,15).join('\n'),cnt=c=>head.split(c).length-1;
+  const dl=['\t',';',','].sort((a,b)=>cnt(b)-cnt(a))[0];
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<txt.length;i++){const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c;continue}
+    if(c==='"'&&cell==='')q=true;else if(c===dl){row.push(cell);cell=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=''}else cell+=c}
+  if(cell!==''||row.length){row.push(cell);rows.push(row)}
+  return[{name:'',rows}];
+}
+async function readXlsx(buf){
+  await loadLib('xlsx');const wb=XLSX.read(buf,{type:'array',cellDates:false,cellNF:true}),U=XLSX.utils;
+  return wb.SheetNames.map(n=>{const ws=wb.Sheets[n];if(!ws||!ws['!ref'])return{name:n,rows:[]};const R=U.decode_range(ws['!ref']),rows=[];
+    for(let r=R.s.r;r<=Math.min(R.e.r,R.s.r+3000);r++){const row=[];for(let c=R.s.c;c<=Math.min(R.e.c,R.s.c+60);c++){
+      const x=ws[U.encode_cell({r,c})];let v='';
+      if(x){if(x.t==='n'&&x.z&&XLSX.SSF.is_date(x.z)){const d=XLSX.SSF.parse_date_code(x.v);v=d?mkD(d.y,d.m,d.d):''}
+        else if(x.t==='n'&&x.z&&/%/.test(x.z))v=Math.round(x.v*100)+'%';
+        else if(x.t==='d')v=iso(new Date(x.v.getTime()+432e5));
+        else if(x.t==='n')v=x.v;else if(x.t==='b')v=x.v?'Ja':'';else v=String(x.v==null?'':x.v)}
+      row.push(v)}rows.push(row)}
+    return{name:n,rows}}).filter(s=>s.rows.some(r=>r.some(v=>v!=='')));
+}
+/* MS Project XML (Fil → Lagre som → XML) */
+function readMspXml(txt){
+  const d=new DOMParser().parseFromString(txt,'application/xml');const tasks=[...d.getElementsByTagName('Task')];if(!tasks.length)return null;
+  const ch=(t,n)=>{for(const c of t.children)if(c.localName===n)return c.textContent;return ''};
+  const u2i={};tasks.forEach(t=>{u2i[ch(t,'UID')]=ch(t,'ID')});
+  const rows=[['ID','Navn','Start','Slutt','Varighet','Forgjengere','Nivå','Overskrift','Type','% fullført','Notater']];
+  const pt=s=>{const m=String(s).match(/PT(\d+)H(\d+)M/);return m?(+m[1]+m[2]/60):null};
+  tasks.forEach(t=>{if(ch(t,'UID')==='0'||ch(t,'IsNull')==='1'||!ch(t,'Name'))return;
+    const preds=[...t.children].filter(c=>c.localName==='PredecessorLink').map(pl=>{const id=u2i[ch(pl,'PredecessorUID')];if(!id)return '';
+      const ty=['FF','FS','SF','SS'][+ch(pl,'Type')]||'FS',f=+ch(pl,'LagFormat'),cal=[4,6,8,10,12,36,38,40,42,44].includes(f),lag=Math.round((+ch(pl,'LinkLag')||0)/(cal?14400:4800));
+      return id+ty+(lag?(lag>0?'+':'')+lag+(cal?'ed':'d'):'')}).filter(Boolean).join(';');
+    const h=pt(ch(t,'Duration'));
+    rows.push([ch(t,'ID'),ch(t,'Name'),ch(t,'Start').slice(0,10),ch(t,'Finish').slice(0,10),h==null?'':Math.round(h/8*10)/10+'d',preds,ch(t,'OutlineLevel'),
+      ch(t,'Summary')==='1'?'Ja':'',ch(t,'Milestone')==='1'?'Milepæl':'',ch(t,'PercentComplete'),ch(t,'Notes')])});
+  const pn=d.documentElement,pt2=pn?(ch(pn,'Title')||ch(pn,'Name').replace(/\.(xml|mpp)$/i,'')):'';
+  return[{name:'MS Project',rows,pre:pt2}];
+}
+/* PDF med tekst: setter teksten sammen til linjer og deler linjene i kolonner etter overskriftsraden */
+async function readPdf(buf){
+  await loadLib('pdf');pdfjsLib.GlobalWorkerOptions.workerSrc=LIBS.pdfw;
+  const doc=await pdfjsLib.getDocument({data:buf}).promise,lines=[];
+  for(let p=1;p<=Math.min(doc.numPages,60);p++){
+    const tc=await (await doc.getPage(p)).getTextContent();
+    const its=tc.items.filter(i=>i.str&&i.str.trim()).map(i=>({s:i.str,x:i.transform[4],y:i.transform[5],w:i.width,h:Math.abs(i.transform[3])||Math.abs(i.transform[0])||8}));
+    its.sort((a,b)=>b.y-a.y||a.x-b.x);const L=[];
+    its.forEach(i=>{const l=L.find(l=>Math.abs(l.y-i.y)<Math.max(2,i.h*.45));if(l)l.it.push(i);else L.push({y:i.y,p,it:[i]})});
+    L.forEach(l=>{l.it.sort((a,b)=>a.x-b.x);const cells=[];
+      l.it.forEach(i=>{const c=cells[cells.length-1],gap=c?i.x-c.x1:1e9;
+        if(c&&gap<Math.max(3,i.h*.7)){c.s+=(gap>i.h*.12&&!/\s$/.test(c.s)&&!/^\s/.test(i.s)?' ':'')+i.s;c.x1=Math.max(c.x1,i.x+i.w)}else cells.push({s:i.s,x0:i.x,x1:i.x+i.w})});
+      l.cells=cells.map(c=>({...c,s:c.s.replace(/\s+/g,' ').trim()})).filter(c=>c.s);if(l.cells.length)lines.push(l)});
+  }
+  if(!lines.length)return[];
+  const score=l=>{const g=l.cells.map(c=>imGuess(c.s)).filter(f=>f&&f!=='skip');return new Set(g).size};
+  let hi=-1,best=1;lines.forEach((l,i)=>{const s=score(l);if(s>best){best=s;hi=i}});
+  let anc;if(hi>=0)anc=lines[hi].cells;else{let mi=0;lines.forEach((l,i)=>{if(l.cells.length>lines[mi].cells.length)mi=i});anc=lines[mi].cells}
+  const B=anc.map((a,i)=>i?(anc[i-1].x1+a.x0)/2:-1e9),lastX=anc[anc.length-1].x1+Math.max(140,(anc[anc.length-1].x1-anc[anc.length-1].x0)*2);
+  /* overskriften gjentas ofte på hver side: alt over den på samme side (sidetopp) hoppes over */
+  const sig=anc.map(c=>normH(c.s)).join('|'),topY={};
+  if(hi>=0)lines.forEach(l=>{if(l.cells.map(c=>normH(c.s)).join('|')===sig||score(l)>=Math.max(2,best-1))topY[l.p]=Math.max(topY[l.p]||-1e9,l.y)});
+  const rows=hi>=0?[anc.map(a=>a.s)]:[];
+  lines.forEach((l,i)=>{if(i===hi||(topY[l.p]!=null&&l.y>=topY[l.p]-0.5))return;
+    const r=new Array(anc.length).fill('');
+    l.cells.forEach(c=>{const cx=(c.x0+c.x1)/2;if(cx>lastX)return;let k=0;for(let j=0;j<B.length;j++)if(cx>=B[j])k=j;r[k]=r[k]?r[k]+' '+c.s:c.s});
+    const filled=r.map((v,j)=>v?j:-1).filter(j=>j>=0);if(!filled.length)return;
+    /* navn som går over to linjer: linje med bare én celle, rett under forrige rad på samme side */
+    const prev=rows.length>(hi>=0?1:0)?rows[rows.length-1]:null;
+    if(prev&&filled.length===1&&prev[filled[0]]&&prev._p===l.p&&prev._y-l.y<30&&!pDate(r[filled[0]],{strict:1})){prev[filled[0]]+=' '+r[filled[0]];prev._y=l.y;return}
+    r._p=l.p;r._y=l.y;rows.push(r)});
+  const pre=hi>=0?lines.slice(0,hi).filter(l=>l.p===lines[hi].p).map(l=>l.cells.map(c=>c.s).join(' ')).find(t=>/[a-zæøå]{3}/i.test(t)):'';
+  return[{name:'PDF',rows,pdf:true,pre:(pre||'').replace(/\s+\d{1,2}\.\d{1,2}\.\d{2,4}$/,'')}];
+}
+
+/* ---------- gjenkjenning av overskriftsrad og kolonner ---------- */
+let IM=null;
+function imDetect(){
+  const sh=IM.sheets[IM.si],rows=sh.rows.filter(r=>r.some(v=>String(v).trim()!==''));
+  const ncol=rows.reduce((m,r)=>Math.max(m,r.length),0);
+  let hdr=-1,best=1;rows.slice(0,25).forEach((r,i)=>{const g=r.map(imGuess).filter(f=>f&&f!=='skip'),s=new Set(g).size;if(s>best){best=s;hdr=i}});
+  const data=rows.slice(hdr+1);
+  const cols=[];for(let c=0;c<ncol;c++){
+    const vals=data.map(r=>r[c]).filter(v=>v!==''&&v!=null);if(!vals.length&&!(hdr>=0&&rows[hdr][c]))continue;
+    const h=hdr>=0?String(rows[hdr][c]==null?'':rows[hdr][c]).trim():'';
+    cols.push({c,h:h||'Kolonne '+(c<26?String.fromCharCode(65+c):c+1),ex:vals.slice(0,3).map(v=>String(v)).join(' · '),f:hdr>=0?imGuess(h):'',vals})}
+  /* hver betydning brukes bare én gang */
+  const used=new Set();cols.forEach(k=>{if(!k.f||k.f==='skip'){k.f='skip';return}if(used.has(k.f))k.f='skip';else used.add(k.f)});
+  /* uten overskrift (eller med mangler): gjett ut fra innholdet */
+  const free=k=>k.f==='skip'&&!(hdr>=0&&imGuess(k.h)==='skip');
+  const frac=(k,fn)=>k.vals.length?k.vals.filter(fn).length/k.vals.length:0;
+  const isD=v=>!!pDate(v,{strict:1});
+  if(!used.has('start')||!used.has('end')){cols.filter(k=>free(k)&&frac(k,isD)>.6).forEach(k=>{if(!used.has('start')){k.f='start';used.add('start')}else if(!used.has('end')){k.f='end';used.add('end')}})}
+  if(!used.has('name')){let bk=null,bl=3;cols.filter(k=>free(k)&&frac(k,v=>typeof v==='string'&&/[a-zæøå]{3}/i.test(v)&&!isD(v))>.6).forEach(k=>{const l=k.vals.reduce((a,v)=>a+String(v).length,0)/k.vals.length;if(l>bl){bl=l;bk=k}});if(bk){bk.f='name';used.add('name')}}
+  if(!used.has('dur')){const k=cols.find(k=>free(k)&&frac(k,v=>/^\d+(?:[.,]\d+)?\s*(d|dg|dgr|dager?|days?|u|uker?|w|t|h|timer)\.?\??$/i.test(String(v).trim()))>.6);if(k){k.f='dur';used.add('dur')}}
+  if(!used.has('id')&&cols.length&&free(cols[0])&&frac(cols[0],v=>/^\d+$/.test(String(v).trim()))>.8){cols[0].f='id';used.add('id')}
+  IM.rows=rows;IM.hdr=hdr;IM.cols=cols;
+  /* tittel: første tekst over overskriftsraden (f.eks. «Fremdriftsplan Storgata 12») */
+  IM.pre=sh.pre||'';if(!IM.pre&&hdr>0)for(const r of rows.slice(0,hdr)){const t=r.find(v=>typeof v==='string'&&/[a-zæøå]{3}/i.test(v)&&!pDate(v,{strict:1}));if(t){IM.pre=t.trim();break}}
+  imInterpret();
+}
+function imInterpret(){
+  const fc={};IM.cols.forEach(k=>{if(k.f!=='skip'&&fc[k.f]==null)fc[k.f]=k.c});
+  const get=(r,f)=>fc[f]==null?'':r[fc[f]];
+  /* dato-format: står måneden først (amerikansk) i noen av cellene? */
+  const mdy={};['start','end'].forEach(f=>{let a=0,b=0;IM.rows.slice(IM.hdr+1).forEach(r=>{const m=String(get(r,f)).match(/(?:^|[^\d])(\d{1,2})[\/](\d{1,2})[\/]\d{2,4}/);if(m){if(+m[1]>12)a++;if(+m[2]>12)b++}});mdy[f]=b>0&&a===0});
+  let ref='';for(const r of IM.rows.slice(IM.hdr+1)){ref=pDate(get(r,'start'),{strict:1,mdy:mdy.start})||pDate(get(r,'end'),{strict:1,mdy:mdy.end});if(ref)break}
+  const hs=IM.hdr>=0?IM.rows[IM.hdr].map(normH).join('|'):null,items=[];
+  IM.rows.slice(IM.hdr+1).forEach((r,ri)=>{
+    if(hs&&r.map(normH).join('|')===hs)return;
+    const name=String(get(r,'name')==null?'':get(r,'name')).replace(/\s+/g,' ').trim();
+    let s=pDate(get(r,'start'),{ref,mdy:mdy.start}),e=pDate(get(r,'end'),{ref:s||ref,end:1,mdy:mdy.end});
+    if(s)ref=s;
+    const dur=pDur(get(r,'dur')),preds=pPreds(get(r,'pred'));
+    if(!name&&!s&&!e)return;
+    const tv=String(get(r,'type')||''),st=pStat(get(r,'status'));
+    const it={inc:true,name:name||'Uten navn',start:s,end:e,dur,preds,ms:/mile/i.test(tv)||(fc.type!=null&&/milep|milest/.test(normH(IM.cols.find(k=>k.c===fc.type).h))&&yes(tv))||(dur&&dur.n===0),
+      sum:yes(get(r,'sum')),lvl:parseInt(get(r,'lvl'))||null,wbs:String(get(r,'wbs')||'').trim(),idv:get(r,'id'),row:ri+1,
+      who:String(get(r,'who')||'').trim(),fag:String(get(r,'fag')||'').trim(),note:String(get(r,'note')||'').trim(),st:st?st.st:'ikke',pct:st?st.pct:0,warn:[],err:''};
+    if(!name)it.warn.push('Mangler navn');
+    items.push(it)});
+  /* overskrifter (sammendrag): ut fra nivå eller WBS-nummer */
+  items.forEach((it,i)=>{const n=items[i+1];if(!n)return;if(it.lvl&&n.lvl&&n.lvl>it.lvl)it.sum=true;if(it.wbs&&n.wbs&&n.wbs.startsWith(it.wbs+'.'))it.sum=true});
+  const depth=it=>it.lvl||(it.wbs?it.wbs.split('.').length:1);
+  items.forEach((it,i)=>{if(!it.sum)return;it.kids=[];for(let j=i+1;j<items.length&&(items[j].lvl||items[j].wbs?depth(items[j])>depth(it):!items[j].sum);j++)if(!items[j].sum)it.kids.push(items[j])});
+  const sums=items.filter(x=>x.sum);IM.title='';
+  if(sums.length&&fc.fag==null){
+    let L=Math.min(...sums.map(depth));const top=sums.filter(x=>depth(x)===L);
+    if(top.length===1&&sums.some(x=>depth(x)===L+1)){IM.title=top[0].name;L++}
+    let cur='';items.forEach(it=>{if(it.sum&&depth(it)<=L)cur=depth(it)===L?it.name:'';else if(!it.sum&&!it.fag)it.fag=cur});
+  }
+  items.forEach(it=>{if(it.sum)it.inc=false;imCheck(it)});
+  /* oppslag for «Venter på»: ID, WBS, radnummer og navn */
+  const K={};items.forEach((it,i)=>{const add=k=>{if(k!==''&&K[k]==null)K[k]=it};add(keyOf(it.idv));add(keyOf(it.wbs));if(fc.id==null)add(String(i+1));add(it.name.toLowerCase())});
+  items.forEach(it=>{it.pl=[];it.preds.forEach(p=>{const t=K[keyOf(p.ref)];if(!t||t===it)it.warn.push('Fant ikke «'+p.ref+'» som den venter på');else it.pl.push({t,ss:p.ss,lag:p.lag,cal:p.cal})});
+    if(!it.start&&!it.end&&!it.sum&&it.pl.length){it.err='';it.auto=true}});
+  IM.items=items;IM.fc=fc;
+}
+/* datoer og feil for én rad; kalles også når brukeren retter i forhåndsvisningen */
+function imCheck(it){
+  it.err='';it.note2='';it.auto=false;
+  if(it.sum)return;
+  let s=it.start,e=it.end;
+  if(it.ms){s=s||e;e=s}
+  else if(s&&e){if(e<s){[s,e]=[e,s];it.note2='Start og slutt var byttet om'}}
+  else if(s&&it.dur){e=it.dur.n===0?s:it.dur.cal?addIso(s,it.dur.n-1):endFromWork(s,Math.max(1,it.dur.n));if(it.dur.n===0)it.ms=true}
+  else if(e&&it.dur){s=it.dur.n===0?e:it.dur.cal?addIso(e,1-it.dur.n):startFromWork(e,Math.max(1,it.dur.n));if(it.dur.n===0)it.ms=true}
+  else if(s||e){s=s||e;e=s}
+  it.start=s;it.end=e;
+  if(!s){if(it.preds&&it.preds.length)it.auto=true;else{it.err='Mangler dato';it.inc=false}}
+}
+const imIncl=()=>IM.items.filter(x=>x.inc&&!x.err&&!x.sum);
+
+/* ---------- panelet ---------- */
+const IMACC='.xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.pdf,.xml,.mpp,.json';
+function openImport(){ed=null;IM={step:1};drawImport();$('sheetbg').hidden=false;$('sheet').scrollTop=0}
+function imTop(){return`<div class="sh-top"><h2 id="shTitle">Hent fremdriftsplan</h2><button class="ib ghost" id="imX" aria-label="Lukk">✕</button></div>`}
+function drawImport(){
+  const sh=$('sheet');sh.classList.add('wide');
+  if(IM.step===1){
+    sh.innerHTML=imTop()+`<p class="info" style="margin:-6px 0 0">Velg en fremdriftsplan fra Excel, CSV, PDF eller MS Project. Du ser hva som blir lest, og kan rette det, før noe legges inn.</p>
+      <label class="imdrop" id="imDrop" for="imFile"><span class="ib primary">Velg fil</span><span class="onpc">eller dra filen hit</span><small>Excel (.xlsx, .xls), CSV, PDF med tekst, MS Project XML</small></label>
+      <input type="file" id="imFile" accept="${IMACC}" hidden>
+      ${IM.busy?`<p class="imbusy">${esc(IM.busy)}</p>`:''}${IM.err?`<div class="wbox" role="alert">${IM.err}</div>`:''}
+      <p class="info"><b>Filen leses bare her i nettleseren.</b> Ingenting lastes opp.</p>
+      <details class="more"><summary><b>Har du planen i MS Project?</b></summary><div class="morein"><p class="info" style="margin:0">MS Project-filer (.mpp) kan ikke leses direkte. Åpne planen i MS Project, velg <b>Fil → Lagre som</b> og lagre den som <b>Excel-arbeidsbok</b> eller <b>XML</b>. Hent inn den nye filen her. En PDF-utskrift av planen virker også, men Excel eller XML gir sikrere resultat.</p></div></details>
+      <details class="more" id="imPasteD"><summary><b>Lim inn fra Excel i stedet</b></summary><div class="morein"><textarea class="inp" id="imPaste" placeholder="Merk tabellen i Excel med overskriftene, kopier den og lim den inn her"></textarea><div class="btnrow"><button class="ib" id="imPasteGo">Les teksten</button></div></div></details>`;
+    $('imX').onclick=closePanel;
+    $('imFile').onchange=()=>{const f=$('imFile').files[0];$('imFile').value='';if(f)imFile(f)};
+    const dz=$('imDrop');dz.ondragover=e=>{e.preventDefault();dz.classList.add('over')};dz.ondragleave=()=>dz.classList.remove('over');
+    dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)imFile(f)};
+    $('imPasteGo').onclick=()=>{const t=$('imPaste').value;if(!t.trim()){$('imPaste').focus();return}imLoaded('innlimt tekst',readCsv(t))};
+    return;
+  }
+  const inc=imIncl(),nms=inc.filter(x=>x.ms).length,nerr=IM.items.filter(x=>x.err).length,nsum=IM.items.filter(x=>x.sum).length,fc=IM.fc;
+  const noName=fc.name==null,noDate=fc.start==null&&fc.end==null;
+  const colSum=IM.cols.filter(k=>k.f!=='skip').map(k=>`${IML[k.f]}: «${esc(k.h)}»`).join(' · ')||'Ingen kolonner er valgt';
+  const rows=IM.items.map((it,i)=>{const ms=it.ms;
+    let msg=[];if(it.sum)msg.push('Overskrift'+(it.kids&&it.kids.length?' for '+it.kids.length+(it.kids.length===1?' aktivitet':' aktiviteter'):'')+'. Blir fag, ikke aktivitet.');
+    else if(it.err)msg.push(`<span class="err">${it.err}</span>. Legg inn en dato for å ta den med.`);
+    else{if(ms)msg.push('Milepæl');else if(it.auto)msg.push('Plasseres etter det den venter på'+(it.dur?', '+it.dur.n+' arbeidsdager':''));else if(it.start){const w=countDays(it.start,it.end).w;msg.push(w+(w===1?' arbeidsdag':' arbeidsdager'))}
+      if(it.pl&&it.pl.length)msg.push('Venter på: '+esc(it.pl.map(p=>p.t.name).join(', ')));if(it.fag)msg.push(esc(it.fag));if(it.who&&it.who!==it.fag)msg.push(esc(it.who));if(it.st!=='ikke')msg.push(STL[it.st]+(it.st==='pagar'&&it.pct?' '+it.pct+' %':''))}
+    if(it.note2)msg.push(it.note2);it.warn.forEach(w=>msg.push(`<span class="warn">${esc(w)}</span>`));
+    return`<div class="imr${it.inc?'':' off'}${it.sum?' sum':''}" data-i="${i}">
+      ${it.sum?'<span class="cb"></span><b class="nm">'+esc(it.name)+'</b>':`<input type="checkbox" class="cb" data-f="inc" ${it.inc?'checked':''} ${it.err?'disabled':''} aria-label="Ta med ${esc(it.name)}">
+      <input class="inp nm" data-f="name" value="${esc(it.name)}" aria-label="Navn">`}
+      ${it.sum?'<span class="d1"></span><span class="d2"></span>':`<label class="d1"><span>${ms?'Dato':'Start'}</span><input class="inp" type="date" data-f="start" value="${it.start||''}"></label>
+      ${ms?'<span class="d2"></span>':`<label class="d2"><span>Slutt</span><input class="inp" type="date" data-f="end" value="${it.end||''}"></label>`}`}
+      <div class="msg">${msg.join(' · ')}</div></div>`}).join('');
+  const has=S.acts.length,md=IM.mode||(has?'add':'replace');
+  sh.innerHTML=imTop()+`<div class="imsum"><b>${esc(IM.file)}</b>${IM.sheets.length>1?` <select class="sel" id="imSheet" aria-label="Ark">${IM.sheets.map((s,i)=>`<option value="${i}"${i===IM.si?' selected':''}>Ark: ${esc(s.name)}</option>`).join('')}</select>`:''}<br>
+      Fant <b>${inc.length-nms} ${inc.length-nms===1?'aktivitet':'aktiviteter'}</b>${nms?` og <b>${nms} ${nms===1?'milepæl':'milepæler'}</b>`:''}.${nsum?` ${nsum} ${nsum===1?'overskrift':'overskrifter'} blir fag (farger).`:''}${nerr?` <span class="err">${nerr} ${nerr===1?'rad mangler':'rader mangler'} dato.</span>`:''}</div>
+    ${IM.sheets[IM.si].pdf?'<p class="info" style="margin:0">PDF-en er lest som tekst. Sjekk at navn og datoer havnet riktig, og endre kolonnene under hvis noe er feil.</p>':''}
+    ${noName||noDate?`<div class="wbox">Fant ikke ${noName?'hvilken kolonne som er navnet':''}${noName&&noDate?' eller ':''}${noDate?'hvilke kolonner som er datoer':''}. Velg det under «Kolonner».</div>`:''}
+    <details class="more" id="imColsD"${noName||noDate||IM.colsOpen?' open':''}><summary><b>Kolonner</b><span>${esc(colSum)}</span></summary><div class="morein">
+      <p class="info" style="margin:0">Planbase har gjettet hva kolonnene betyr ut fra overskriftene. Endre det som er feil.</p>
+      <div class="imcols">${IM.cols.map(k=>`<label class="imcol${k.f!=='skip'?' on':''}"><span class="h">${esc(k.h)}</span><span class="ex">${esc(k.ex)||'&nbsp;'}</span>
+        <select class="sel" data-col="${k.c}">${IMF.map(f=>`<option value="${f[0]}"${f[0]===k.f?' selected':''}>${f[1]}</option>`).join('')}</select></label>`).join('')}</div></div></details>
+    <div class="imh"><b>Aktiviteter</b><span class="info">Fjern haken på det du ikke vil ha med. Navn og datoer kan rettes her.</span></div>
+    <div class="imrows" id="imRows"><div class="imr hd"><span></span><span>Navn</span><span>Start</span><span>Slutt</span><span>Info</span></div>${rows||'<p class="empty">Fant ingen rader.</p>'}</div>
+    ${has?`<div class="immode" role="radiogroup" aria-label="Hvor skal planen legges inn"><b>Du har allerede ${S.acts.length} aktiviteter i «${esc(S.title||'Uten navn')}»</b>
+      <label><input type="radio" name="imMode" value="add"${md==='add'?' checked':''}><span><b>Legg til</b> i planen du har</span></label>
+      <label><input type="radio" name="imMode" value="replace"${md==='replace'?' checked':''}><span><b>Erstatt</b> planen du har (kan angres)</span></label>
+      <label><input type="radio" name="imMode" value="new"${md==='new'?' checked':''}><span>Lag et <b>nytt prosjekt</b></span></label></div>`:''}
+    <div class="sh-foot imfoot"><button class="ib" id="imBack">Velg en annen fil</button><span class="spacer"></span><button class="ib primary" id="imGo"${inc.length?'':' disabled'}>${inc.length?'Legg inn '+inc.length+(inc.length===1?' aktivitet':' aktiviteter'):'Ingenting å legge inn'}</button></div>`;
+  $('imX').onclick=closePanel;
+  $('imBack').onclick=()=>{IM={step:1};drawImport()};
+  if($('imSheet'))$('imSheet').onchange=()=>{IM.si=+$('imSheet').value;imDetect();drawImport()};
+  $('imColsD').ontoggle=()=>{IM.colsOpen=$('imColsD').open};
+  sh.querySelectorAll('[data-col]').forEach(s=>s.onchange=()=>{const k=IM.cols.find(k=>k.c===+s.dataset.col),f=s.value;
+    if(f!=='skip')IM.cols.forEach(o=>{if(o!==k&&o.f===f)o.f='skip'});k.f=f;IM.colsOpen=true;imInterpret();const y=sh.scrollTop;drawImport();sh.scrollTop=y});
+  sh.querySelectorAll('[name=imMode]').forEach(r=>r.onchange=()=>{IM.mode=r.value});
+  const R=$('imRows');
+  R.addEventListener('input',e=>{const f=e.target.dataset.f;if(f!=='name')return;const it=IM.items[+e.target.closest('[data-i]').dataset.i];it.name=e.target.value});
+  R.addEventListener('change',e=>{const f=e.target.dataset.f;if(!f||f==='name')return;const el=e.target.closest('[data-i]'),it=IM.items[+el.dataset.i];
+    if(f==='inc')it.inc=e.target.checked;
+    else{const v=isDate(e.target.value)?e.target.value:'';it[f]=v;if(f==='start'&&it.end&&v&&it.end<v)it.end=v;if(f==='end'&&it.start&&v&&it.start>v)it.start=v;
+      const wasErr=!!it.err;it.dur=null;imCheck(it);if(wasErr&&!it.err)it.inc=true}
+    const y=sh.scrollTop;drawImport();sh.scrollTop=y});
+  $('imGo').onclick=imApply;
+}
+async function imFile(f){
+  const n=f.name,ext=(n.match(/\.([a-z0-9]+)$/i)||[,''])[1].toLowerCase();IM={step:1,busy:'Leser '+n+' …'};drawImport();
+  const fail=t=>{IM={step:1,err:t};drawImport()};
+  try{
+    if(ext==='mpp')return fail('<b>MS Project-filer (.mpp) kan ikke leses direkte.</b> Åpne planen i MS Project, velg Fil → Lagre som, og lagre den som Excel-arbeidsbok eller XML. Hent inn den filen her.');
+    if(/^(png|jpe?g|heic|gif|webp|bmp|tiff?)$/.test(ext)||/^image\//.test(f.type))return fail('<b>Bilder kan ikke tolkes.</b> Bruk planen som Excel, CSV eller PDF i stedet.');
+    if(/^(docx?|pptx?|odt)$/.test(ext))return fail('<b>Word- og PowerPoint-filer kan ikke leses.</b> Lagre planen som PDF eller kopier tabellen til Excel, og hent den inn her.');
+    const buf=await f.arrayBuffer(),u8=new Uint8Array(buf.slice(0,8));
+    const isPdf=u8[0]===0x25&&u8[1]===0x50&&u8[2]===0x44&&u8[3]===0x46,isZip=u8[0]===0x50&&u8[1]===0x4b,isOle=u8[0]===0xd0&&u8[1]===0xcf;
+    let sheets;
+    if(isPdf||ext==='pdf'){
+      try{sheets=await readPdf(buf)}catch(e){if(e&&e.message==='lib')throw e;return fail('<b>Klarte ikke å åpne PDF-en.</b> Den kan være skadet eller passordbeskyttet.')}
+      if(!sheets.length||sheets[0].rows.length<2)return fail('<b>PDF-en har ingen tekst som kan leses</b>, den er trolig skannet eller et bilde. Be om planen som Excel, eller som PDF lagret rett fra programmet den ble laget i.');
+    }else if(isZip||isOle||/^(xlsx|xlsm|xls|ods)$/.test(ext)){
+      if(isOle&&ext==='mpp')return fail('MS Project-filer kan ikke leses direkte.');
+      sheets=await readXlsx(buf);
+    }else{
+      const t=decodeText(buf);
+      if(ext==='json'||/^\s*\{/.test(t)){let b;try{b=parseBackup(t)}catch(e){}if(b){closePanel();go('set');askReplace(b,'filen');return}return fail('Filen ble ikke gjenkjent.')}
+      if(ext==='xml'||/^\s*<\?xml|<Project[\s>]/.test(t)){sheets=readMspXml(t);if(!sheets)return fail('<b>XML-filen ble ikke gjenkjent som en MS Project-plan.</b>')}
+      else sheets=readCsv(t);
+    }
+    imLoaded(n,sheets);
+  }catch(e){fail(e&&e.message==='lib'?'<b>Fikk ikke hentet leseren for denne filtypen.</b> Sjekk at du er koblet til internett og prøv igjen. Filen din sendes ikke noe sted, det er bare programkoden som hentes.':'<b>Klarte ikke å lese filen.</b> Prøv å lagre den som Excel (.xlsx) eller CSV og hent den inn på nytt.')}
+}
+function imLoaded(name,sheets){
+  sheets=(sheets||[]).filter(s=>s.rows.some(r=>r.some(v=>String(v).trim()!=='')));
+  if(!sheets.length){IM={step:1,err:'<b>Fant ingen tabell i filen.</b>'};drawImport();return}
+  /* velg arket som ser mest ut som en plan */
+  let si=0,bs=-1;sheets.forEach((s,i)=>{const sc=s.rows.slice(0,25).reduce((m,r)=>Math.max(m,new Set(r.map(imGuess).filter(f=>f&&f!=='skip')).size),0)*1000+Math.min(999,s.rows.length);if(sc>bs){bs=sc;si=i}});
+  IM={step:2,file:name,sheets,si};imDetect();
+  if(!IM.items.length&&!IM.cols.length){IM={step:1,err:'<b>Fant ingen rader i filen.</b>'};drawImport();return}
+  drawImport();$('sheet').scrollTop=0;
+}
+/* fag: samme navn som før får samme farge, nye fag får ledige farger */
+function imColors(names,vals){
+  const cn=names.slice(),map={};let k=0;
+  vals.forEach(v=>{const i=cn.findIndex(n=>n&&n.toLowerCase()===v.toLowerCase());if(i>=0){map[v]=i;return}const f=cn.findIndex(n=>!n);if(f>=0){cn[f]=v;map[v]=f}else map[v]=(k++)%NCOL});
+  return{cn,map};
+}
+function imApply(){
+  const list=imIncl();if(!list.length)return;
+  const mode=S.acts.length?(IM.mode||'add'):'replace';
+  const startNames=mode==='add'?S.colorNames:(S.colorNames.join('|')===SEED_COLS.join('|')?['','','','','','']:S.colorNames);
+  /* farge etter fag; uten fag brukes ansvarlig hvis det er få av dem */
+  let key=x=>x.fag;if(!list.some(x=>x.fag)){const w=[...new Set(list.map(x=>x.who).filter(Boolean))];if(w.length>1&&w.length<=NCOL)key=x=>x.who;else key=()=>''}
+  const vals=[...new Set(list.map(key).filter(Boolean))],{cn,map}=imColors(startNames,vals);
+  const nid=new Map();list.forEach(x=>nid.set(x,uid()));
+  const expand=t=>t.sum?(t.kids||[]).filter(k=>nid.has(k)):nid.has(t)?[t]:[];
+  let first='';list.forEach(x=>{if(x.start&&(!first||x.start<first))first=x.start});first=first||TODAY;
+  const auto=new Set(),acts=list.map((x,i)=>{
+    const preds=[];x.pl.forEach(p=>expand(p.t).forEach(t=>{if(t!==x&&!preds.some(q=>q.id===nid.get(t))){const q={id:nid.get(t),lag:Math.max(0,p.lag)};if(p.ss)q.t='SS';if(p.cal)q.cal=1;preds.push(q)}}));
+    let s=x.start,e=x.end;if(!s){s=onOrNextWork(first);e=x.ms?s:(x.dur&&x.dur.cal?addIso(s,Math.max(1,x.dur.n)-1):endFromWork(s,Math.max(1,x.dur?x.dur.n:1)));auto.add(nid.get(x))}
+    const c=key(x)&&map[key(x)]!=null?map[key(x)]:vals.length?0:i%NCOL;
+    return{id:nid.get(x),name:x.name.trim()||'Uten navn',start:s,end:x.ms?s:e,c,status:x.st,type:x.ms?'milepael':'aktivitet',pct:x.ms?0:x.pct,who:x.who,note:x.note,preds}});
+  let title=IM.title||IM.pre||String(IM.file||'').replace(/\.[a-z0-9]+$/i,'').replace(/[-_]+/g,' ').trim();
+  title=title.replace(/^fremdriftsplan\s*[-–:]?\s*(?=\S)/i,'').slice(0,80);title=title.charAt(0).toUpperCase()+title.slice(1);
+  if(mode==='new'){
+    const p=normalize({acts,arrows:[],title,colorNames:cn,showMerk:S.showMerk,extraFri:S.extraFri,calDefault:S.calDefault,ferie:S.ferie,fri:S.fri});
+    if(!newProj(p))return;
+  }else{
+    snap('henting av plan');
+    if(mode==='replace'){S.acts=[];S.arrows=[];S.base=null;listSel.clear();if(/^Eksempel:/.test(S.title))S.title=''}
+    S.acts.push(...acts);S.colorNames=cn;if(!S.title&&title&&title!=='innlimt tekst')S.title=title;S=normalize(S);
+  }
+  /* aktiviteter uten dato plasseres etter det de venter på */
+  topo().forEach(b=>{if(!auto.has(b.id))return;const k=earliestStart(b);if(k)moveTo(b,k)});
+  save();IM=null;$('sheet').classList.remove('wide');$('sheetbg').hidden=true;ed=null;
+  const f=S.acts.reduce((m,a)=>!m||a.start<m?a.start:m,'');if(f){const d=parse(f);cy=d.getFullYear();cm=d.getMonth()}
+  go('gantt');
+  toast(`${acts.length} ${acts.length===1?'aktivitet er':'aktiviteter er'} lagt inn${mode==='new'?' i et nytt prosjekt':''}.`,mode!=='new');
+}
+document.addEventListener('click',e=>{if(e.target.closest('[data-import]'))openImport()});
 
 /* ================= Oppstart ================= */
 let rt,lastW=innerWidth;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(Math.abs(innerWidth-lastW)<2&&view!=='cal')return;lastW=innerWidth;if(view==='gantt')renderGantt();else if(view==='cal'&&calMode==='year')drawYearArrows()},120)});
