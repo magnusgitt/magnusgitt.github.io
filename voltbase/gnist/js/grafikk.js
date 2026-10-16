@@ -28,6 +28,20 @@ function flislag(fn, seed) { const c = nyC(LW, LH), g = c.getContext('2d');
   for (const off of [-LW, 0, LW]) { g.save(); g.translate(off, 0); fn(g, rng(seed)); g.restore(); } return c; }
 function myk(g, x, y, rx, ry, farge, a) { g.save(); g.translate(x, y); g.scale(1, ry / rx); const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
   gr.addColorStop(0, `rgba(${farge},${a})`); gr.addColorStop(1, `rgba(${farge},0)`); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fill(); g.restore(); }
+// et tre med stamme og en krone av mange klumper, med en svak kant av månelys øverst
+function tre(g, q, x, y, h, kr, farge, kant) {
+  g.strokeStyle = farge; g.lineWidth = Math.max(2, kr * .12); g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + (q() - .5) * kr * .4, y - h * .5, x + (q() - .5) * kr * .3, y - h); g.stroke();
+  for (let i = 0; i < 3; i++) { g.lineWidth = Math.max(1, kr * .05); g.beginPath(); const yy = y - h * (.55 + q() * .3), s = q() < .5 ? -1 : 1; g.moveTo(x, yy); g.lineTo(x + s * kr * (.4 + q() * .3), yy - kr * .3); g.stroke(); }
+  const n = 9 + (kr / 6 | 0);
+  for (let i = 0; i < n; i++) { const a = q() * Math.PI, d = q() * kr * .8, bx = x + Math.cos(a) * d * 1.2 - (q() - .5) * 4, by = y - h - Math.sin(a) * d * .6 + kr * .2, br = kr * (.3 + q() * .3);
+    if (kant) { g.fillStyle = kant; g.beginPath(); g.arc(bx, by - 1.5, br, 0, 7); g.fill(); } g.fillStyle = farge; g.beginPath(); g.arc(bx, by, br, 0, 7); g.fill(); }
+  g.lineCap = 'butt';
+}
+// tett kratt: en ujevn kant av løv langs bakken
+function kratt(g, q, x0, x1, y, hMin, hMax, farge) { g.fillStyle = farge; for (let x = x0; x < x1; x += 6 + q() * 10) { const r0 = hMin + q() * (hMax - hMin); g.beginPath(); g.arc(x, y - r0 * .45, r0 * .6, 0, 7); g.fill(); } g.fillRect(x0, y - hMin * .3, x1 - x0, LH); }
+// slyngplanter som henger ned fra en kant
+function slynger(g, q, x, y, l, farge) { g.strokeStyle = farge; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + (q() - .5) * 10, y + l * .4, x + (q() - .5) * 10, y + l * .7, x + (q() - .5) * 6, y + l); g.stroke();
+  g.fillStyle = farge; for (let b = 6; b < l; b += 5 + q() * 4) { g.beginPath(); g.ellipse(x + (q() - .5) * 5, y + b, 2.2, 1.2, q() * 3, 0, 7); g.fill(); } }
 function lagHimmel() {
   const c = nyC(LW, LH), g = c.getContext('2d'), r = rng(7);
   // en død verden: kald, tung himmel uten bylys under skyene
@@ -50,6 +64,33 @@ function lagHimmel() {
   sky(LW * .2, LH * .2, 700, 140, 26); sky(LW * .62, LH * .32, 900, 160, 30); sky(LW * .92, LH * .12, 500, 110, 16); sky(LW * .4, LH * .5, 1100, 120, 26);
   for (let i = 0; i < 22; i++) { const x = r() * LW, y = LH * (.15 + r() * .5), w = 260 + r() * 520; myk(g, x, y, w, 16 + r() * 40, i % 3 ? '120,140,175' : '100,150,165', .04 + r() * .05); }
   return c;
+}
+// majestetiske fjell bak ruinbyen: skarpe tinder med snø, skygge på den ene siden og skog i liene.
+// Høydene er summer av periodiske bølger, så laget skjøter seg sømløst.
+function lagFjell() {
+  return flislag((g, r) => {
+    const tinde = (x, k, f) => 1 - Math.abs(Math.sin(Math.PI * k * x / LW + f));
+    const rygg = (x, ledd) => ledd.reduce((s, [k, f, a, p]) => s + a * Math.pow(tinde(x, k, f), p), 0);
+    const kjede = (base, ledd, farge, sno, skog, dis) => {
+      const h = x => base - rygg(x, ledd), topp = Math.min(...Array.from({ length: 160 }, (_, i) => h(i * LW / 160)));
+      g.beginPath(); g.moveTo(0, LH); for (let x = 0; x <= LW; x += 4) g.lineTo(x, h(x)); g.lineTo(LW, LH); g.closePath();
+      const gr = g.createLinearGradient(0, topp, 0, base + 80); gr.addColorStop(0, farge[0]); gr.addColorStop(1, farge[1]); g.fillStyle = gr; g.fill();
+      g.save(); g.clip();
+      // skyggesiden: der fjellet faller mot høyre ligger i skygge fra månen
+      for (let x = 0; x < LW; x += 2) { const s = h(x + 2) - h(x - 2); if (s > .5) { g.fillStyle = `rgba(4,8,16,${Math.min(.4, .15 + s * .03)})`; g.fillRect(x, h(x), 2, base - h(x) + 60); } }
+      // snø over snøgrensen, med en ujevn kant
+      if (sno) for (let x = 0; x < LW; x += 2) { const y = h(x), grense = sno + Math.sin(x * .05) * 12 + Math.sin(x * .013) * 18 + Math.sin(x * .21) * 4; if (y < grense) {
+        const s = h(x + 2) - h(x - 2); g.fillStyle = s > 1 ? 'rgba(150,170,200,.85)' : s > 0 ? 'rgba(185,200,225,.88)' : 'rgba(216,228,244,.9)'; g.fillRect(x, y, 2, grense - y); } }
+      // skog i liene: tette, små grantopper
+      if (skog) for (let i = 0; i < skog; i++) { const x = r() * LW, y = h(x) + 30 + r() * 120; if (y > base + 40) continue; const s = 4 + r() * 6;
+        g.fillStyle = 'rgba(10,20,24,.7)'; g.beginPath(); g.moveTo(x, y - s * 2.4); g.lineTo(x + s, y); g.lineTo(x - s, y); g.closePath(); g.fill(); }
+      g.restore();
+      const dg = g.createLinearGradient(0, base - 60, 0, base + 60); dg.addColorStop(0, `rgba(${dis},0)`); dg.addColorStop(1, `rgba(${dis},.55)`); g.fillStyle = dg; g.fillRect(0, base - 60, LW, 120);
+    };
+    kjede(580, [[2, .3, 250, .9], [5, 1.1, 120, 1.1], [11, .4, 50, 1], [29, 2, 16, 1], [67, .5, 6, 1]], ['#5f7799', '#2c3d58'], 300, 0, '70,90,120');
+    kjede(620, [[3, 2.2, 160, .9], [7, .2, 80, 1.1], [17, 1.3, 30, 1], [41, .7, 10, 1], [89, 1.7, 4, 1]], ['#384b66', '#18243a'], 360, 900, '55,75,100');
+    for (let i = 0; i < 6; i++) myk(g, r() * LW, 520 + r() * 90, 300 + r() * 300, 18 + r() * 14, '140,165,200', .07);
+  }, 61);
 }
 function lagFjern() {
   return flislag((g, r) => {
@@ -84,6 +125,10 @@ function lagFjern() {
     g.beginPath(); g.moveTo(kx - 70, base); g.quadraticCurveTo(kx - 40, base - 120, kx - 52, base - 190); g.lineTo(kx + 52, base - 190); g.quadraticCurveTo(kx + 40, base - 120, kx + 70, base); g.closePath(); g.fill();
     g.fillRect(kx + 80, base - 250, 14, 250); g.fillRect(kx + 104, base - 230, 12, 230); g.fillRect(kx + 60, base - 90, 120, 90);
     g.fillStyle = 'rgba(120,150,190,.12)'; g.fillRect(kx + 80, base - 250, 14, 3); g.fillRect(kx + 104, base - 230, 12, 3);
+    // naturen har tatt tilbake byen: skog i bunnen, trær som vokser ut av tårnene
+    { const q = rng(91), farge = '#152a2a';
+      for (let i = 0; i < 14; i++) { const x = q() * LW; if (Math.abs(x - 1400) < 120) continue; tre(g, q, x, base + 10, 40 + q() * 90, 18 + q() * 22, farge, 'rgba(90,130,140,.18)'); }
+      kratt(g, q, -20, LW + 20, base + 6, 20, 70, farge); }
     const gr = g.createLinearGradient(0, base - 200, 0, base + 60);
     gr.addColorStop(0, 'rgba(60,80,105,0)'); gr.addColorStop(1, 'rgba(60,80,105,.65)'); g.fillStyle = gr; g.fillRect(0, base - 200, LW, 260);
     g.fillStyle = '#1e2a3c'; g.fillRect(0, base + 60, LW, LH);
@@ -149,6 +194,10 @@ function lagMidt(lit) {
         g.fillStyle = gr; g.beginPath(); g.moveTo(x - 10, y); g.lineTo(x + 10, y); g.lineTo(x + 140, base); g.lineTo(x - 140, base); g.closePath(); g.fill();
         myk(g, x, y - 3, 40, 26, '255,230,170', .8); }
     });
+    { const q = rng(57), farge = '#12271f', kant = 'rgba(120,180,150,.26)';
+      for (const [x, h, kr] of [[480, 300, 70], [930, 380, 90], [1430, 220, 60], [30, 160, 50]]) tre(g, q, x, base + 4, h, kr, farge, kant);
+      for (let i = 0; i < 40; i++) slynger(g, q, q() * LW, 120 + q() * 400, 30 + q() * 90, 'rgba(22,44,36,.85)');
+      kratt(g, q, -20, LW + 20, base + 4, 18, 48, farge); }
     g.fillStyle = '#0e1828'; g.fillRect(0, base, LW, LH);
     const gr = g.createLinearGradient(0, base - 120, 0, base + 30); gr.addColorStop(0, 'rgba(60,95,125,0)'); gr.addColorStop(1, 'rgba(60,95,125,.35)');
     g.fillStyle = gr; g.fillRect(0, base - 120, LW, 150);
@@ -194,12 +243,25 @@ function lagNaer() {
     for (const [bx, bh] of [[120, 120], [930, 150], [1560, 100]]) { g.strokeStyle = c; g.lineWidth = 4; g.beginPath(); g.moveTo(bx, base); g.quadraticCurveTo(bx + 6, base - bh * .5, bx - 4, base - bh); g.stroke();
       for (let i = 0; i < 9; i++) { const a = r() * Math.PI * 2, d = r() * 34; g.beginPath(); g.arc(bx - 4 + Math.cos(a) * d, base - bh + Math.sin(a) * d * .7, 14 + r() * 12, 0, 7); g.fill(); } }
     for (let i = 0; i < 14; i++) { const x = r() * LW, w = 26 + r() * 50; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(x + (r() - .5) * w, base - 6 - r() * 18, 8 + r() * 12, 0, 7); g.fill(); } }
+    { const q = rng(73);
+      // store blader og bregner som vokser over ruinene
+      const blad = (x, y, l, a) => { g.save(); g.translate(x, y); g.rotate(a); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(l * .5, -l * .32, l, 0); g.quadraticCurveTo(l * .5, l * .22, 0, 0); g.fill(); g.restore(); };
+      for (let i = 0; i < 34; i++) { const x = q() * LW, n = 4 + (q() * 4 | 0), s = 30 + q() * 60; g.fillStyle = i % 3 ? c : '#0a1a16'; for (let k = 0; k < n; k++) blad(x, base - 4, s * (.6 + q() * .5), -Math.PI / 2 + (k / (n - 1) - .5) * 2.4 + (q() - .5) * .3); }
+      // lianer fra toppen
+      for (let i = 0; i < 9; i++) { const x = q() * LW, l = 140 + q() * 260; g.strokeStyle = c; g.lineWidth = 2.4; g.beginPath(); g.moveTo(x, -10); g.bezierCurveTo(x + 30, l * .3, x - 30, l * .7, x + (q() - .5) * 20, l); g.stroke();
+        g.fillStyle = c; for (let b = 20; b < l; b += 14 + q() * 12) blad(x + (q() - .5) * 18, b, 12 + q() * 10, q() * 6.28); }
+      // en sumpdam med siv og vannliljer
+      const sx = 620, sw = 300; g.fillStyle = '#0a1622'; g.beginPath(); g.ellipse(sx + sw / 2, base + 2, sw / 2, 12, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(140,180,210,.18)'; for (let i = 0; i < 8; i++) g.fillRect(sx + 30 + q() * (sw - 60), base - 2 + q() * 6, 10 + q() * 30, 1.2);
+      g.fillStyle = '#0d2420'; for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(sx + 40 + q() * (sw - 80), base + q() * 5, 7, 2.4, 0, .3, 6.1); g.fill(); }
+      g.strokeStyle = c; g.lineWidth = 1.6; for (let i = 0; i < 26; i++) { const x = sx + (q() < .5 ? q() * 50 : sw - q() * 50), h = 30 + q() * 50; g.beginPath(); g.moveTo(x, base + 4); g.quadraticCurveTo(x + 4, base - h * .5, x + (q() - .5) * 10, base - h); g.stroke();
+        if (q() < .4) { g.fillStyle = '#1a120c'; g.fillRect(x + (q() - .5) * 2 - 1.6, base - h * .9, 3.2, 10); } } }
     gr = g.createLinearGradient(0, base - 40, 0, base + 30); gr.addColorStop(0, 'rgba(50,85,105,0)'); gr.addColorStop(1, 'rgba(50,85,105,.25)');
     g.fillStyle = gr; g.fillRect(0, base - 40, LW, 70);
   }, 37);
 }
 let BG = null;
-function lagBakgrunn() { BG = { himmel: lagHimmel(), fjern: lagFjern(), midt: lagMidt(false), midtLys: null, naer: lagNaer() }; }
+function lagBakgrunn() { BG = { himmel: lagHimmel(), fjell: lagFjell(), fjern: lagFjern(), midt: lagMidt(false), midtLys: null, naer: lagNaer() }; }
 
 // ---------- terreng (malte biter, bufret) ----------
 const PAL = {

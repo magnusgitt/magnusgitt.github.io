@@ -24,6 +24,7 @@ function tegnBakgrunn(kx, ky) {
   const lagX0 = (p, f = 0) => { let x0 = -((((kx * skala * dpr * p - f) % lw) + lw) % lw); if (x0 > 0) x0 -= lw; return x0; };
   const lag = (bilde, p, pv, a, f) => { if (!bilde || a <= 0) return; ctx.globalAlpha = a; const y = lagY(pv);
     for (let x = lagX0(p, f); x < cw; x += lw) ctx.drawImage(bilde, x, y, lw + 1, lh); ctx.globalAlpha = 1; };
+  lag(BG.fjell, .04, .15, 1);
   // fjernlaget ligger slik at kraftverket i horisonten er i bildet når introen ser mot det
   lag(BG.fjern, .08, .25, 1, fjernForskyv(lw));
   // et rødt varsellys blinker fortsatt på pipa til kraftverket langt borte
