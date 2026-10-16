@@ -123,11 +123,12 @@ const dypAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? 6 : Math.min(6,
 const iKraft = (x, y) => x <= 71 && y >= 33 && y < 72 && !(x >= 70 && y < 52);
 const erTurbin = (x, y) => x >= 20 && x <= 52 && y >= 48 && y <= 61;
 const iKjeller2 = (x, y) => !iKraft(x, y) && y >= 20 && y < 72 && x >= 70 && x <= 171 && !(y < 36 && (x < 123 || x > 130)) && !(x >= 167 && y <= 27);
-function inne(x, y) { if (y >= 72) return false; return iKraft(x, y) || iKjeller2(x, y) || (x >= 49 && x <= 56 && y >= 20 && y <= 23) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
+function inne(x, y) { if (y >= 72) return y >= 118 && x >= 59 && x <= 150 && y <= 157; return iKraft(x, y) || iKjeller2(x, y) || (x >= 49 && x <= 56 && y >= 20 && y <= 23) || (y >= 24 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) || (x >= 73 && x <= 101 && y >= 6 && y <= 18) || (x >= 105 && x <= 117 && y >= 19); }
 const erHall = (x, y) => x >= 73 && x <= 101 && y >= 5 && y <= 19;
 const erGard = (x, y) => x >= 132 && x <= 159 && y >= 4 && y <= 27;
 const erArena2 = (x, y) => x >= 140 && x <= 166 && y >= 42 && y <= 58;
 function omraade(tx, ty) {
+  if (ty >= 118) return tx <= 58 ? 'Damfoten' : tx <= 95 ? 'Galleriet' : tx <= 112 ? 'Verktøylageret' : tx <= 150 ? 'Strømbassenget' : 'Magasinet';
   if (ty >= 72) return tx <= 62 ? 'Fjellfoten' : tx <= 96 ? 'Juvet' : tx <= 131 ? 'Mastene' : tx <= 166 ? 'Vindskaret' : 'Toppmasta';
   if (iKraft(tx, ty)) return erTurbin(tx, ty) || (tx <= 19 && ty >= 56) ? 'Turbinhallen' : tx >= 59 ? 'Fallrøret' : tx <= 27 ? 'Verktøyrommet' : 'Inntaket';
   if (tx >= 132 && ty <= 26) return erGard(tx, ty) ? 'Stasjonsgården' : 'Trafostasjonen';

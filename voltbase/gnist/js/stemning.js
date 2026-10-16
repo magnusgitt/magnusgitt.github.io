@@ -13,9 +13,12 @@ const STEMNINGER = {
   stasjon: { mf: [5, 8, 28],  tint: [226, 234, 255], dis: [150, 180, 255], bloom: .5,  bg: 'hall' },
   kraft:   { mf: [3, 13, 6],  tint: [224, 255, 224], dis: [130, 255, 160], bloom: .5,  bg: 'kraft' },
   turbin:  { mf: [2, 13, 13], tint: [218, 255, 244], dis: [110, 240, 220], bloom: .6,  bg: 'kraft' },
+  dam:     { mf: [2, 9, 16],  tint: [220, 242, 250], dis: [110, 210, 230], bloom: .5,  bg: 'kraft' },
+  galleri: { mf: [3, 12, 14], tint: [222, 248, 240], dis: [120, 230, 200], bloom: .5,  bg: 'kraft' },
   linja:   { mf: [4, 9, 20],  tint: [228, 238, 255], dis: [150, 190, 235], bloom: .45, bg: 'kjeller' },
 };
 function stemningFor(tx, ty) {
+  if (ty >= 118) return inne(tx, ty) ? 'galleri' : 'dam';
   if (ty >= 72) return 'linja';
   if (iKraft(tx, ty)) return erTurbin(tx, ty) ? 'turbin' : 'kraft';
   if (tx >= 132 && ty <= 27) return 'stasjon';

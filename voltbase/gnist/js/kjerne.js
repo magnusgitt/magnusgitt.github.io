@@ -26,11 +26,11 @@ function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w
   g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
 // ---------- tilstand ----------
-const EVNER = ['dobbel', 'hansker', 'stot', 'liv', 'hemmelig', 'krok', 'liv2', 'tester', 'sliper', 'liv4', 'klatre', 'liv5', 'glid', 'liv6'];
+const EVNER = ['dobbel', 'hansker', 'stot', 'liv', 'hemmelig', 'krok', 'liv2', 'tester', 'sliper', 'liv4', 'klatre', 'liv5', 'glid', 'liv6', 'jord', 'liv7'];
 function nyeEvner() { const e = {}; for (const k of EVNER) e[k] = false; return e; }
 // kartet deles i ruter på 4×4 fliser som fylles inn etter hvert som montøren har vært der
 const KC = 4, KW = Math.ceil(MW / KC), KH = Math.ceil(MH / KC);
-const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8Array(KW * KH), brukt: 0, kjop: {}, knust: new Set(), boss3: false, boss4: false, boss5: false, oppdrag: {}, helt: false, tidsmodus: false, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
+const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8Array(KW * KH), brukt: 0, kjop: {}, knust: new Set(), boss3: false, boss4: false, boss5: false, boss6: false, oppdrag: {}, helt: false, tidsmodus: false, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
   bossDone: false, boss2: false, tid: 0, ferdig: false, dodsfall: 0, shake: 0, flash: 0, flashF: '255,255,255', dod: 0, ending: 0, power: 0,
   hintSett: new Set(), mork: .55, frame: 0, panelT: 0, slow: 0, evneVent: 0, omr: '', hallLys: 0, hallFlimmer: 0, maal: '', idle: 0, laas: 0 };
 const P = { x: 0, y: 0, w: 18, h: 30, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buf: 0, air: 0, dashT: 0, dashCd: 0,
@@ -46,8 +46,10 @@ const B3 = { aktiv: false, fase: '', introT: 0, hp: 6, x: 146.5 * T, y: 27 * T, 
 const B4 = { aktiv: false, fase: '', introT: 0, hp: 4, t: 0, stun: 0, dod: 0, vinkel: 0, R: 0, borste: -1, borsteT: 0, forrige: -1, skuddT: 3, golv: 0, golvT: 4 };
 // Lynfuglen: bossen i stormen på toppen av høyspentlinja
 const B5 = { aktiv: false, fase: '', introT: 0, hp: 5, x: 0, y: 0, t: 0, stun: 0, dod: 0, tilstand: '', tT: 0, mx: 0, my: 0, vx: 0, vy: 0, lynT: 3, vindT: 5 };
+// Spenningsålen: bossen i magasinet ved vannkraftdammen
+const B6 = { aktiv: false, fase: '', introT: 0, hp: 3, t: 0, x: 0, y: 0, dir: 1, syklus: '', sT: 0, niva: 146, strom: '', stromT: 0, skuddT: 2, dod: 0 };
 // krokpunkter for nye områder: hver sone og hvert system legger seg til her i stedet for å endre spill.js
-const OPPDATER = [], TEGN_VERDEN = [], TEGN_FORAN = [], TEGN_GLOD = [], LYSKILDER = [], TILBAKESTILL = [], BOSSER = [];
+const OPPDATER = [], TEGN_VERDEN = [], TEGN_OVER = [], TEGN_FORAN = [], TEGN_GLOD = [], LYSKILDER = [], TILBAKESTILL = [], BOSSER = [];
 const prosj = [], bolger = [], striker = [], partikler = [], lys = [], fiender = [], bolter = [], sveip = [];
 let lyn = null;
 const cam = { x: 0, y: 0, look: 0, anker: 0, zoom: 1 };

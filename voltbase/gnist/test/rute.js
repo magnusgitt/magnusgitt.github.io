@@ -459,7 +459,7 @@ async function linja(b) {
   // jordingsstanga i Vindskaret, og belønningen fra Ivar
   await page.evaluate(() => { S.mode = 'spill'; TS.left = TS.right = TS.jump = TS.krok = false; oppdaterTaster(); }); await pos(page, 163, 109); await vent(page, 300);
   sjekk('jordingsstanga plukkes opp', await page.evaluate(() => S.oppdrag.jord === 2));
-  sjekk('målet peker tilbake til Ivar', await page.evaluate(() => { const b = S.boss5, l = S.ev.liv6; S.boss5 = S.ev.liv6 = true; const m = maalTekst(); S.boss5 = b; S.ev.liv6 = l; return m.includes('Ivar'); }));
+  sjekk('målet peker tilbake til Ivar', await page.evaluate(() => { const b = S.boss5, l = S.ev.liv6, b6 = S.boss6, l7 = S.ev.liv7; S.boss5 = S.ev.liv6 = S.boss6 = S.ev.liv7 = true; const m = maalTekst(); S.boss5 = b; S.ev.liv6 = l; S.boss6 = b6; S.ev.liv7 = l7; return m.includes('Ivar'); }));
   await pos(page, 11, 104); await vent(page, 300); await page.keyboard.press('ArrowDown'); await vent(page, 350);
   for (let i = 0; i < 3; i++) { await page.keyboard.press('Space'); await vent(page, 320); }
   sjekk('Ivar gir lengre lynpisk', await page.evaluate(() => S.oppdrag.jord === 3 && S.kjop.pisk2 && PISK_LENGDE === 120), await page.evaluate(() => [S.oppdrag, PISK_LENGDE]));
@@ -514,6 +514,85 @@ async function linja(b) {
   await ctx.close();
 }
 
+async function dam(b) {
+  console.log('Fase 3: Vannkraftdammen');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  const ev = { dobbel: true, hansker: true, stot: true, krok: true, liv: true, liv2: true, tester: true, sliper: true, liv4: true, klatre: true, liv5: true, glid: true, liv6: true };
+  const lagring = { v: 4, ev, cp: 16, cpLit: [...Array(17).keys()], orb: [], boss: true, boss2: true, boss3: true, boss4: true, boss5: true, oppdrag: { jord: 3 }, helt: true, ferdig: true, tid: 1200 };
+  await page.evaluate(([k, l]) => localStorage.setItem(k, JSON.stringify(l)), [KEY, lagring]);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600); await page.evaluate(SIM);
+  // porten fra Toppmasta tar montøren til dammen
+  await pos(page, 196, 99); await page.keyboard.down('ArrowRight'); await vent(page, 600); await page.keyboard.up('ArrowRight'); await vent(page, 1100);
+  { const s = await page.evaluate(() => ({ sone: spillerSone(), x: P.x / 32, omr: S.omr, cam: cam.y / 32, st: ST.navn })); sjekk('porten tar montøren til Vannkraftdammen', s.sone === 2 && s.x < 8 && s.omr === 'Damfoten', s);
+    sjekk('kameraet holder seg i damsonen', s.cam >= 118, s); sjekk('dammen har sin egen stemning', s.st === 'dam', s); }
+  // Damvokter Sigrid gir oppdraget
+  await pos(page, 17, 149); await vent(page, 300);
+  sjekk('snakkeknappen vises ved Sigrid', await page.evaluate(() => document.querySelector('#verkKnapp').textContent.includes('Sigrid')));
+  await page.keyboard.press('ArrowDown'); await vent(page, 350); for (let i = 0; i < 3; i++) { await page.keyboard.press('Enter'); await vent(page, 320); }
+  sjekk('Sigrid gir oppdraget med måleren', await page.evaluate(() => S.mode === 'spill' && S.oppdrag.maaler === 1), await page.evaluate(() => [S.mode, S.oppdrag]));
+  // basseng 1: veggene er glatte, vannet løfter montøren opp
+  sjekk('veggene ved bassengene er glatte', await page.evaluate(() => glattVegg(45, 150) && glattVegg(29, 150) && !glattVegg(45, 130)));
+  { const r = await page.evaluate(() => { S.mode = 'pause'; fiender.length = 0; __sett(40, 156); S.t = 0; const r = __sim(900, i => { TS.right = true; TS.jump = true; if (i % 30 === 0) I.jumpP = true; }); TS.right = TS.jump = false; return r; });
+    sjekk('kommer ikke opp av basseng 1 når vannet er lavt', !r.fall && r.x < 45, r); }
+  { const r = await page.evaluate(() => { __sett(40, 156); S.t = 0; let opp = 0; const r = __sim(120 * 14, i => { S.t += 1 / 120; if (P.x / 32 > 47 && P.onGround) opp = 1; if (opp) { TS.right = TS.jump = false; return; } if (S.t > 6) { TS.right = true; TS.jump = true; if (i % 30 === 0) I.jumpP = true; }}); TS.right = TS.jump = false; return r; });
+    sjekk('vannet løfter montøren opp på hylla', !r.fall && r.x > 46 && r.y < 139.2 && r.bakke, r); }
+  // basseng 2 i galleriet: følg rytmen over
+  { const r = await page.evaluate(() => { __sett(67, 138); S.t = 0; const r = __sim(120 * 25, i => { S.t += 1 / 120; TS.right = true; TS.jump = true; if (P.iVann && i % 30 === 0) I.jumpP = true; if (P.x / 32 > 93 && P.onGround) TS.right = TS.jump = false; }); TS.right = TS.jump = false; return r; });
+    sjekk('kommer over basseng 2 i rytme med vannet', !r.fall && r.x > 92 && r.y < 139.2, r); }
+  // jordspydet i verktøylageret
+  await page.evaluate(() => { S.mode = 'spill'; S.t = 0; oppdaterTaster(); }); await pos(page, 104, 138); await lukkKort(page);
+  sjekk('jordspydet plukkes opp', await page.evaluate(() => S.ev.jord && !!document.querySelector('#ev-jord')));
+  // basseng 3 står under spenning til det er jordet
+  const stot = () => page.evaluate(() => { P.x = 120 * 32; P.y = 146 * 32; P.iVann = true; P.inv = 0; P.safeX = 111 * 32; P.safeY = 137 * 32; const hp = P.hp; for (const f of OPPDATER) f(1 / 60); const r = { skadet: P.hp < hp, x: P.x / 32 }; P.hp = P.max; P.inv = 0; P.iVann = false; return r; });
+  { const r = await stot(); sjekk('vannet i basseng 3 slår før det er jordet', r.skadet && r.x < 112, r); }
+  await pos(page, 112, 138); await vent(page, 300);
+  sjekk('jordingspunktet kan brukes', await page.evaluate(() => document.querySelector('#verkKnapp').textContent.includes('jordingspunkt')));
+  await page.keyboard.press('ArrowDown'); await vent(page, 350); for (let i = 0; i < 2; i++) { await page.keyboard.press('Enter'); await vent(page, 320); }
+  sjekk('jordspydet jorder bassenget', await page.evaluate(() => S.oppdrag.jordet === 1 && S.mode === 'spill'), await page.evaluate(() => [S.mode, S.oppdrag]));
+  { const r = await stot(); sjekk('jordet vann er trygt å svømme i', !r.skadet, r); }
+  await pos(page, 124, 156); await vent(page, 300);
+  sjekk('måleren hentes fra bunnen', await page.evaluate(() => S.oppdrag.maaler === 2));
+  sjekk('målet peker tilbake til Sigrid', await page.evaluate(() => { const b = S.boss6, l = S.ev.liv7; S.boss6 = S.ev.liv7 = true; const m = maalTekst(); S.boss6 = b; S.ev.liv7 = l; return m.includes('Sigrid'); }));
+  const brukt0 = await page.evaluate(() => S.brukt);
+  await pos(page, 17, 149); await vent(page, 300); await page.keyboard.press('ArrowDown'); await vent(page, 350);
+  for (let i = 0; i < 3; i++) { await page.keyboard.press('Space'); await vent(page, 320); }
+  sjekk('Sigrid gir ti lysorber', await page.evaluate(b0 => S.oppdrag.maaler === 3 && S.brukt === b0 - 10, brukt0), await page.evaluate(() => [S.oppdrag, S.brukt]));
+  // Spenningsålen
+  await page.evaluate(() => { P.inv = 0; P.hp = P.max; }); await pos(page, 170, 156); await vent(page, 400);
+  sjekk('Spenningsålen våkner i magasinet', await page.evaluate(() => B6.aktiv));
+  sjekk('hurtigreise er stengt under bosskamp', await page.evaluate(() => !reiseTil(0)));
+  await pos(page, 154, 138); await vent(page, 300);
+  sjekk('ut av magasinet nullstiller kampen', await page.evaluate(() => !B6.aktiv && B6.hp === 3 && S.mode === 'spill'));
+  await pos(page, 170, 156); await vent(page, 300); await page.waitForFunction(() => B6.fase === 'kamp', null, { timeout: 5000 }).catch(() => {});
+  sjekk('bosslinja viser Spenningsålen', await page.evaluate(() => document.querySelector('#boss').classList.contains('vis') && document.querySelector('#bossNavn').textContent === 'Spenningsålen' && document.querySelectorAll('#bossSik i').length === 3));
+  { const r = await page.evaluate(() => { S.mode = 'pause'; Object.assign(B6, { syklus: 'hoy', sT: 9, strom: 'varsel', stromT: 1.1, t: 0, x: 185 * 32, y: 150 * 32 }); P.x = 161 * 32; P.y = 150 * 32; P.iVann = true; P.inv = 0; const hp0 = P.hp;
+      oppdaterBoss6(1 / 60); const forVarsel = P.hp; for (let i = 0; i < 80 && P.hp === hp0; i++) oppdaterBoss6(1 / 60); const etter = P.hp; P.hp = P.max; P.iVann = false; S.mode = 'spill'; return { hp0, forVarsel, etter, strom: B6.strom }; });
+    sjekk('strømmen i vannet varsles før den slår', r.forVarsel === r.hp0 && r.etter < r.hp0, r); }
+  await pos(page, 170, 156);
+  const f0 = await page.evaluate(() => { P.inv = 999; Object.assign(B6, { syklus: 'hoy', sT: 9, strom: '', stromT: 9 }); const hp = B6.hp; B6.x = P.x + 40; B6.y = P.y; P.face = 1; P.piskT = .2; oppdaterBoss6(1 / 60); return hp - B6.hp; });
+  sjekk('ålen tåler pisken når vannet er høyt', f0 === 0, f0);
+  for (let i = 0; i < 3; i++) { await page.evaluate(() => { Object.assign(B6, { syklus: 'lav', sT: 3, strom: '' }); B6.x = P.x + P.w / 2 + 40; P.face = 1; P.piskT = .2; P.piskCd = 0; }); await vent(page, 150); }
+  await page.waitForFunction(() => __gnist.S.boss6, null, { timeout: 6000 }).catch(() => {});
+  sjekk('Spenningsålen er slått', await page.evaluate(() => S.boss6 && !B6.aktiv), await page.evaluate(() => [B6.hp, B6.fase, B6.syklus, S.boss6]));
+  await page.evaluate(() => { P.inv = 0; }); await pos(page, 178, 156); await vent(page, 400);
+  sjekk('livsgnist 7 etter Spenningsålen', await page.evaluate(() => S.ev.liv7 && P.max === maksLiv()));
+  sjekk('minst 26 fagkort', await page.evaluate(() => FAG.length >= 26), await page.evaluate(() => FAG.length));
+  // lagring
+  await page.evaluate(() => lagre()); const l = await page.evaluate(() => hentLagret());
+  sjekk('lagringen tar med dammen', l.boss6 === true && l.oppdrag.maaler === 3 && l.oppdrag.jordet === 1 && l.ev.jord && l.ev.liv7, l && { b: l.boss6, o: l.oppdrag });
+  // kartet og hurtigreise
+  await page.evaluate(() => { for (const i of [17, 18, 19, 20, 21]) S.cpLit.add(i); }); await page.keyboard.press('Tab'); await vent(page, 300);
+  sjekk('kartet har en fane for dammen', await page.evaluate(() => document.querySelectorAll('#kartSoner button').length === kjenteSoner().length && !!document.querySelector('#kartSoner button[data-sone="2"]') && kartSone === 2));
+  await page.keyboard.press('Tab'); await vent(page, 200);
+  sjekk('hurtigreise fra dammen til byen', await page.evaluate(() => reiseTil(4) && spillerSone() === 0));
+  sjekk('hurtigreise fra byen til dammen', await page.evaluate(() => reiseTil(19) && spillerSone() === 2 && cam.y / 32 >= 118));
+  // porten tilbake til linja
+  await pos(page, 5, 149); await page.keyboard.down('ArrowLeft'); await vent(page, 500); await page.keyboard.up('ArrowLeft'); await vent(page, 1100);
+  sjekk('porten tilbake til linja', await page.evaluate(() => spillerSone() === 1 && Math.abs(P.x / 32 - 195) < 2.5), await tilstand(page));
+  sjekk('ingen JS-feil (dammen)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function touch(b, navn, opts) {
   console.log('Touch: ' + navn);
   const { ctx, page, errs } = await nySide(b, opts);
@@ -531,7 +610,7 @@ async function touch(b, navn, opts) {
   await pos(page, 50, 18); await vent(page, 300);
   await berør('touchStart', [{ x: hopp.x, y: hopp.y, id: 2 }]); await vent(page, 120); await berør('touchEnd', []); await vent(page, 120);
   { const t = await tilstand(page); sjekk('hoppknappen virker', t.y < 18.9, t); }
-  await pos(page, 76, 18); await vent(page, 3800);
+  await pos(page, 76, 18); await vent(page, 1500); await page.waitForFunction(() => __gnist.B.fase === 'kamp', null, { timeout: 8000 }).catch(() => {});
   sjekk('bosskamp på touch', (await tilstand(page)).fase === 'kamp');
   sjekk('ingen scroll', (await page.evaluate(() => scrollY)) === 0);
   { const kk = await boks('#kartKnapp'); sjekk('kartknapp innenfor skjermen', kk && kk.x + kk.w / 2 <= (opts.viewport || {}).width + 1 && kk.x > 0, kk);
@@ -624,6 +703,7 @@ async function grafikk(b) {
     if (med('fase7')) await fase7(b);
     if (med('grafikk')) await grafikk(b);
     if (med('linja')) await linja(b);
+    if (med('dam')) await dam(b);
     if (med('touch')) { await touch(b, 'liggende', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       await touch(b, 'stående', devices['iPhone 13']); }
     if (global.ekstraTester) for (const t of global.ekstraTester) await t(b, { sjekk, nySide, pos, tilstand, vent, dobbelhopp, lukkKort, KEY });

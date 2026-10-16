@@ -7,6 +7,7 @@
 const SONER = [
   { id: 'byen', navn: 'Byen', y0: 0, y1: 71 },
   { id: 'linja', navn: 'Høyspentlinja', y0: 72, y1: 117 },
+  { id: 'dam', navn: 'Vannkraftdammen', y0: 118, y1: 158 },
 ];
 function soneFor(ty) { for (let i = SONER.length - 1; i >= 0; i--) if (ty >= SONER[i].y0) return i; return 0; }
 const spillerSone = () => soneFor(Math.floor((P.y + P.h / 2) / T));
@@ -69,6 +70,7 @@ function nesteDialog() {
 }
 function tegnFigurer() {
   for (const f of FIGURER) { const X = (f.x + .5) * T, Y = (f.y + 1) * T; if (!synlig(X, Y, 80)) continue;
+    if (f.tegn) { f.tegn(X, Y); if (figurNaer === f && S.mode === 'spill') { ctx.fillStyle = 'rgba(255,233,168,.95)'; ctx.font = 'bold 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText('↓', X, Y - 46 + Math.sin(S.t * 4) * 2); } continue; }
     tegnSkygge(X, Y, 16);
     ctx.save(); ctx.translate(X, Y); ctx.scale(P.x + P.w / 2 < X ? -1 : 1, 1);
     const d = f.drakt, pust = Math.sin(S.t * 2 + f.x) * .6;
@@ -91,7 +93,7 @@ function tegnFigurer() {
 }
 function figurGlod() {
   for (const g of GJENSTANDER) { if ((S.oppdrag[g.oppdrag] || 0) >= 2) continue; const X = (g.x + .5) * T, Y = (g.y + .5) * T; if (synlig(X, Y, 60)) { glod(SPR.w, X, Y, 40 + 4 * Math.sin(S.t * 3), .6); glod(SPR.h, X, Y, 8, .6); } }
-  for (const f of FIGURER) { const X = (f.x + .5) * T, Y = f.y * T; if (synlig(X, Y, 80)) glod(SPR.w, X, Y - 2, 60, .35); }
+  for (const f of FIGURER) { const X = (f.x + .5) * T, Y = f.y * T; if (synlig(X, Y, 80)) glod(f.tegn ? SPR.c : SPR.w, X, Y - 2, 60, .35); }
 }
 
 // ---------- vind, oppvind og glideskjerm ----------
@@ -109,7 +111,7 @@ function iOppvind(x, y) { const tx = x / T, ty = y / T; return OPPVIND.find(v =>
 // kalles fra montørens bevegelse etter tyngdekraften
 function luftKrefter(p, dt) {
   const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
-  p.glir = !!(S.ev.glid && !p.onGround && !p.krok && p.dashT <= 0 && I.jumpHeld && (p.glirFor || p.vy > 30) && !p.vegg && S.laas <= 0);
+  p.glir = !!(S.ev.glid && !p.onGround && !p.krok && p.dashT <= 0 && I.jumpHeld && (p.glirFor || p.vy > 30) && !p.vegg && !p.iVann && S.laas <= 0);
   if (p.glir) { if (!p.glirFor) { lyd('glid'); p.glirT = 0; } p.glirT = (p.glirT || 0) + dt;
     if (p.vy > 95) p.vy = Math.max(95, p.vy - 4800 * dt); }
   p.glirFor = p.glir;
@@ -231,6 +233,7 @@ const ekstraBoss = () => BOSSER.find(b => b.aktiv() && b.kamp());
 // ---------- registrering ----------
 OPPDATER.push(dt => { oppdaterVind(dt); oppdaterPorter(dt); oppdaterFigurer(); vindPartikler(dt); });
 TEGN_VERDEN.push(() => { tegnMaster(); tegnOppvind(); tegnPorter(); tegnFigurer(); });
+TEGN_OVER.push(() => tegnVannstand());
 TEGN_GLOD.push(() => { masteGlod(); porterGlod(); figurGlod(); });
 LYSKILDER.push(L => {
   for (const p of PORTER) if (p.krav() && synlig(p.x * T, p.y0 * T, 200)) L((p.x + .5) * T, (p.y0 + p.y1) / 2 * T, 160, .7);
@@ -238,3 +241,43 @@ LYSKILDER.push(L => {
   for (const g of GJENSTANDER) if ((S.oppdrag[g.oppdrag] || 0) < 2 && synlig(g.x * T, g.y * T, 100)) L((g.x + .5) * T, (g.y + .5) * T, 100, .7);
   for (const m of MASTER) if (synlig(m.x * T, m.y0 * T, 100)) L(m.x * T, m.y0 * T - 12, 50, .5);
 });
+
+// ---------- vannstand: bassenger der vannet stiger og synker, og svømming ----------
+// { id, x0, x1: kolonnene, bunn: raden under vannet, niva(): overflaten i ruter, elektrisk(): strøm i vannet nå, varsel(): strømmen kommer snart }
+const VANNSTAND = [];
+// rytme: lavt (venter) → stiger → høyt (venter) → synker. Lange pauser, så timingen er tilgivende.
+function rytmeNiva(lav, hoy, per, fase) { const t = ((S.t + (fase || 0)) % per + per) % per / per;
+  const k = t < .3 ? 0 : t < .5 ? (1 - Math.cos((t - .3) / .2 * Math.PI)) / 2 : t < .8 ? 1 : (1 + Math.cos((t - .8) / .2 * Math.PI)) / 2; return lerp(lav, hoy, k); }
+function vannVed(px, py) { const tx = px / T; for (const v of VANNSTAND) if (tx >= v.x0 && tx < v.x1 + 1 && py / T >= v.niva() && py / T < v.bunn) return v; return null; }
+const iFarligVann = p => { const v = vannVed(p.x + p.w / 2, p.y + p.h - 4); return !!(v && v.elektrisk()); };
+// glatte vegger ved bassengene: klatrejernet får ikke tak, så vannet må brukes
+const glattVegg = (tx, ty) => VANNSTAND.some(v => (tx === v.x0 - 1 || tx === v.x1 + 1) && ty >= v.topp && ty < v.bunn);
+function vannKrefter(p, dt) {
+  const cx = p.x + p.w / 2, v = vannVed(cx, p.y + p.h * .6);
+  const var_ = p.iVann; p.iVann = !!v;
+  if (!v) return;
+  const flate = v.niva() * T;
+  if (!var_ && p.vy > 200) { lyd('plask'); sprut(cx, flate + 4, 16, 'c', 180); }
+  p.air = S.ev.dobbel ? 1 : 0; p.canDash = true; p.fallT = 0;
+  // oppdrift: montøren flyter opp til overflaten, med ↓ dykker den
+  if (I.down) p.vy = mot(p.vy - 2000 * dt, 150, 900 * dt);
+  else { const dybde = p.y + p.h * .35 - flate; p.vy -= (2000 + (dybde > 0 ? 700 : 0)) * dt; if (dybde < 4 && p.vy < 0) p.vy *= 1 - Math.min(1, dt * 8); }
+  p.vy = clamp(p.vy, -260, 180); p.vx *= 1 - Math.min(1, dt * 1.6);
+  if (p.buf > 0 && !p.onGround) { p.buf = 0; const naer = p.y + p.h * .35 - flate < 14; p.vy = naer ? -640 : -360; lyd(naer ? 'hopp' : 'svom'); ring(cx, Math.max(flate, p.y), 8, 'c', 90, .5); }
+  if (Math.random() < dt * 6) part(cx + (Math.random() - .5) * 10, p.y + 4, 0, -60, .6, 3, 'c', 0);
+}
+function tegnVannstand() {
+  for (const v of VANNSTAND) { const X0 = v.x0 * T, X1 = (v.x1 + 1) * T, Y = v.niva() * T, Yb = v.bunn * T; if (!synlig((X0 + X1) / 2, (Y + Yb) / 2, (X1 - X0) / 2 + (Yb - Y) / 2 + 100) || Yb - Y < 1) continue;
+    const el = v.elektrisk(), va = v.varsel && v.varsel();
+    const gr = ctx.createLinearGradient(0, Y, 0, Yb); gr.addColorStop(0, el ? 'rgba(90,210,255,.55)' : va ? `rgba(230,200,90,${.4 + .2 * Math.sin(S.t * 20)})` : 'rgba(50,130,170,.45)'); gr.addColorStop(1, 'rgba(6,24,44,.82)');
+    ctx.fillStyle = gr; ctx.fillRect(X0, Y, X1 - X0, Yb - Y);
+    ctx.strokeStyle = el ? 'rgba(220,250,255,.95)' : 'rgba(190,240,255,.6)'; ctx.lineWidth = 1.6; ctx.beginPath();
+    for (let x = X0; x <= X1; x += 8) { const y = Y + Math.sin(S.t * 2.4 + x * .05) * 2 + Math.sin(S.t * 1.3 + x * .11) * 1.2; x === X0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+    if (el) { ctx.strokeStyle = 'rgba(200,245,255,.7)'; ctx.lineWidth = 1.2; for (let i = 0; i < 3; i++) { const x = X0 + hs(i, S.frame >> 2, v.x0) * (X1 - X0); jagget(x, Y + 2, x + (hs(i, 3, S.frame >> 2) - .5) * 60, Math.min(Yb, Y + 40 + hs(i, 4, S.frame >> 2) * 60), 6, 5, (S.frame >> 2) + i); } } }
+}
+function vannGlod() {
+  for (const v of VANNSTAND) { const X0 = v.x0 * T, X1 = (v.x1 + 1) * T, Y = v.niva() * T; if (!synlig((X0 + X1) / 2, Y, (X1 - X0) / 2 + 100)) continue; const el = v.elektrisk();
+    for (let x = X0 + 16; x < X1; x += 48) glod(el ? SPR.c : SPR.w, x, Y + 2, el ? 46 : 22, el ? .5 + .2 * Math.sin(S.t * 30 + x) : .12); }
+}
+OPPDATER.push(dt => { const v = P.iVann && vannVed(P.x + P.w / 2, P.y + P.h - 4); if (v && v.felle && v.elektrisk() && S.dod <= 0) { gnister(P.x + P.w / 2, P.y + P.h / 2, 10, 'c'); skade(0, true); } });
+TEGN_GLOD.push(vannGlod);

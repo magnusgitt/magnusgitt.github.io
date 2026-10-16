@@ -9,6 +9,7 @@ function jagget(x1, y1, x2, y2, utslag, n, seed) { const r = rng(seed); ctx.begi
 function synlig(x, y, m) { const vw = cssW / skala, vh = cssH / skala; return x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m; }
 
 function tegnBakgrunn(kx, ky) {
+  if (ky >= DY0 * T - 1) return tegnDamBg(kx, ky);
   if (ky >= LY0 * T - 1) return tegnLinjaBg(kx, ky);
   const cw = cv.width, ch = cv.height;
   const maxY = Math.max(1, 34 * T - cssH / skala), t = clamp(ky / maxY, 0, 1);
@@ -608,6 +609,7 @@ function tegn() {
   tegnSpiller();
   tegnSkjerm(P);
   tegnVann();
+  for (const f of TEGN_OVER) f();
   tegnStov();
   samleLys();
   tegnLys();

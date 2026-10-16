@@ -14,7 +14,7 @@ function pop(sel) { const e = $(sel); if (!e) return; e.classList.remove('pop');
 function hud() {
   $('#liv').innerHTML = Array.from({ length: P.max }, (_, i) => `<i class="${i < P.hp ? '' : 'tom'}"></i>`).join('');
   $('#orbtall').textContent = '✦ ' + S.orbTatt.size + ' / ' + ORBER.length;
-  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']); if (S.ev.tester) e.push(['tester', 'Spenningstester']); if (S.ev.sliper) e.push(['sliper', 'Vinkelsliper']); if (S.ev.klatre) e.push(['klatre', 'Klatrejern']); if (S.ev.glid) e.push(['glid', 'Glideskjerm']);
+  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']); if (S.ev.tester) e.push(['tester', 'Spenningstester']); if (S.ev.sliper) e.push(['sliper', 'Vinkelsliper']); if (S.ev.klatre) e.push(['klatre', 'Klatrejern']); if (S.ev.glid) e.push(['glid', 'Glideskjerm']); if (S.ev.jord) e.push(['jord', 'Jordspyd']);
   PISK_LENGDE = S.kjop.pisk2 ? 120 : 92;
   $('#evner').innerHTML = e.map(([id, n]) => `<div class="ev" id="ev-${id}" title="${n}">${IKON[id]}</div>`).join('');
   sistKlar = null;
@@ -39,7 +39,7 @@ function hudEvneTilstand() {
 let sistVerk = null;
 // samme knapp brukes for å snakke med figurer og for å åpne verkstedet
 function hudVerk() { const f = S.mode === 'spill' ? figurNaer : null, v = S.mode === 'spill' && (S.verkNaer >= 0 || !!f), nokkel = v + (f ? f.id : '');
-  if (nokkel === sistVerk) return; sistVerk = nokkel; $('#verkKnapp').classList.toggle('skjult', !v); $('#verkKnapp').textContent = f ? 'Snakk med ' + f.navn : 'Åpne verkstedet';
+  if (nokkel === sistVerk) return; sistVerk = nokkel; $('#verkKnapp').classList.toggle('skjult', !v); $('#verkKnapp').textContent = f ? (f.knapp || 'Snakk med ' + f.navn) : 'Åpne verkstedet';
   if (f && !S.hintSett.has('snakk')) hint('snakk', erTouch ? 'Trykk på knappen for å snakke.' : 'Trykk ↓ eller knappen for å snakke.', 3.5);
   if (v && !f && !S.hintSett.has('verk')) hint('verk', erTouch ? 'Et verksted! Trykk på knappen for å bruke lysorbene.' : 'Et verksted! Trykk ↓ eller knappen for å bruke lysorbene.', 4); }
 let sistKrokKlar = null;
@@ -67,6 +67,13 @@ function maalTekst() {
     if (!S.ev.glid) return 'Klatre opp den høyeste masta bak juvet';
     return 'Seil over Vindskaret til toppmasta'; }
   if (!S.ev.liv6) return 'Ta livsgnisten på toppmasta';
+  if (!S.boss6) { if (B6.aktiv) return 'Slå ålen når vannet er tappet ut';
+    if (ty < DY0) return 'Finn porten bak toppmasta';
+    if (!S.ev.jord) return 'Kom deg gjennom dammen til verktøylageret';
+    if (!JORDET()) return 'Jord bassenget som står under spenning';
+    return 'Finn magasinet bak dammen'; }
+  if (!S.ev.liv7) return 'Ta livsgnisten i magasinet';
+  if (S.oppdrag.maaler === 2) return 'Gi isolasjonsmåleren tilbake til Sigrid';
   if (S.oppdrag.jord === 2) return 'Gi jordingsstanga tilbake til Gamle Ivar';
   if (S.oppdrag.jord === 1) return 'Finn jordingsstanga til Ivar nede i Vindskaret';
   return 'Finn alle lysorber, fagkort og gjemmesteder';
@@ -89,6 +96,9 @@ function maalPunkt() {
   if (!S.ev.liv5) return [36.5, 60.5];
   if (!S.boss5) { if (B5.aktiv) return null; if (P.y < LY0 * T) return [66.5, 59]; if (!S.ev.glid) return [113.5, 83.5]; return [173, 98]; }
   if (!S.ev.liv6) return [184.5, 99.5];
+  if (!S.boss6) { if (B6.aktiv) return null; if (P.y < DY0 * T) return [198.5, 98]; if (!S.ev.jord) return [104.5, 138]; if (!JORDET()) return [113.5, 138]; return [162, 150]; }
+  if (!S.ev.liv7) return [178.5, 156.5];
+  if (S.oppdrag.maaler === 2) return [16.5, 149];
   if (S.oppdrag.jord === 2) return [12.5, 104];
   if (S.oppdrag.jord === 1) return [163.5, 109.5];
   return null;
@@ -110,7 +120,7 @@ function settTilHex(a) { let h = ''; for (let i = 0; i < a.length; i += 4) h += 
 function hexTilSett(h) { const a = new Uint8Array(KW * KH); if (typeof h !== 'string') return a;
   for (let j = 0; j < h.length && j * 4 < a.length; j++) { const n = parseInt(h[j], 16) || 0; for (let b = 0; b < 4; b++) if (j * 4 + b < a.length) a[j * 4 + b] = (n >> b) & 1; } return a; }
 function lagre() { if (S.tidsmodus) return; try { localStorage.setItem(NOKKEL, JSON.stringify({ v: LAGRE_VERSJON, ev: S.ev, cp: S.cp, cpLit: [...S.cpLit], orb: [...S.orbTatt],
-  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop, knust: [...S.knust], boss3: S.boss3, boss4: S.boss4, boss5: S.boss5, oppdrag: S.oppdrag, helt: S.helt,
+  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop, knust: [...S.knust], boss3: S.boss3, boss4: S.boss4, boss5: S.boss5, boss6: S.boss6, oppdrag: S.oppdrag, helt: S.helt,
   boss: S.bossDone, boss2: S.boss2, tid: Math.round(S.tid), ferdig: S.ferdig, dod: S.dodsfall })); } catch (e) {} }
 function hentLagret() {
   try { const d = JSON.parse(localStorage.getItem(NOKKEL) || 'null'); if (!d || typeof d !== 'object' || !d.ev || typeof d.ev !== 'object') return null;
@@ -119,7 +129,7 @@ function hentLagret() {
     return { ev, cp: Number.isInteger(d.cp) && d.cp >= 0 && d.cp < SJEKK.length ? d.cp : 0, cpLit: heltall(d.cpLit, SJEKK.length), orb: heltall(d.orb, ORBER.length),
       fag: heltall(d.fag, FAG.length), sett: hexTilSett(d.sett), brukt: Number.isInteger(d.brukt) && d.brukt >= 0 ? d.brukt : 0,
       kjop: Object.fromEntries([...OPPGRADERINGER.map(o => o.id), 'pisk2'].map(id => [id, !!(d.kjop && d.kjop[id] === true)])),
-      boss5: d.boss5 === true, oppdrag: Object.fromEntries(Object.entries(d.oppdrag && typeof d.oppdrag === 'object' ? d.oppdrag : {}).filter(([k, v]) => /^[a-z]+$/.test(k) && Number.isInteger(v) && v >= 0 && v <= 3)),
+      boss5: d.boss5 === true, boss6: d.boss6 === true, oppdrag: Object.fromEntries(Object.entries(d.oppdrag && typeof d.oppdrag === 'object' ? d.oppdrag : {}).filter(([k, v]) => /^[a-z]+$/.test(k) && Number.isInteger(v) && v >= 0 && v <= 3)),
       knust: heltall(d.knust, SVAKE.length), boss3: d.boss3 === true, boss4: d.boss4 === true, helt: d.helt === true,
       boss: d.boss === true, boss2: d.boss2 === true, tid: typeof d.tid === 'number' && d.tid > 0 ? d.tid : 0, ferdig: d.ferdig === true, dod: Number.isInteger(d.dod) ? d.dod : 0 };
   } catch (e) { return null; }

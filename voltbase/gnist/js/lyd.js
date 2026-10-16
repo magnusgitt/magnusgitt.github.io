@@ -86,6 +86,9 @@ function lyd(n) {
     case 'prell': tone(1600, 1200, .1, 'square', .03); sus(.08, 6000, 2500, .05, 0, 'highpass'); tone(800, 600, .12, 'triangle', .03, .03); break;
     case 'lynfugl': tone(1400, 2200, .25, 'sawtooth', .025); tone(2200, 900, .35, 'square', .015, .2); sus(.3, 8000, 3000, .04, .1, 'highpass'); break;
     case 'torden': sus(1.6, 600, 60, .14); tone(60, 35, 1.2, 'sawtooth', .04); sus(.2, 8000, 2000, .06, 0, 'highpass'); break;
+    case 'svom': sus(.25, 1400, 300, .06); tone(300, 180, .15, 'sine', .02); break;
+    case 'sluse': tone(90, 60, 1.6, 'sawtooth', .035); sus(1.8, 700, 150, .08); break;
+    case 'jord': tone(160, 60, .5, 'square', .05); sus(.4, 3000, 200, .1); tone(900, 1400, .3, 'triangle', .03, .25); break;
     case 'slutt': [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, f, 1.6, 'triangle', .04, i * .16)); break;
   }
 }
@@ -101,6 +104,8 @@ const TEMA = {
   boss3:  { bpm: 132, rot: 50, skala: [0, 1, 3, 5, 7, 8, 10], akk: [0, 5, 1, 4], arp: 1, lys: .9, puls: true },
   kraft:  { bpm: 66, rot: 48, skala: [0, 2, 3, 5, 7, 8, 11], akk: [0, 5, 3, 6], arp: .4, lys: .55 },
   boss4:  { bpm: 126, rot: 52, skala: [0, 1, 3, 5, 7, 8, 11], akk: [0, 3, 1, 5], arp: .95, lys: .85, puls: true },
+  dam:    { bpm: 74, rot: 50, skala: [0, 2, 4, 5, 7, 9, 11], akk: [0, 5, 3, 4], arp: .55, lys: .85 },
+  boss6:  { bpm: 128, rot: 50, skala: [0, 1, 3, 5, 7, 8, 10], akk: [0, 3, 5, 1], arp: .95, lys: .9, puls: true },
   linja:  { bpm: 80, rot: 53, skala: [0, 2, 3, 5, 7, 9, 10], akk: [0, 4, 5, 3], arp: .5, lys: .9 },
   boss5:  { bpm: 138, rot: 53, skala: [0, 2, 3, 5, 7, 8, 10], akk: [0, 6, 5, 4], arp: 1, lys: .95, puls: true },
   boss2:  { bpm: 120, rot: 54, skala: [0, 1, 3, 5, 6, 8, 10], akk: [0, 1, 4, 1], arp: .9, lys: .8, puls: true },
@@ -111,8 +116,8 @@ function musTone(f, t, dur, type, vol) { const o = A.c.createOscillator(), g = A
   g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(.4, dur * .3)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(MUS.gain); o.start(t); o.stop(t + dur + .05); }
 function velgTema() {
-  if (B5.aktiv && B5.fase !== 'dod') return 'boss5'; if (B4.aktiv && B4.fase !== 'dod') return 'boss4';
-  if (P.y >= LY0 * T) return 'linja'; if (B3.aktiv && B3.fase !== 'dod') return 'boss3'; if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
+  if (B6.aktiv && B6.fase !== 'dod') return 'boss6'; if (B5.aktiv && B5.fase !== 'dod') return 'boss5'; if (B4.aktiv && B4.fase !== 'dod') return 'boss4';
+  if (P.y >= DY0 * T) return 'dam'; if (P.y >= LY0 * T) return 'linja'; if (B3.aktiv && B3.fase !== 'dod') return 'boss3'; if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
   const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
   if (iKraft(tx, ty)) return 'kraft'; if (tx >= 132 && ty <= 27) return 'stasjon'; if (iKjeller2(tx, ty)) return 'kabel'; if (erHall(tx, ty)) return S.bossDone ? 'ute' : 'kjeller'; if (inne(tx, ty)) return 'kjeller'; return 'ute';
 }

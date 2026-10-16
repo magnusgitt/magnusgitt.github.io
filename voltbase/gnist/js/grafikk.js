@@ -172,14 +172,15 @@ const PAL = {
 PAL.kabel = { c: ['#000', '#2e3a3f', '#253035', '#1d272b', '#172024', '#12191c', '#0e1416'], mose: '#3f5559', stra: ['#56707a', '#68848d', '#4a6168'] };
 PAL.kraft = { c: ['#000', '#33402f', '#293427', '#202a1f', '#192119', '#141a14', '#0f140f'], mose: '#4d6340', stra: ['#6f8a5c', '#86a26f', '#5b7349'] };
 PAL.fjell = { c: ['#000', '#36404f', '#2b3443', '#222a37', '#1b212c', '#151a23', '#10141b'], mose: '#dfe8f2', stra: ['#7d8f86', '#97a89c', '#66786e'], gress: true, rim: 'rgba(230,245,255,.5)' };
+PAL.betong = { c: ['#000', '#3a4446', '#2f383a', '#262e30', '#1e2527', '#181e20', '#121719'], mose: '#3f6a5c', stra: ['#5c8f7a', '#74a890', '#4a7866'], gress: true, rim: 'rgba(170,240,220,.4)' };
 PAL.ute.rim = 'rgba(190,255,225,.4)'; PAL.kjeller.rim = 'rgba(255,215,170,.3)'; PAL.hall.rim = 'rgba(205,190,255,.32)'; PAL.kabel.rim = 'rgba(150,240,250,.3)'; PAL.kraft.rim = 'rgba(190,255,170,.32)';
-const palAt = (x, y) => y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
+const palAt = (x, y) => y >= 118 ? PAL.betong : y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
 const chunks = new Map();
 
 // grunnfargen på bakveggen (halvgjennomsiktig, så den innendørs parallaksen synes bak)
-function bakveggFarge(x, y) { return erHall(x, y) ? '20,22,40' : iKraft(x, y) ? '22,29,24' : iKjeller2(x, y) ? '20,29,33' : '24,32,48'; }
+function bakveggFarge(x, y) { if (y >= 118) return '22,30,32'; return erHall(x, y) ? '20,22,40' : iKraft(x, y) ? '22,29,24' : iKjeller2(x, y) ? '20,29,33' : '24,32,48'; }
 const SKILT = ['FARE', '400 V', '230 V', 'K-12', 'K-7', 'T3', 'NØD', 'IP44'];
 function bakvegg(g, x, y) {
   const X = x * T, Y = y * T;
