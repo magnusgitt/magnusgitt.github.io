@@ -196,21 +196,26 @@ function tegnFiende2(e) {
     ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.3, 1.3); ctx.rotate(clamp(e.vx / 600, -.4, .4));
     ctx.fillStyle = 'rgba(255,200,170,.35)'; const v = Math.sin(t * 45) * 3; ctx.beginPath(); ctx.ellipse(-2, -8, 9, 3 + v * .4, -.5, 0, 7); ctx.ellipse(-2, 8, 9, 3 - v * .4, .5, 0, 7); ctx.fill();
     const gr = ctx.createLinearGradient(-10, 0, 12, 0); gr.addColorStop(0, '#3a1408'); gr.addColorStop(1, '#c25a2c'); ctx.fillStyle = gr;
-    ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -7); ctx.lineTo(-10, 0); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -7); ctx.lineTo(-10, 0); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.clip(); rustFlekker(-10, -7, 18, 14, 41, 3, .8); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-3, -7, 1.2, 14); ctx.fillStyle = 'rgba(255,220,180,.25)'; ctx.beginPath(); ctx.moveTo(10, -.6); ctx.lineTo(-5, -5.6); ctx.lineTo(-5, -4.2); ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1; ctx.stroke(); nagler([[-6, -3.5], [-6, 3.5]], .75);
     ctx.fillStyle = va ? '#ff4a3a' : '#ffe36b'; ctx.beginPath(); ctx.arc(5, -1.5, 2.3, 0, 7); ctx.fill();
     ctx.strokeStyle = 'rgba(255,230,140,.9)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-14, -3); ctx.lineTo(-16, 2); ctx.stroke(); ctx.restore(); return true; }
   if (e.type === 'skytter') { const X = e.x + e.w / 2, Y = e.y + e.h;
-    ctx.fillStyle = '#2a1a14'; ctx.fillRect(X - 9, Y - 6, 18, 6); ctx.fillStyle = '#4a2a22'; rr(ctx, X - 10, Y - 20, 20, 15, 4); ctx.fill(); ctx.strokeStyle = 'rgba(255,170,110,.85)'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.save(); ctx.translate(X, Y - 15); ctx.rotate(e.sikt || 0); ctx.fillStyle = '#6a3a28'; ctx.fillRect(0, -3.5, 15, 7); ctx.fillStyle = '#c9a77a'; for (let k = 0; k < 3; k++) ctx.fillRect(3 + k * 4, -4.5, 2, 9); ctx.restore();
+    ctx.fillStyle = '#2a1a14'; ctx.fillRect(X - 9, Y - 6, 18, 6); ctx.fillStyle = '#4a2a22'; rr(ctx, X - 10, Y - 20, 20, 15, 4); ctx.fill(); ctx.save(); ctx.clip(); rustRenner(X - 10, Y - 20, 20, 15, 51, 3); rustFlekker(X - 10, Y - 20, 20, 15, 52, 2, .6); ctx.restore();
+    ctx.strokeStyle = 'rgba(255,170,110,.85)'; ctx.lineWidth = 1.2; rr(ctx, X - 10, Y - 20, 20, 15, 4); ctx.stroke(); nagler([[X - 7.5, Y - 8], [X + 7.5, Y - 8]], .8);
+    ctx.save(); ctx.translate(X, Y - 15); ctx.rotate(e.sikt || 0); ctx.fillStyle = '#6a3a28'; ctx.fillRect(0, -3.5, 15, 7); ctx.fillStyle = '#c9a77a'; for (let k = 0; k < 3; k++) ctx.fillRect(3 + k * 4, -4.5, 2, 9); ctx.fillStyle = '#140a06'; ctx.beginPath(); ctx.ellipse(15, 0, 1.4, 3.2, 0, 0, 7); ctx.fill(); ctx.restore();
     const lad = e.lad > 0 && Math.sin(S.t * (14 + e.lad * 30)) > 0; ctx.fillStyle = lad ? '#fff' : '#ff8a3a'; ctx.beginPath(); ctx.arc(X, Y - 15, 3.4, 0, 7); ctx.fill(); return true; }
   if (e.type === 'skjold') { const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t;
     ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir, 1);
     ctx.strokeStyle = '#1a0c06'; ctx.lineWidth = 2; for (let i = -1; i <= 1; i++) { const s = Math.sin(t * 12 + i * 2) * 2; ctx.beginPath(); ctx.moveTo(i * 7, -5); ctx.lineTo(i * 7 + 3 + s, 0); ctx.stroke(); }
     const gr = ctx.createLinearGradient(0, -20, 0, -4); gr.addColorStop(0, '#8a4a2a'); gr.addColorStop(1, '#3a1a0c'); ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(-2, -9, 13, 9, 0, Math.PI, 0); ctx.lineTo(11, -4); ctx.lineTo(-15, -4); ctx.fill();
+    ctx.save(); ctx.clip(); rustFlekker(-15, -18, 26, 14, 71, 4, .8); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-15, -9, 26, 1.2); ctx.fillStyle = 'rgba(255,220,170,.2)'; ctx.beginPath(); ctx.ellipse(-4, -15, 7, 1.8, 0, 0, 7); ctx.fill(); ctx.restore(); nagler([[-9, -7], [-1, -7.5], [6, -6.5]], .8);
     ctx.fillStyle = '#ffe36b'; ctx.beginPath(); ctx.arc(6, -11, 1.8, 0, 7); ctx.fill();
     // skjoldet: en isolatorplate foran
     ctx.fillStyle = '#9aa7b8'; rr(ctx, 11, -20, 6, 20, 2); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(12, -19, 1.5, 18);
     ctx.fillStyle = '#c9a77a'; for (let k = 0; k < 3; k++) ctx.fillRect(10, -17 + k * 6, 8, 1.6);
+    ctx.strokeStyle = 'rgba(40,50,60,.55)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(13, -20); ctx.lineTo(15, -14); ctx.lineTo(13.5, -10); ctx.stroke();
     ctx.restore(); return true; }
   return false;
 }

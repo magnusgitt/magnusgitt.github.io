@@ -408,6 +408,32 @@ function planke(g, x, y) {
     g.fillStyle = '#c9d0db'; g.fillRect(px - 1.5, Y + 8, 6, 3);
   }
 }
+// detaljer inne i fast grunn: steiner, knuste betongblokker med armeringsjern, sprekker, røtter og rustrenner.
+// Tegnes én gang per bit av kartet, så det koster ingenting per bilde.
+const BYPAL = new Set([PAL.ute, PAL.kjeller, PAL.hall, PAL.betong]);
+function detalj(g, x, y, pal, d) {
+  const X = x * T, Y = y * T, hv = k => hs(x, y, k), farge = pal.c[Math.min(6, Math.max(1, d - 1))];
+  // steiner og grus, mest et stykke inn i grunnen
+  if (d >= 2 && hv(400) < .2) { const sx = X + 6 + hv(401) * 20, sy = Y + 6 + hv(402) * 20, r = 3 + hv(403) * 5, a = hv(404) * 3;
+    g.fillStyle = farge; g.beginPath(); for (let i = 0; i < 6; i++) { const v = a + i * 1.05, rr2 = r * (.75 + hs(x, y, 405 + i) * .4); g.lineTo(sx + Math.cos(v) * rr2 * 1.3, sy + Math.sin(v) * rr2); } g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.06)'; g.beginPath(); g.ellipse(sx - r * .3, sy - r * .45, r * .7, r * .28, 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(sx + r * .2, sy + r * .6, r * .9, r * .25, 0, 0, 7); g.fill(); }
+  // knuste betongblokker med rustne armeringsjern i byen, nær overflaten
+  if (BYPAL.has(pal) && d <= 3 && hv(410) < .09) { const bx = X + 4 + hv(411) * 14, by = Y + 4 + hv(412) * 14, w = 12 + hv(413) * 10, h = 7 + hv(414) * 6;
+    g.save(); g.translate(bx + w / 2, by + h / 2); g.rotate((hv(415) - .5) * .7);
+    g.fillStyle = 'rgba(120,130,140,.16)'; g.fillRect(-w / 2, -h / 2, w, h); g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(-w / 2, -h / 2, w, 1.4); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(-w / 2, h / 2 - 1.6, w, 1.6);
+    g.strokeStyle = 'rgba(150,80,45,.55)'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(w / 2 - 2, -h / 4); g.lineTo(w / 2 + 5 + hv(416) * 4, -h / 4 - 2 + hv(417) * 3); g.moveTo(w / 2 - 2, h / 5); g.quadraticCurveTo(w / 2 + 4, h / 5, w / 2 + 6, h / 5 + 4); g.stroke(); g.restore(); }
+  // sprekker langs kanten
+  if (d <= 2 && hv(420) < .14) { let cx = X + 4 + hv(421) * 24, cy = Y + 2 + hv(422) * 6; g.strokeStyle = 'rgba(0,0,0,.32)'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx, cy);
+    for (let i = 0; i < 4; i++) { cx += (hs(x, y, 423 + i) - .5) * 9; cy += 4 + hs(x, y, 427 + i) * 4; g.lineTo(cx, cy); } g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.04)'; g.beginPath(); g.moveTo(X + 5 + hv(421) * 24, Y + 3 + hv(422) * 6); g.lineTo(cx + 1, cy); g.stroke(); }
+  // røtter som har grodd ned gjennom jorda under gress
+  if ((pal === PAL.ute || pal.gress) && d >= 1 && d <= 3 && hv(430) < .22 && !inne(x, y - d)) { let rx = X + hv(431) * T, ry = Y; g.strokeStyle = 'rgba(70,50,35,.45)'; g.lineWidth = 1.6 - d * .3; g.beginPath(); g.moveTo(rx, ry);
+    for (let i = 0; i < 3; i++) { const nx = rx + (hs(x, y, 432 + i) - .5) * 12, ny = ry + 9 + hs(x, y, 435 + i) * 4; g.quadraticCurveTo((rx + nx) / 2 + (hs(x, y, 438 + i) - .5) * 6, (ry + ny) / 2, nx, ny); rx = nx; ry = ny; } g.stroke(); }
+  // rustrenner under jernbjelker og rør innendørs: brune striper fra overkanten
+  if ((pal === PAL.kjeller || pal === PAL.hall || pal === PAL.kraft || pal === PAL.kabel) && d === 1 && !erSol(x, y - 1) && hv(440) < .25) { const rx = X + 4 + hv(441) * 22, l = 10 + hv(442) * 18;
+    const gr = g.createLinearGradient(0, Y, 0, Y + l); gr.addColorStop(0, 'rgba(150,80,40,.35)'); gr.addColorStop(1, 'rgba(150,80,40,0)'); g.fillStyle = gr; g.fillRect(rx, Y, 2 + hv(443) * 2, l); }
+}
 function lagChunk(cx, cy) {
   const pad = 2, r = chunkRes, c = nyC(Math.ceil((CPX + pad * 2) * r), Math.ceil((CPX + pad * 2) * r)), g = c.getContext('2d');
   g.scale(r, r); g.translate(-cx * CPX + pad, -cy * CPX + pad);
@@ -430,6 +456,7 @@ function lagChunk(cx, cy) {
     if (!erSol(x + 1, y)) { g.fillStyle = 'rgba(140,180,230,.12)'; g.fillRect(x * T + T - 5, y * T, 5, T); }
     if (!erSol(x - 1, y)) { g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x * T, y * T, 6, T); }
     if (!erSol(x, y + 1)) { g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x * T, y * T + T - 8, T, 8); } });
+  alle((x, y) => { if (erSol(x, y)) detalj(g, x, y, palAt(x, y), dypAt(x, y)); });
   alle((x, y) => { if (erSol(x, y) && !erSol(x, y - 1)) topp(g, x, y, palAt(x, y)); });
   alle((x, y) => { if (erSol(x, y) && !erSol(x, y + 1)) heng(g, x, y, palAt(x, y)); });
   alle((x, y) => { if (tile(x, y) === ONE && !STAAL.has(x + ',' + y)) planke(g, x, y); });

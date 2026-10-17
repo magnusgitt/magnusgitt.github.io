@@ -109,39 +109,70 @@ function tegnFiende(e) {
   if (e.type === 'sveve') return tegnSveve(e);
   if (e.type === 'rele') return tegnRele(e);
   if (tegnFiende2(e)) return;
-  // gnistlus: varme farger og lysende øyne, så den skiller seg fra bakgrunnen
-  const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t, v = e.varsel || 0;
-  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25); ctx.rotate(-v * .14 + (v > .5 ? Math.sin(t * 40) * .03 : 0));
-  ctx.strokeStyle = '#1a0c06'; ctx.lineWidth = 1.8;
-  for (let i = -1; i <= 1; i++) { const s = Math.sin(t * 14 + i * 2) * 2.5; ctx.beginPath(); ctx.moveTo(i * 5, -5); ctx.lineTo(i * 5 + 3 + s, -2); ctx.lineTo(i * 5 + 1 + s, 0); ctx.stroke(); }
-  const gr = ctx.createLinearGradient(0, -14, 0, -3); gr.addColorStop(0, '#a8482a'); gr.addColorStop(1, '#3a160c');
+  // gnistlus: en kabelbille med rusten kobberrygg, nagler og lysende øyne, så den skiller seg fra bakgrunnen
+  const X = e.x + e.w / 2, Y = e.y + e.h, t = e.t, v = e.varsel || 0, id = (e.x0 || 0) | 0;
+  ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.25, 1.25); ctx.rotate(-v * .14 + (v > .5 ? Math.sin(t * 40) * .03 : 0)); ctx.lineCap = 'round';
+  // kabelbein med blanke kobbertupper
+  for (let i = -1; i <= 1; i++) { const s = Math.sin(t * 14 + i * 2) * 2.5;
+    ctx.strokeStyle = '#1a0c06'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(i * 5, -5); ctx.lineTo(i * 5 + 3 + s, -2.5); ctx.lineTo(i * 5 + 1.5 + s, -.4); ctx.stroke();
+    ctx.fillStyle = '#e09a54'; ctx.beginPath(); ctx.arc(i * 5 + 1.5 + s, -.4, .9, 0, 7); ctx.fill(); }
+  // ryggskjoldet: kobber med rust og to plater
+  const gr = ctx.createLinearGradient(0, -14, 0, -3); gr.addColorStop(0, '#b4552e'); gr.addColorStop(.6, '#7a3018'); gr.addColorStop(1, '#3a160c');
   ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, -7, 11, 7, 0, Math.PI, 0); ctx.lineTo(11, -4); ctx.lineTo(-11, -4); ctx.closePath(); ctx.fill();
+  ctx.save(); ctx.clip(); rustFlekker(-11, -14, 22, 10, id + 7, 4, .8);
+  ctx.strokeStyle = 'rgba(30,10,4,.55)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-3, -14); ctx.quadraticCurveTo(-4, -9, -3, -4); ctx.moveTo(-8, -11); ctx.quadraticCurveTo(-9, -7, -8, -4); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,220,170,.22)'; ctx.beginPath(); ctx.ellipse(-2, -11.5, 6, 1.6, -.1, 0, 7); ctx.fill(); ctx.restore();
   ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(0, -7, 11, 7, 0, Math.PI, 0); ctx.stroke();
-  ctx.fillStyle = v > .5 ? '#ff5a3c' : '#ffe36b'; ctx.beginPath(); ctx.arc(7, -8, 2.2 + v * .6, 0, 7); ctx.arc(3, -9, 1.6 + v * .4, 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,230,140,.95)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-7, -12); ctx.lineTo(-4, -9); ctx.lineTo(-1, -14); ctx.lineTo(2, -10); ctx.stroke();
+  ctx.fillStyle = '#2a120a'; ctx.fillRect(-11, -5, 22, 1.6);
+  nagler([[-6, -6.5], [1, -7.5]], .9);
+  // hodet: en liten isolator med øyne
+  ctx.fillStyle = '#d9d2bf'; rr(ctx, 4, -12, 7, 7, 2); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(4, -8.5, 7, 1);
+  ctx.fillStyle = v > .5 ? '#ff5a3c' : '#ffe36b'; ctx.beginPath(); ctx.arc(8.2, -9.6, 1.9 + v * .6, 0, 7); ctx.arc(5.4, -10.2, 1.3 + v * .4, 0, 7); ctx.fill();
+  // antennene med en liten lysbue mellom seg
+  ctx.strokeStyle = '#3a2418'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(6, -12); ctx.lineTo(4, -17); ctx.moveTo(9, -12); ctx.lineTo(11, -17); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,230,140,.95)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(4, -17); for (let k = 1; k < 4; k++) ctx.lineTo(4 + k * 1.75, -17 + (Math.sin(t * 30 + k * 2) > 0 ? -1.4 : 1.2)); ctx.lineTo(11, -17); ctx.stroke();
   ctx.restore();
 }
-// svevegnist: en liten flygende isolator med summende vinger
+// svevegnist: en flygende isolator med summende vinger og en avrevet kabel som henger under
 function tegnSveve(e) {
   const X = e.x + e.w / 2, Y = e.y + e.h / 2, t = e.t, va = e.varsel || 0;
-  ctx.save(); ctx.translate(X + (va > .5 ? Math.sin(t * 50) * 1.2 : 0), Y); ctx.scale(e.dir * 1.25, 1.25);
-  ctx.fillStyle = 'rgba(255,220,180,.4)'; const v = Math.sin(t * 40) * 3;
-  ctx.beginPath(); ctx.ellipse(-3, -7 + v * .3, 8, 3 + v * .5, -.4, 0, 7); ctx.ellipse(4, -7 - v * .3, 8, 3 - v * .4, .4, 0, 7); ctx.fill();
-  const gr = ctx.createLinearGradient(0, -8, 0, 8); gr.addColorStop(0, '#b0503a'); gr.addColorStop(1, '#3a1810');
+  ctx.save(); ctx.translate(X + (va > .5 ? Math.sin(t * 50) * 1.2 : 0), Y); ctx.scale(e.dir * 1.25, 1.25); ctx.lineCap = 'round';
+  // vingene: tynne metallrammer med slør
+  const v = Math.sin(t * 40) * 3;
+  ctx.fillStyle = 'rgba(255,220,180,.32)'; ctx.beginPath(); ctx.ellipse(-3, -8 + v * .3, 8, 3 + v * .5, -.4, 0, 7); ctx.ellipse(4, -8 - v * .3, 8, 3 - v * .4, .4, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(70,40,30,.7)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.ellipse(-3, -8 + v * .3, 8, 3 + v * .5, -.4, 0, 7); ctx.ellipse(4, -8 - v * .3, 8, 3 - v * .4, .4, 0, 7); ctx.stroke();
+  // kabelen som henger og svinger under
+  ctx.strokeStyle = '#1a0c06'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-2, 6); ctx.quadraticCurveTo(-5 + Math.sin(t * 3) * 3, 11, -3 + Math.sin(t * 3 + 1) * 4, 15); ctx.stroke();
+  ctx.strokeStyle = '#e09a54'; ctx.lineWidth = .8; ctx.beginPath(); const kx = -3 + Math.sin(t * 3 + 1) * 4; ctx.moveTo(kx, 15); ctx.lineTo(kx - 1.5, 17); ctx.moveTo(kx, 15); ctx.lineTo(kx + 1.2, 17.2); ctx.stroke();
+  // kroppen: en brun isolator med ribber
+  const gr = ctx.createLinearGradient(0, -8, 0, 8); gr.addColorStop(0, '#bb5a3e'); gr.addColorStop(.55, '#7a2e1c'); gr.addColorStop(1, '#3a1810');
   ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, 9, 7, 0, 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.1; ctx.stroke();
-  ctx.fillStyle = '#f2c23c'; ctx.fillRect(-6, 4, 12, 2.5);
-  ctx.fillStyle = va > .5 ? '#ff5a3c' : '#ffe36b'; ctx.beginPath(); ctx.arc(5, -1, 2.4 + va * .6, 0, 7); ctx.fill();
+  ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,.28)'; for (let k = -1; k <= 1; k++) ctx.fillRect(-9, k * 3.6 + .8, 18, 1.2);
+  ctx.fillStyle = 'rgba(255,225,190,.2)'; ctx.beginPath(); ctx.ellipse(-2, -4, 5, 1.6, -.2, 0, 7); ctx.fill(); rustFlekker(-9, -7, 18, 14, 31, 2, .7); ctx.restore();
+  ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(0, 0, 9, 7, 0, 0, 7); ctx.stroke();
+  // metallkappe og varselbånd
+  ctx.fillStyle = '#5a5e68'; rr(ctx, -4, -9, 8, 3, 1); ctx.fill(); ctx.fillStyle = '#f2c23c'; ctx.fillRect(-6, 4, 12, 2.5); ctx.fillStyle = '#1a1a1a'; for (let k = -5; k < 6; k += 3) ctx.fillRect(k, 4, 1.2, 2.5);
+  ctx.fillStyle = va > .5 ? '#ff5a3c' : '#ffe36b'; ctx.beginPath(); ctx.arc(5, -1, 2.4 + va * .6, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(5.6, -1.7, .7, 0, 7); ctx.fill();
   ctx.restore();
 }
-// releet står på gulvet og blinker mens det lader
+// releet står på gulvet og blinker mens det lader. Kontaktarmen slår ned når det fyrer.
 function tegnRele(e) {
-  const X = e.x + e.w / 2, Y = e.y + e.h;
-  ctx.save(); ctx.translate(X, Y); ctx.scale(1.15, 1.15);
-  ctx.fillStyle = '#4a2a22'; rr(ctx, -11, -20, 22, 20, 3); ctx.fill(); ctx.strokeStyle = 'rgba(255,170,110,.85)'; ctx.lineWidth = 1.2; ctx.stroke();
-  ctx.fillStyle = '#e07a2a'; for (let k = 0; k < 3; k++) ctx.fillRect(-7, -16 + k * 4, 14, 2.2);
-  const lad = e.lad > 0 && Math.sin(S.t * (14 + e.lad * 30)) > 0;
-  ctx.fillStyle = lad ? '#ffffff' : '#ffe36b'; ctx.beginPath(); ctx.arc(e.dir * 8, -9, 2.8, 0, 7); ctx.fill();
+  const X = e.x + e.w / 2, Y = e.y + e.h, lad = e.lad > 0 && Math.sin(S.t * (14 + e.lad * 30)) > 0;
+  ctx.save(); ctx.translate(X, Y); ctx.scale(1.15, 1.15); ctx.lineCap = 'round';
+  // kabel ut bak
+  ctx.strokeStyle = '#1a0c06'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-e.dir * 10, -5); ctx.quadraticCurveTo(-e.dir * 16, -3, -e.dir * 18, 0); ctx.stroke();
+  // stålkassen med rust og nagler
+  const gr = ctx.createLinearGradient(0, -20, 0, 0); gr.addColorStop(0, '#5e3a2e'); gr.addColorStop(1, '#341a14');
+  ctx.fillStyle = gr; rr(ctx, -11, -20, 22, 20, 3); ctx.fill();
+  ctx.save(); rr(ctx, -11, -20, 22, 20, 3); ctx.clip(); rustRenner(-11, -20, 22, 20, 61, 3); rustFlekker(-11, -20, 22, 20, 62, 3, .6); ctx.restore();
+  ctx.strokeStyle = 'rgba(255,170,110,.85)'; ctx.lineWidth = 1.2; rr(ctx, -11, -20, 22, 20, 3); ctx.stroke();
+  nagler([[-8.5, -17.5], [8.5, -17.5], [-8.5, -2.5], [8.5, -2.5]], .8);
+  // spolen med kobbervikling
+  ctx.fillStyle = '#20120d'; rr(ctx, -7, -17, 9, 13, 1.5); ctx.fill();
+  for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#b8662a' : '#e08a3a'; ctx.fillRect(-6, -16 + k * 2.4, 7, 1.6); }
+  // kontaktarmen: løftet når den lader, slått ned ellers
+  ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(3, -14); ctx.lineTo(9, e.lad > 0 ? -17 : -12); ctx.stroke();
+  ctx.fillStyle = lad ? '#ffffff' : '#ffe36b'; ctx.beginPath(); ctx.arc(e.dir * 6 + 1, -7, 2.6, 0, 7); ctx.fill();
   ctx.fillStyle = '#1a0c06'; ctx.fillRect(-12, -2, 24, 2);
   ctx.restore();
 }

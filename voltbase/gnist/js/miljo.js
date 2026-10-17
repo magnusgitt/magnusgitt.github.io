@@ -54,3 +54,41 @@ function tegnSump(x, y) {
       if (i % 2) { ctx.fillStyle = '#3a2618'; ctx.beginPath(); ctx.ellipse(sx + Math.sin(a) * h * .9, Y - h * .9, 1.6, 4, a, 0, 7); ctx.fill(); } } }
 }
 TEGN_VERDEN.unshift(tegnGress);
+// ---------- vær: regnbyger over den døde byen, løv som faller fra trærne og tåke over dammen ----------
+const VAER = { regn: 0, take: 0, lov: Array.from({ length: 12 }, () => ({ x: Math.random(), y: Math.random(), ph: Math.random() * 6.28, s: .6 + Math.random() * .6, f: Math.random() < .5 })) };
+const DRAPER = Array.from({ length: 170 }, () => ({ x: Math.random(), y: Math.random(), z: .5 + Math.random() * .8 }));
+// regnet kommer i byger: litt yr nesten hele tiden, og en skikkelig byge av og til
+const bygeStyrke = () => .2 + .8 * clamp(Math.sin(S.t * .045) * 1.8 - .4, 0, 1);
+function oppdaterVaer(dt) {
+  const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T), sone = soneFor(ty), ute = !inne(tx, ty);
+  const regnMaal = ute && sone === 0 ? bygeStyrke() * (1 - lysNiva() * .5) : 0, takeMaal = ute && sone === 2 ? 1 : 0;
+  VAER.regn += (regnMaal - VAER.regn) * Math.min(1, dt * .8); VAER.take += (takeMaal - VAER.take) * Math.min(1, dt * .6);
+}
+function tegnVaer() {
+  if (S.kval < 1 && VAER.regn < .05) return;
+  const cw = cv.width, ch = cv.height;
+  if (VAER.regn > .02) {
+    // regnstriper i skrå vinkel, nærmeste dråper raskest og tydeligst
+    const n = Math.round(DRAPER.length * VAER.regn * (S.kval < 2 ? .5 : 1)), sk = -.18 + gressVind(P.x) * .3;
+    ctx.strokeStyle = 'rgba(175,200,235,.55)'; ctx.lineCap = 'round';
+    for (let i = 0; i < n; i++) { const d = DRAPER[i], l = (10 + d.z * 14) * dpr;
+      const sy = ((d.y * ch + S.t * (700 + d.z * 500) * dpr - cam.y * skala * dpr * d.z * .4) % (ch + l * 2) + ch + l * 2) % (ch + l * 2) - l;
+      const sx = ((d.x * cw + sy * sk - cam.x * skala * dpr * d.z * .4) % (cw + 40) + cw + 40) % (cw + 40) - 20;
+      ctx.globalAlpha = (.12 + d.z * .22) * Math.min(1, VAER.regn * 1.4); ctx.lineWidth = (.6 + d.z * .7) * dpr;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + sk * l, sy + l); ctx.stroke(); }
+    // en svak grå slør over bildet når det regner tett
+    ctx.globalAlpha = VAER.regn * .07; ctx.fillStyle = '#9fb4cc'; ctx.fillRect(0, 0, cw, ch);
+  }
+  // løv som virvler ned i byen, bare ute
+  if (S.kval > 0 && SYN.ute && soneFor(Math.floor(P.y / T)) === 0) for (const b of VAER.lov) {
+    const sx = ((b.x * cw + Math.sin(S.t * .9 + b.ph) * 40 * dpr + S.t * 18 * dpr * b.s - cam.x * skala * dpr * .9) % (cw + 40) + cw + 40) % (cw + 40) - 20;
+    const sy = ((b.y * ch + S.t * 34 * dpr * b.s - cam.y * skala * dpr * .9) % (ch + 40) + ch + 40) % (ch + 40) - 20, r = (2.6 + b.s * 1.8) * dpr;
+    ctx.globalAlpha = .55; ctx.fillStyle = b.f ? '#3d5a34' : '#6a4a2a'; ctx.save(); ctx.translate(sx, sy); ctx.rotate(S.t * 2 * b.s + b.ph); ctx.scale(1, Math.abs(Math.sin(S.t * 3 * b.s + b.ph)) * .8 + .2);
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * .45, 0, 0, 7); ctx.fill(); ctx.restore(); }
+  // lav tåke som driver langs bakken ved dammen
+  if (VAER.take > .02) for (let i = 0; i < 3; i++) { const w = cw * 1.3, x = ((S.t * (14 + i * 9) * dpr - cam.x * skala * dpr * (.9 + i * .15) + i * w * .5) % (cw + w) + cw + w) % (cw + w) - w;
+    ctx.globalAlpha = .1 * VAER.take; ctx.drawImage(TAKE, x, ch * (.62 + i * .1), w, w * .28); }
+  ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+}
+OPPDATER.push(oppdaterVaer);
+TEGN_FORAN.push(tegnVaer);

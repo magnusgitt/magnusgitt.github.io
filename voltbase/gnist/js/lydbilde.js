@@ -1,11 +1,14 @@
 'use strict';
 // Gnist – lydbildet: vind over ruinene, gammelt metall som knirker, fottrinn etter underlag,
 // metallstønn når en boss våkner, og lyden av at strømmen kommer tilbake.
-const LB = { vind: null, filter: null, knirkT: 5, niva: -1, stromT: 0, fase: [] };
+const LB = { vind: null, filter: null, regn: null, knirkT: 5, niva: -1, stromT: 0, fase: [] };
 function lydbildeInit() {
   if (LB.vind || !A.c) return;
   try { const c = A.c, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = A.stoy; s.loop = true;
-    f.type = 'bandpass'; f.frequency.value = 500; f.Q.value = .7; g.gain.value = 0; s.connect(f); f.connect(g); g.connect(A.master); s.start(); LB.vind = g; LB.filter = f; } catch (e) {}
+    f.type = 'bandpass'; f.frequency.value = 500; f.Q.value = .7; g.gain.value = 0; s.connect(f); f.connect(g); g.connect(A.master); s.start(); LB.vind = g; LB.filter = f;
+    // regnet: høyfrekvent sus som følger bygene
+    const s2 = c.createBufferSource(), f2 = c.createBiquadFilter(), g2 = c.createGain(); s2.buffer = A.stoy; s2.loop = true; s2.playbackRate.value = .93;
+    f2.type = 'highpass'; f2.frequency.value = 2400; g2.gain.value = 0; s2.connect(f2); f2.connect(g2); g2.connect(A.master); s2.start(); LB.regn = g2; } catch (e) {}
 }
 // hva montøren står på
 function underlag() {
@@ -38,6 +41,7 @@ function oppdaterLydbilde(dt) {
   // vinden: sterkest ute i den døde byen, stilner litt etter hvert som byen våkner
   const maal = !spill || !lydPa ? 0 : (ute ? .045 : .01) * (1 - lysNiva() * .4) * (.75 + .25 * Math.sin(S.t * .23)) + kast * .05;
   LB.vind.gain.setTargetAtTime(maal, t, .7); LB.filter.frequency.setTargetAtTime(360 + 240 * (.5 + .5 * Math.sin(S.t * .31)) + kast * 600, t, .8);
+  if (LB.regn) LB.regn.gain.setTargetAtTime(spill && lydPa ? VAER.regn * .035 : 0, t, .6);
   if (spill && ute && sone === 0) { LB.knirkT -= dt * (1.2 - lysNiva() * .7); if (LB.knirkT <= 0) { LB.knirkT = 8 + Math.random() * 12; knirk(Math.random() < .3); } }
   // en boss som våkner, stønner som gammelt metall
   [B, B2, B3, B4].forEach((b, i) => { if (b.fase === 'intro' && LB.fase[i] !== 'intro') { knirk(true); lyd('metallstonn'); } LB.fase[i] = b.fase; });
