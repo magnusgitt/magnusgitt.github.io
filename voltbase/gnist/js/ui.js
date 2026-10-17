@@ -336,6 +336,7 @@ $('#bSnuOk').addEventListener('click', lukkSnu);
 $('#bVib').addEventListener('click', () => { INNST.vib = !INNST.vib; lagreInnst(); vib(30); });
 $('#bRist').addEventListener('click', () => { INNST.rist = !INNST.rist; lagreInnst(); });
 $('#bTips').addEventListener('click', () => { INNST.tips = !INNST.tips; lagreInnst(); });
+$('#bGrafikk').addEventListener('click', () => { const r = ['auto', 2, 1, 0]; settGrafikk(r[(r.indexOf(INNST.grafikk) + 1) % r.length]); });
 settLyd(lydPa); visInnst();
 
 // egne knappeplasseringer: flyttes med translate/scale, så treffområdet følger knappen

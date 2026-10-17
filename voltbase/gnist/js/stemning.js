@@ -40,10 +40,13 @@ function oppdaterStemning(dt, snap) {
 // ---------- kvalitet ----------
 // 2: alt, 1: uten bloom, 0: uten innendørs parallakse og lysstråler. Går ned av seg selv hvis bildet blir tregt.
 const KVAL_FAST = (() => { try { const v = new URLSearchParams(location.search).get('kval'); return v === null ? -1 : clamp(parseInt(v, 10) || 0, 0, 2); } catch (e) { return -1; } })();
-S.kval = KVAL_FAST >= 0 ? KVAL_FAST : 2;
+// fast kvalitet: fra adressen (?kval=) eller valgt i innstillingene; ellers velges den automatisk
+const kvalLast = () => KVAL_FAST >= 0 ? KVAL_FAST : INNST.grafikk === 'auto' ? -1 : INNST.grafikk;
+S.kval = kvalLast() >= 0 ? kvalLast() : 2;
+function settGrafikk(v) { INNST.grafikk = v; const f = kvalLast(), ny = f >= 0 ? f : 2; if ((ny === 0) !== (S.kval === 0)) chunks.clear(); S.kval = ny; MAAL.sum = MAAL.n = 0; lagreInnst(); }
 const MAAL = { sum: 0, n: 0, spilt: 0 };
 function maalYtelse(rdt) {
-  if (KVAL_FAST >= 0 || S.mode !== 'spill' || document.hidden) { MAAL.sum = MAAL.n = 0; return; }
+  if (kvalLast() >= 0 || S.mode !== 'spill' || document.hidden) { MAAL.sum = MAAL.n = 0; return; }
   MAAL.spilt += rdt; if (MAAL.spilt < 4) return;          // la oppstarten roe seg først
   MAAL.sum += rdt; MAAL.n++;
   if (MAAL.n >= 120) { const snitt = MAAL.sum / MAAL.n; MAAL.sum = MAAL.n = 0;

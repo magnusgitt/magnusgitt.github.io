@@ -396,6 +396,13 @@ async function fase7(b) {
   // hjelpetekst av/på
   await page.keyboard.press('Escape'); await vent(page, 300); await page.click('#bTips'); await vent(page, 100);
   sjekk('hjelpetekst kan slås av', await page.evaluate(k => JSON.parse(localStorage.getItem(k + '-innst')).tips === false && document.querySelector('#bTips').textContent.includes('av'), KEY));
+  // grafikkvalget: automatisk, høy, middels, lav, og tilbake til automatisk
+  await page.click('#bGrafikk'); await page.click('#bGrafikk'); await vent(page, 100);
+  let gv = await page.evaluate(k => ({ kval: S.kval, tekst: document.querySelector('#bGrafikk').textContent, lagret: JSON.parse(localStorage.getItem(k + '-innst')).grafikk }), KEY);
+  sjekk('grafikk kan settes til middels', gv.kval === 1 && gv.tekst.includes('middels') && gv.lagret === 1, gv);
+  await page.click('#bGrafikk'); await page.click('#bGrafikk'); await vent(page, 100);
+  gv = await page.evaluate(() => ({ kval: S.kval, tekst: document.querySelector('#bGrafikk').textContent }));
+  sjekk('grafikk tilbake på automatisk', gv.kval === 2 && gv.tekst.includes('automatisk'), gv);
   await page.keyboard.press('Escape'); await vent(page, 200);
   await page.evaluate(() => { document.querySelector('#hint').classList.remove('vis'); hint('testtips', 'Test'); });
   sjekk('ingen hjelpetekst når den er av', await page.evaluate(() => !document.querySelector('#hint').classList.contains('vis')));
