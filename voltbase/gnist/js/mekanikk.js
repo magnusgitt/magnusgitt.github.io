@@ -231,7 +231,7 @@ function fiende2Glod(e) {
 
 // ---------- bosser fra de nye områdene ----------
 // hver boss: { navn, aktiv(), hp(), maks, kamp() (vises i HUD) }
-const anyBoss = () => B.aktiv || B2.aktiv || B3.aktiv || B4.aktiv || BOSSER.some(b => b.aktiv());
+const anyBoss = () => B.aktiv || B2.aktiv || B3.aktiv || B4.aktiv || BOSSER.some(b => b.aktiv()) || !!MR.rom;
 const ekstraBoss = () => BOSSER.find(b => b.aktiv() && b.kamp());
 
 // ---------- registrering ----------
@@ -285,3 +285,86 @@ function vannGlod() {
 }
 OPPDATER.push(dt => { const v = P.iVann && vannVed(P.x + P.w / 2, P.y + P.h - 4); if (v && v.felle && v.elektrisk() && S.dod <= 0) { gnister(P.x + P.w / 2, P.y + P.h / 2, 10, 'c'); skade(0, true); } });
 TEGN_GLOD.push(vannGlod);
+
+// ---------- glatt gulv: hver kilde sier om montøren står på is akkurat nå ----------
+const GLATT = [];
+const glattGulv = () => GLATT.some(f => f());
+
+// ---------- fiberrør: med fiberløpet bærer lyset montøren gjennom kabelrørene ----------
+// { pkt: [[x, y], ...] rutene røret går gjennom, fra munning til munning, krav?(): åpent? }
+const ROR = [];
+function rorMaal(r) { if (r.len) return; r.seg = []; r.len = 0;
+  for (let i = 0; i + 1 < r.pkt.length; i++) { const [x0, y0] = r.pkt[i], [x1, y1] = r.pkt[i + 1], l = Math.hypot(x1 - x0, y1 - y0) * T; r.seg.push(l); r.len += l; } }
+function rorPunkt(r, s) { rorMaal(r); s = clamp(s, 0, r.len);
+  for (let i = 0; i < r.seg.length; i++) { if (s <= r.seg[i] || i === r.seg.length - 1) { const k = r.seg[i] ? s / r.seg[i] : 0, [x0, y0] = r.pkt[i], [x1, y1] = r.pkt[i + 1];
+    return [(x0 + (x1 - x0) * k + .5) * T, (y0 + (y1 - y0) * k + .5) * T]; } s -= r.seg[i]; } return [0, 0]; }
+function oppdaterRorInngang(dt) {
+  P.rorCd = Math.max(0, (P.rorCd || 0) - dt);
+  if (P.ror || P.rorCd > 0 || S.dod > 0 || S.overgang || S.mode !== 'spill') return;
+  const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
+  for (const r of ROR) for (const ende of [0, 1]) { const [mx, my] = r.pkt[ende ? r.pkt.length - 1 : 0];
+    if (Math.abs(pcx - (mx + .5) * T) > 15 || Math.abs(pcy - (my + .5) * T) > 20) continue;
+    if (!S.ev.fiber) { hint('ror', 'Et fiberrør. Bare lys kommer gjennom det.', 3.5); return; }
+    if (r.krav && !r.krav()) { hint('rorstengt', 'Røret er stengt mens kampen pågår.', 3); return; }
+    rorMaal(r); if (P.krok) slippKrok(false);
+    P.ror = { r, s: ende ? r.len : 0, dir: ende ? -1 : 1 }; P.vx = P.vy = 0; P.dashT = 0; lyd('stot'); GN.flare = 1; sprut(pcx, pcy, 14, 'c', 180); return; }
+}
+// kalles fra montørens bevegelse: mens han er i røret styrer røret alt
+function flyttIRor(p, dt) {
+  const o = p.ror, r = o.r; o.s += o.dir * 1150 * dt; p.inv = Math.max(p.inv, .25);
+  const [x, y] = rorPunkt(r, o.s); p.x = x - p.w / 2; p.y = y - p.h / 2; p.vx = p.vy = 0; p.onGround = false;
+  if (Math.random() < dt * 40) part(x, y, (Math.random() - .5) * 40, (Math.random() - .5) * 40, .3, 4, 'c', 0);
+  if ((o.dir > 0 && o.s >= r.len) || (o.dir < 0 && o.s <= 0)) {
+    const n = r.pkt.length, [ax, ay] = o.dir > 0 ? r.pkt[n - 2] : r.pkt[1], [bx, by] = o.dir > 0 ? r.pkt[n - 1] : r.pkt[0], l = Math.hypot(bx - ax, by - ay) || 1, dx = (bx - ax) / l, dy = (by - ay) / l;
+    p.ror = null; p.rorCd = .8; p.air = S.ev.dobbel ? 1 : 0; p.canDash = true; p.safeX = p.x; p.safeY = p.y;
+    if (dy < -.5) p.vy = -560; else { p.vx = dx * 300; p.vy = dy > .5 ? 120 : -200; }
+    lyd('land'); sprut(x, y, 18, 'c', 220); GN.x = x; GN.y = y - 20;
+  }
+}
+function tegnRor() {
+  for (const r of ROR) { rorMaal(r); const [mx, my] = rorPunkt(r, r.len / 2); if (!synlig(mx, my, r.len / 2 + 100)) continue;
+    const sti = () => { ctx.beginPath(); r.pkt.forEach(([x, y], i) => i ? ctx.lineTo((x + .5) * T, (y + .5) * T) : ctx.moveTo((x + .5) * T, (y + .5) * T)); };
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    sti(); ctx.strokeStyle = '#0d1218'; ctx.lineWidth = 16; ctx.stroke(); ctx.strokeStyle = '#2b3846'; ctx.lineWidth = 11; ctx.stroke();
+    ctx.strokeStyle = 'rgba(160,210,255,.25)'; ctx.lineWidth = 2; ctx.stroke();
+    // klammer langs røret
+    ctx.fillStyle = '#5a6878'; for (let s = 20; s < r.len - 10; s += 44) { const [x, y] = rorPunkt(r, s); ctx.fillRect(x - 3, y - 3, 6, 6); }
+    // munningene
+    for (const ende of [0, 1]) { const [x, y] = r.pkt[ende ? r.pkt.length - 1 : 0], X = (x + .5) * T, Y = (y + .5) * T, apen = S.ev.fiber && (!r.krav || r.krav());
+      ctx.fillStyle = '#0d1218'; ctx.beginPath(); ctx.arc(X, Y, 12, 0, 7); ctx.fill(); ctx.strokeStyle = apen ? '#8fe3ff' : '#4a5a6a'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = apen ? 'rgba(170,240,255,' + (.5 + .3 * Math.sin(S.t * 4 + x)) + ')' : '#1a222c'; ctx.beginPath(); ctx.arc(X, Y, 6, 0, 7); ctx.fill(); }
+    ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'; }
+}
+function rorGlod() {
+  for (const r of ROR) { rorMaal(r); const [mx, my] = rorPunkt(r, r.len / 2); if (!synlig(mx, my, r.len / 2 + 100)) continue;
+    if (S.ev.fiber) { const [x, y] = rorPunkt(r, (S.t * 260) % r.len); glod(SPR.c, x, y, 14, .7); }
+    for (const ende of [0, 1]) { const [x, y] = r.pkt[ende ? r.pkt.length - 1 : 0]; glod(SPR.c, (x + .5) * T, (y + .5) * T, 26, S.ev.fiber ? .55 : .15); } }
+  if (P.ror) { glod(SPR.c, P.x + P.w / 2, P.y + P.h / 2, 46, 1); glod(SPR.h, P.x + P.w / 2, P.y + P.h / 2, 12, 1); }
+}
+OPPDATER.push(oppdaterRorInngang);
+TEGN_VERDEN.unshift(tegnRor);
+TEGN_GLOD.push(rorGlod);
+TILBAKESTILL.push(() => { P.ror = null; });
+
+// ---------- minibossrom: en valgfri kamp i bølger, med premie til slutt ----------
+// { id: oppdragsnøkkel, navn, x0, x1, y0, y1: rommet, dorer: [[x0, y0, x1, y1]], bolger: [[fiende, ...], ...], premie() }
+const MINIROM = [];
+const MR = { rom: null, bolge: 0, fiender: [], pause: 0 };
+function lukkMinirom(v) { for (const d of MR.rom.dorer) rect(d[0], d[1], d[2], d[3], v); }
+function oppdaterMinirom(dt) {
+  if (S.dod > 0 || S.overgang) return;
+  const tx = (P.x + P.w / 2) / T, ty = (P.y + P.h / 2) / T;
+  if (!MR.rom) { const r = MINIROM.find(r => !S.oppdrag[r.id] && tx > r.x0 + 1 && tx < r.x1 && ty > r.y0 && ty < r.y1 + 1); if (!r) return;
+    Object.assign(MR, { rom: r, bolge: 0, fiender: [], pause: 1.4 }); lukkMinirom(DOOR); lyd('dor'); S.shake = .3; banner(r.navn, `Overlev ${r.bolger.length} bølger`, 2.2); return; }
+  const r = MR.rom;
+  if (MR.fiender.length && MR.fiender.every(e => !e.liv)) { MR.fiender = []; MR.bolge++; MR.pause = 1.1; }
+  if (MR.fiender.length) return;
+  if (MR.bolge >= r.bolger.length) {
+    S.oppdrag[r.id] = 1; lukkMinirom(AIR); lyd('slutt'); S.flash = .5; S.flashF = '200,240,255'; banner('Rommet er ryddet', 'Femten lysorber til verkstedet', 3);
+    r.premie && r.premie(); S.brukt -= 15; MR.rom = null; lagre(); hud(); return; }
+  MR.pause -= dt; if (MR.pause > 0) return;
+  for (const f of r.bolger[MR.bolge]) { const e = lagEnFiende(f); fiender.push(e); MR.fiender.push(e); sprut(e.x + e.w / 2, e.y + e.h / 2, 16, 'c', 200); }
+  lyd('varsel'); toast(`Bølge ${MR.bolge + 1} av ${r.bolger.length}`);
+}
+OPPDATER.push(oppdaterMinirom);
+TILBAKESTILL.push(() => { if (MR.rom) { lukkMinirom(AIR); MR.rom = null; MR.fiender = []; } });

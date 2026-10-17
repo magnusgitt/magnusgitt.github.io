@@ -275,7 +275,8 @@ PAL.fjell = { c: ['#000', '#36404f', '#2b3443', '#222a37', '#1b212c', '#151a23',
 PAL.betong = { c: ['#000', '#3a4446', '#2f383a', '#262e30', '#1e2527', '#181e20', '#121719'], mose: '#3f6a5c', stra: ['#5c8f7a', '#74a890', '#4a7866'], gress: true, rim: 'rgba(170,240,220,.4)' };
 PAL.ute.rim = 'rgba(190,255,225,.4)'; PAL.kjeller.rim = 'rgba(255,215,170,.3)'; PAL.hall.rim = 'rgba(205,190,255,.32)'; PAL.kabel.rim = 'rgba(150,240,250,.3)'; PAL.kraft.rim = 'rgba(190,255,170,.32)';
 PAL.sump = { c: ['#000', '#2f3a2c', '#273123', '#1f281c', '#192017', '#141a12', '#0f140d'], mose: '#4f7a3c', stra: ['#5f8a4a', '#7aa25c', '#4c7038'], gress: true, rim: 'rgba(190,240,160,.35)' };
-const palAt = (x, y) => y >= 159 ? PAL.sump : y >= 118 ? PAL.betong : y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
+PAL.data = { c: ['#000', '#2c3444', '#242b3a', '#1d2330', '#171c28', '#121620', '#0d1018'], mose: '#3a4a60', stra: ['#4a5a70', '#5a6a80', '#3a4a60'], rim: 'rgba(150,200,255,.35)' };
+const palAt = (x, y) => y >= 200 ? PAL.data : y >= 159 ? PAL.sump : y >= 118 ? PAL.betong : y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
 const chunks = new Map();

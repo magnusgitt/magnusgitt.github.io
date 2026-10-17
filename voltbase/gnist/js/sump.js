@@ -28,6 +28,7 @@ OMRAADER.push({ navn: 'Sumpen', kart: [
   [40, 189, 100, 193, AIR], [40, 194, 100, 194, AIR],      // kulverten
   [48, 194, 56, 194, VANN], [72, 194, 80, 194, VANN], [86, 194, 92, 194, VANN],
   [62, 191, 64, 191, ONE], [83, 191, 85, 191, ONE],
+  [20, 189, 30, 192, AIR],                                 // gjemmestedet under sumpkanten (fiberrøret)
 ] });
 const ARENA7 = { x0: 172, x1: 196, gulv: 185, midt: 184.5, tak: 165 };
 
@@ -51,13 +52,19 @@ SJEKK.push({ x: 8, y: 184 }, { x: 76, y: 184 }, { x: 121, y: 184 }, { x: 166, y:
 FAG.push(
   { x: 86, y: 179, tittel: 'Nedfalt ledning', tekst: 'Regn alltid med at en ledning som ligger på bakken er strømførende. Hold god avstand, hold andre unna og ring 112.' },
   { x: 60, y: 193, tittel: 'Skrittspenning', tekst: 'Når strøm går ned i bakken, synker spenningen utover fra stedet. Står du med beina fra hverandre, kan det bli farlig spenning mellom dem. Ta små skritt for å komme deg unna.' },
+  { x: 94, y: 193, tittel: 'Jordelektrode', tekst: 'Et anlegg jordes med en jordelektrode, for eksempel et jordspyd eller en ringjord rundt bygget. Lav overgangsmotstand til jord gir et sikrere anlegg.' },
+  { x: 25, y: 192, spor: true, tittel: 'Spor: et navneskilt', tekst: 'Et navneskilt av messing: «Vaktelektriker, Sentralen.» Navnet er slitt bort. Bare tittelen kan leses.' },
   { x: 159, y: 172, tittel: 'Vernesko', tekst: 'Vernesko for elektrikere kan ha isolerende såle. De er et ekstra vern, men erstatter aldri det å gjøre anlegget spenningsløst.' });
 ORBER.push([12, 182], [24, 178], [33, 175], [45, 181], [48, 175], [55, 182], [58, 171], [64, 181], [77, 177], [85, 178], [92, 170], [93, 174],
   [106, 184], [116, 184], [127, 184], [137, 184], [144, 174], [149, 182], [151, 178], [160, 182], [164, 167],
-  [44, 191], [52, 192], [63, 189], [76, 192], [84, 189], [90, 192], [96, 191]);
+  [44, 191], [52, 192], [63, 189], [76, 192], [84, 189], [90, 192], [96, 191], [22, 191], [27, 192], [29, 190]);
 FIENDE_DEF.push({ type: 'padde', x0: 40, x1: 52, y: 184 }, { type: 'padde', x0: 57, x1: 70, y: 184 }, { type: 'sverm', x: 58, y: 168 },
   { type: 'skjold', x0: 84, x1: 94, y: 184 }, { type: 'sverm', x: 89, y: 175 }, { type: 'sverm', x: 108, y: 184 }, { type: 'sverm', x: 128, y: 184 },
-  { type: 'padde', x0: 142, x1: 154, y: 184 }, { type: 'sverm', x: 150, y: 168 }, { type: 'jager', x: 165, y: 170 }, { type: 'padde', x0: 82, x1: 98, y: 193 });
+  { type: 'padde', x0: 142, x1: 154, y: 184 }, { type: 'sverm', x: 150, y: 168 }, { type: 'jager', x: 165, y: 170 });
+MINIROM.push({ id: 'minisump', navn: 'Kulverten', x0: 82, x1: 99, y0: 189, y1: 194, dorer: [[81, 189, 81, 194], [97, 188, 98, 188]],
+  bolger: [[{ type: 'padde', x0: 83, x1: 99, y: 194 }, { type: 'padde', x0: 83, x1: 99, y: 194 }],
+    [{ type: 'sverm', x: 88, y: 191 }, { type: 'sverm', x: 95, y: 191 }, { type: 'padde', x0: 83, x1: 99, y: 194 }],
+    [{ type: 'jager', x: 90, y: 190 }, { type: 'skjold', x0: 83, x1: 99, y: 194 }, { type: 'sverm', x: 85, y: 191 }]] });
 
 // ---------- nye fiender ----------
 // spolepadde: en tung spole som sitter stille og hopper mot montøren når han kommer nær

@@ -9,6 +9,7 @@ function jagget(x1, y1, x2, y2, utslag, n, seed) { const r = rng(seed); ctx.begi
 function synlig(x, y, m) { const vw = cssW / skala, vh = cssH / skala; return x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m; }
 
 function tegnBakgrunn(kx, ky) {
+  if (ky >= XY0 * T - 1) return tegnDataBg(kx, ky);
   if (ky >= SY0 * T - 1) return tegnSumpBg(kx, ky);
   if (ky >= DY0 * T - 1) return tegnDamBg(kx, ky);
   if (ky >= LY0 * T - 1) return tegnLinjaBg(kx, ky);
@@ -102,6 +103,7 @@ function tegnFunn(f) {
   else if (f.id === 'krok') { ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(-1, -2, 5, 0, 7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(4, -2); ctx.quadraticCurveTo(9, 4, 2, 8); ctx.stroke(); ctx.fillRect(-2, -3, 2, 2); }
   else if (f.id === 'klatre') { ctx.fillRect(-2, -9, 4, 14); ctx.beginPath(); ctx.moveTo(2, -2); ctx.lineTo(9, -6); ctx.lineTo(9, -3); ctx.lineTo(2, 1); ctx.fill(); ctx.beginPath(); ctx.moveTo(-2, 5); ctx.lineTo(2, 5); ctx.lineTo(0, 10); ctx.fill(); }
+  else if (f.id === 'fiber') { ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(-8, 5); ctx.bezierCurveTo(-3, -8, 3, 8, 8, -5); ctx.stroke(); ctx.fillRect(-9, 4, 4, 4); ctx.fillRect(5, -7, 4, 4); }
   else if (f.id === 'stovler') { ctx.beginPath(); ctx.moveTo(-6, -9); ctx.lineTo(0, -9); ctx.lineTo(0, 1); ctx.lineTo(6, 3); ctx.lineTo(7, 7); ctx.lineTo(-7, 7); ctx.lineTo(-7, 4); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#1d2228'; ctx.fillRect(-7, 5, 14, 2); }
   else if (f.id.startsWith('liv')) { ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(0, 7); ctx.bezierCurveTo(-9, 1, -7, -8, 0, -3); ctx.bezierCurveTo(7, -8, 9, 1, 0, 7); ctx.fill(); }
   else { ctx.beginPath(); ctx.moveTo(2, -9); ctx.lineTo(-5, 1); ctx.lineTo(0, 1); ctx.lineTo(-2, 9); ctx.lineTo(5, -2); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill(); }
@@ -181,7 +183,7 @@ function tegnRele(e) {
 // fagkort: et lite gult kort som svever
 function tegnFagkort() { FAG.forEach((f, i) => { if (S.fag.has(i)) return; const X = f.x * T + T / 2, Y = f.y * T + T / 2 + Math.sin(S.t * 2 + i) * 3; if (!synlig(X, Y, 60)) return;
   ctx.save(); ctx.translate(X, Y); ctx.rotate(Math.sin(S.t * 1.3 + i) * .15);
-  ctx.fillStyle = '#ffd36b'; rr(ctx, -8, -10, 16, 20, 2.5); ctx.fill(); ctx.fillStyle = '#3a2408'; ctx.fillRect(-5, -6, 10, 1.6); ctx.fillRect(-5, -2, 10, 1.6); ctx.fillRect(-5, 2, 7, 1.6);
+  ctx.fillStyle = f.spor ? '#bfe8ff' : '#ffd36b'; rr(ctx, -8, -10, 16, 20, 2.5); ctx.fill(); ctx.fillStyle = f.spor ? '#10283a' : '#3a2408'; ctx.fillRect(-5, -6, 10, 1.6); ctx.fillRect(-5, -2, 10, 1.6); ctx.fillRect(-5, 2, 7, 1.6);
   ctx.fillStyle = '#e07a22'; ctx.beginPath(); ctx.moveTo(1, 4); ctx.lineTo(-2, 8.5); ctx.lineTo(.5, 8.5); ctx.lineTo(-1, 11); ctx.lineTo(3.5, 6); ctx.lineTo(1, 6); ctx.fill();
   ctx.restore(); }); }
 // verkstedbenk ved sjekkpunktet
@@ -387,7 +389,7 @@ function oppdaterAnim(p) {
   return A.p;
 }
 function tegnSpiller() {
-  const p = P; if (S.dod > 0) return;
+  const p = P; if (S.dod > 0 || p.ror) return;
   const pose = oppdaterAnim(p), A = ANIM;
   // etterbilder fra strømstøtet
   ctx.globalCompositeOperation = 'lighter';

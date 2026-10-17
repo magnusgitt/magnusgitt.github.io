@@ -662,6 +662,73 @@ async function sump(b) {
   await ctx.close();
 }
 
+async function datasenter(b) {
+  console.log('Fase 3: Datasenteret');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  const ev = { dobbel: true, hansker: true, stot: true, krok: true, liv: true, liv2: true, tester: true, sliper: true, liv4: true, klatre: true, liv5: true, glid: true, liv6: true, jord: true, liv7: true, stovler: true, liv8: true };
+  const lagring = { v: 4, ev, cp: 5, cpLit: [...Array(26).keys()], orb: [], boss: true, boss2: true, boss3: true, boss4: true, boss5: true, boss6: true, boss7: true, oppdrag: { jord: 3, maaler: 3, jordet: 1 }, helt: true, ferdig: true, tid: 1800 };
+  await page.evaluate(([k, l]) => localStorage.setItem(k, JSON.stringify(l)), [KEY, lagring]);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600); await page.evaluate(SIM);
+  sjekk('målet peker mot ståldøra i kraftverket', await page.evaluate(() => maalTekst().includes('ståldøra')), await page.evaluate(() => maalTekst()));
+  // Sumpens minibossrom stenges og nullstilles
+  { const r = await page.evaluate(() => { fiender.length = 0; P.x = 90 * 32; P.y = 195 * 32 - P.h; P.inv = 99; oppdaterMinirom(1 / 60); const inne = MR.rom && MR.rom.id, dor = tile(81, 190);
+      respawn(true); return { inne, dor, etter: tile(81, 190), rom: MR.rom }; });
+    sjekk('minibossrommet i Sumpen stenger dørene', r.inne === 'minisump' && r.dor === 5, r); sjekk('minibossrommet åpnes igjen når montøren slås ut', r.etter === 0 && r.rom === null, r); }
+  // ståldøra i kraftverket tar montøren til Datasenteret
+  await page.evaluate(() => FAG.forEach((f, i) => { if (f.x === 12 && f.y === 60) S.fag.add(i); }));
+  await pos(page, 13, 60); await page.keyboard.down('ArrowLeft'); await vent(page, 600); await page.keyboard.up('ArrowLeft'); await vent(page, 1100);
+  { const s = await page.evaluate(() => ({ sone: spillerSone(), x: P.x / 32, omr: S.omr, cam: cam.y / 32, st: ST.navn })); sjekk('ståldøra tar montøren til Datasenteret', s.sone === 4 && s.x < 9 && s.omr === 'Slusa', s);
+    sjekk('kameraet holder seg i Datasenteret', s.cam >= 200, s); sjekk('Datasenteret har sin egen stemning', s.st === 'data', s); }
+  // fiberrøret er stengt uten fiberløp
+  { const r = await page.evaluate(() => { S.mode = 'pause'; fiender.length = 0; __sett(89, 217); __sim(120, () => { TS.right = true; }); TS.right = false; const r = { ror: !!P.ror, x: P.x / 32 }; S.mode = 'spill'; return r; });
+    sjekk('uten fiberløp går ikke montøren inn i røret', !r.ror && r.x < 93, r); }
+  await page.evaluate(() => { P.inv = 0; }); await pos(page, 89, 216); await vent(page, 400);
+  sjekk('fiberløpet plukkes opp', await page.evaluate(() => S.ev.fiber));
+  await lukkKort(page);
+  await page.evaluate(() => { fiender.length = 0; window.__varI = false; OPPDATER.push(() => { if (P.ror) window.__varI = true; }); }); await pos(page, 89, 217);
+  await page.keyboard.down('ArrowRight'); await page.waitForFunction(() => window.__varI, null, { timeout: 3000 }).catch(() => {}); await page.keyboard.up('ArrowRight'); await vent(page, 900);
+  { const r = await page.evaluate(() => ({ var_i: window.__varI, x: P.x / 32, y: (P.y + P.h) / 32, ror: !!P.ror }));
+    sjekk('fiberløpet bærer montøren gjennom røret til kjøletårnet', r.var_i && !r.ror && r.x > 93.5 && r.x < 101 && r.y > 238, r); }
+  // nye fiender
+  { const r = await page.evaluate(() => { lagFiender(); const o = fiender.find(e => e.type === 'orm'), d = fiender.find(e => e.type === 'drone'); if (!o || !d) return { finnes: false };
+      let maks = 0; for (let i = 0; i < 90; i++) { oppdaterFiende2(o, 1 / 60, o.bx + 40, o.gulv - 15); maks = Math.max(maks, o.opp); }
+      const b0 = bolter.length; for (let i = 0; i < 90; i++) oppdaterFiende2(d, 1 / 60, d.x + d.w / 2, d.y + 4 * 32);
+      return { finnes: true, maks, skudd: bolter.length - b0 }; });
+    sjekk('kabelormen skyter opp av gulvet', r.finnes && r.maks > .9, r); sjekk('kjøledronen slipper isnåler', r.finnes && r.skudd >= 1, r); }
+  // minibossrommet i lagerhallen
+  { const r = await page.evaluate(() => { fiender.length = 0; bolter.length = 0; P.x = 136 * 32; P.y = 232 * 32 - P.h; P.inv = 999; const bolger = [];
+      for (let i = 0; i < 1200 && !S.oppdrag.minidata; i++) { oppdaterMinirom(1 / 30); if (MR.fiender.length) { bolger.push(MR.bolge); for (const e of MR.fiender) drepFiende(e); } }
+      return { ferdig: S.oppdrag.minidata, bolger: [...new Set(bolger)], rom: MR.rom }; });
+    sjekk('minibossrommet gir tre bølger og en premie', r.ferdig === 1 && r.bolger.length === 3 && r.rom === null, r); }
+  // Kjølekjempen
+  await page.evaluate(() => { fiender.length = 0; P.inv = 0; }); await pos(page, 170, 240); await vent(page, 300);
+  sjekk('Kjølekjempen våkner i kontrollrommet', await page.evaluate(() => B8.aktiv && tile(161, 238) === DOOR && tile(197, 238) === DOOR));
+  await page.waitForFunction(() => B8.fase === 'kamp', null, { timeout: 5000 }).catch(() => {});
+  sjekk('bosslinja viser Kjølekjempen', await page.evaluate(() => document.querySelector('#bossNavn').textContent === 'Kjølekjempen'));
+  sjekk('gulvet blir glatt når kjempen fryser', await page.evaluate(() => { B8.syklus = 'frys'; B8.sT = 9; P.onGround = true; return glattGulv(); }));
+  { const r = await page.evaluate(() => { S.mode = 'pause'; Object.assign(B8, { syklus: 'frys', sT: 99, angT: 99, skuddT: 99, x: 190 * 32 }); B8.is.length = 0; P.inv = 0; P.x = 170 * 32; P.y = 241 * 32 - P.h; const hp0 = P.hp;
+      B8.is.push({ x: P.x + P.w / 2, y: (ARENA8.tak + 1) * 32, vy: 0, varsel: .8 }); oppdaterBoss8(1 / 60); const forVarsel = P.hp; for (let i = 0; i < 160 && P.hp === hp0; i++) oppdaterBoss8(1 / 60);
+      const etter = P.hp; P.hp = P.max; B8.is.length = 0; S.mode = 'spill'; return { hp0, forVarsel, etter }; });
+    sjekk('istappen varsles før den faller', r.forVarsel === r.hp0 && r.etter < r.hp0, r); }
+  const f0 = await page.evaluate(() => { P.inv = 999; Object.assign(B8, { syklus: 'frys', sT: 99, angT: 99 }); const hp = B8.hp, [kx, ky] = b8Kjerne(); P.x = kx - 40 - P.w / 2; P.y = ky - P.h / 2; P.face = 1; P.piskT = .2; oppdaterBoss8(1 / 60); return hp - B8.hp; });
+  sjekk('kjernen tåler pisken når den er kald', f0 === 0, f0);
+  for (let i = 0; i < 3; i++) { await page.evaluate(() => { Object.assign(B8, { syklus: 'over', sT: 3 }); B8.is.length = 0; B8.damp.length = 0; const [kx, ky] = b8Kjerne(); P.x = kx - 40 - P.w / 2; P.y = ky - P.h / 2; P.vy = 0; P.face = 1; P.piskT = .2; P.piskCd = 0; }); await vent(page, 150); }
+  await page.waitForFunction(() => S.boss8, null, { timeout: 6000 }).catch(() => {});
+  sjekk('Kjølekjempen er slått', await page.evaluate(() => S.boss8 && !B8.aktiv && tile(161, 238) === AIR), await page.evaluate(() => [B8.hp, B8.fase, B8.syklus, S.boss8]));
+  await page.evaluate(() => { P.inv = 0; }); await pos(page, 179, 240); await vent(page, 400);
+  sjekk('livsgnist 9 etter Kjølekjempen', await page.evaluate(() => S.ev.liv9 && P.max === maksLiv()));
+  await page.evaluate(() => { if (S.mode === 'evne') lukkEvne(); });
+  await page.evaluate(() => lagre()); const l = await page.evaluate(() => hentLagret());
+  sjekk('lagringen tar med Datasenteret', l.boss8 === true && l.ev.fiber && l.ev.liv9 && l.oppdrag.minidata === 1, l && { b: l.boss8, o: l.oppdrag });
+  await page.keyboard.press('Tab'); await vent(page, 300);
+  sjekk('kartet har en fane for Datasenteret', await page.evaluate(() => !!document.querySelector('#kartSoner button[data-sone="4"]') && kartSone === 4));
+  await page.keyboard.press('Tab'); await vent(page, 200);
+  await pos(page, 5, 217); await page.keyboard.down('ArrowLeft'); await vent(page, 500); await page.keyboard.up('ArrowLeft'); await vent(page, 1100);
+  sjekk('porten tilbake til kraftverket', await page.evaluate(() => spillerSone() === 0 && Math.abs(P.x / 32 - 13) < 2.5), await tilstand(page));
+  sjekk('ingen JS-feil (Datasenteret)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function spiker(b) {
   console.log('Spikerpistolen');
   const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
@@ -905,6 +972,7 @@ async function lydbilde(b) {
     if (med('linja')) await linja(b);
     if (med('dam')) await dam(b);
     if (med('sump')) await sump(b);
+    if (med('data')) await datasenter(b);
     if (med('spiker')) await spiker(b);
     if (med('anim')) await anim(b);
     if (med('intro')) await intro(b);

@@ -6,7 +6,7 @@
 // =============================================================
 const $ = s => document.querySelector(s);
 const cv = $('#c'), ctx = cv.getContext('2d');
-const T = 32, MW = 200, MH = 200;  // verden vokser nedover: hver sone har sine egne rader. Bredden må aldri endres (kartrutene i lagringen)
+const T = 32, MW = 200, MH = 260;  // verden vokser nedover: hver sone har sine egne rader. Bredden må aldri endres (kartrutene i lagringen)
 // flistyper: VANN = strømførende vann, BVANN = vannet i koblingsrommet (farlig bare når bossen setter strøm på), LUKE = luka ved hovedtavla
 // GHO = spøkelsesplattform (fast bare med spenningstesteren), SVAK = svak vegg som vinkelsliperen skjærer gjennom
 const AIR = 0, SOL = 1, ONE = 2, HAZ = 3, CUR = 4, DOOR = 5, VANN = 6, BVANN = 7, LUKE = 8, GHO = 9, SVAK = 10;
@@ -26,11 +26,11 @@ function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w
   g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
 // ---------- tilstand ----------
-const EVNER = ['dobbel', 'hansker', 'stot', 'liv', 'hemmelig', 'krok', 'liv2', 'tester', 'sliper', 'liv4', 'klatre', 'liv5', 'glid', 'liv6', 'jord', 'liv7', 'stovler', 'liv8'];
+const EVNER = ['dobbel', 'hansker', 'stot', 'liv', 'hemmelig', 'krok', 'liv2', 'tester', 'sliper', 'liv4', 'klatre', 'liv5', 'glid', 'liv6', 'jord', 'liv7', 'stovler', 'liv8', 'fiber', 'liv9'];
 function nyeEvner() { const e = {}; for (const k of EVNER) e[k] = false; return e; }
 // kartet deles i ruter på 4×4 fliser som fylles inn etter hvert som montøren har vært der
 const KC = 4, KW = Math.ceil(MW / KC), KH = Math.ceil(MH / KC);
-const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8Array(KW * KH), brukt: 0, kjop: {}, knust: new Set(), boss3: false, boss4: false, boss5: false, boss6: false, boss7: false, oppdrag: {}, helt: false, tidsmodus: false, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
+const S = { mode: 'meny', t: 0, ev: nyeEvner(), fag: new Set(), sett: new Uint8Array(KW * KH), brukt: 0, kjop: {}, knust: new Set(), boss3: false, boss4: false, boss5: false, boss6: false, boss7: false, boss8: false, oppdrag: {}, helt: false, tidsmodus: false, cp: 0, cpLit: new Set([0]), orbTatt: new Set(),
   bossDone: false, boss2: false, tid: 0, ferdig: false, dodsfall: 0, shake: 0, flash: 0, flashF: '255,255,255', dod: 0, ending: 0, power: 0,
   hintSett: new Set(), mork: .55, frame: 0, panelT: 0, slow: 0, evneVent: 0, omr: '', hallLys: 0, hallFlimmer: 0, maal: '', idle: 0, laas: 0 };
 const P = { x: 0, y: 0, w: 18, h: 30, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buf: 0, air: 0, dashT: 0, dashCd: 0,

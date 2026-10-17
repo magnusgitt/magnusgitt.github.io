@@ -114,6 +114,8 @@ const TEMA = {
   boss6:  { bpm: 128, rot: 50, skala: [0, 1, 3, 5, 7, 8, 10], akk: [0, 3, 5, 1], arp: .95, lys: .9, puls: true },
   sump:   { bpm: 68, rot: 47, skala: [0, 2, 3, 5, 7, 8, 10], akk: [0, 6, 3, 4], arp: .45, lys: .7 },
   boss7:  { bpm: 124, rot: 47, skala: [0, 1, 3, 5, 6, 8, 10], akk: [0, 1, 5, 3], arp: .95, lys: .85, puls: true },
+  data:   { bpm: 88, rot: 45, skala: [0, 2, 3, 5, 7, 8, 11], akk: [0, 5, 6, 4], arp: .7, lys: .75 },
+  boss8:  { bpm: 130, rot: 45, skala: [0, 1, 3, 5, 7, 8, 11], akk: [0, 6, 1, 5], arp: 1, lys: .9, puls: true },
   linja:  { bpm: 80, rot: 53, skala: [0, 2, 3, 5, 7, 9, 10], akk: [0, 4, 5, 3], arp: .5, lys: .9 },
   boss5:  { bpm: 138, rot: 53, skala: [0, 2, 3, 5, 7, 8, 10], akk: [0, 6, 5, 4], arp: 1, lys: .95, puls: true },
   boss2:  { bpm: 120, rot: 54, skala: [0, 1, 3, 5, 6, 8, 10], akk: [0, 1, 4, 1], arp: .9, lys: .8, puls: true },
@@ -124,8 +126,8 @@ function musTone(f, t, dur, type, vol) { const o = A.c.createOscillator(), g = A
   g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(.4, dur * .3)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(MUS.gain); o.start(t); o.stop(t + dur + .05); }
 function velgTema() {
-  if (B7.aktiv && B7.fase !== 'dod') return 'boss7'; if (B6.aktiv && B6.fase !== 'dod') return 'boss6'; if (B5.aktiv && B5.fase !== 'dod') return 'boss5'; if (B4.aktiv && B4.fase !== 'dod') return 'boss4';
-  if (P.y >= SY0 * T) return 'sump'; if (P.y >= DY0 * T) return 'dam'; if (P.y >= LY0 * T) return 'linja'; if (B3.aktiv && B3.fase !== 'dod') return 'boss3'; if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
+  if (B8.aktiv && B8.fase !== 'dod') return 'boss8'; if (B7.aktiv && B7.fase !== 'dod') return 'boss7'; if (B6.aktiv && B6.fase !== 'dod') return 'boss6'; if (B5.aktiv && B5.fase !== 'dod') return 'boss5'; if (B4.aktiv && B4.fase !== 'dod') return 'boss4';
+  if (P.y >= XY0 * T) return 'data'; if (P.y >= SY0 * T) return 'sump'; if (P.y >= DY0 * T) return 'dam'; if (P.y >= LY0 * T) return 'linja'; if (B3.aktiv && B3.fase !== 'dod') return 'boss3'; if (B2.aktiv && B2.fase !== 'dod') return 'boss2'; if (B.aktiv && B.fase !== 'dod') return 'hall';
   const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
   if (iKraft(tx, ty)) return 'kraft'; if (tx >= 132 && ty <= 27) return 'stasjon'; if (iKjeller2(tx, ty)) return 'kabel'; if (erHall(tx, ty)) return S.bossDone ? 'ute' : 'kjeller'; if (inne(tx, ty)) return 'kjeller'; return 'ute';
 }

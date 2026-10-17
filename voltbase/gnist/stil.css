@@ -147,6 +147,7 @@ a.knapp { text-decoration:none; text-align:center; }
 .oppg.kjopt { border-color:rgba(120,255,170,.4); } .oppg.kjopt button { border-color:rgba(120,255,170,.5); background:transparent; color:#9dffc6; opacity:1; }
 .fagKort { text-align:left; padding:10px 12px; margin-top:8px; border-radius:12px; border:1px solid rgba(255,197,107,.3); background:rgba(255,197,107,.05); }
 .fagKort b { color:#fff1d6; display:block; } .fagKort span { font-size:14px; color:#d6e2f5; line-height:1.45; }
+.fagKort.spor { border-color:rgba(150,215,255,.45); background:rgba(150,215,255,.07); } .fagKort.spor b { color:#d6f0ff; }
 .fagKort.mangler { border-color:rgba(255,255,255,.1); background:transparent; color:var(--dempet); }
 .fagIkon { font-weight:800; font-size:17px; color:#3a2408; letter-spacing:.04em; }
 @media (max-width:520px) {

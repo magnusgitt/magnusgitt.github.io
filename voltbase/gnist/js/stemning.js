@@ -17,9 +17,11 @@ const STEMNINGER = {
   galleri: { mf: [3, 12, 14], tint: [222, 248, 240], dis: [120, 230, 200], bloom: .5,  bg: 'kraft' },
   sump:    { mf: [3, 11, 7],  tint: [228, 250, 226], dis: [150, 230, 150], bloom: .55, bg: 'kraft' },
   kulvert: { mf: [3, 10, 10], tint: [220, 244, 232], dis: [110, 220, 170], bloom: .55, bg: 'kabel' },
+  data:    { mf: [2, 6, 16],  tint: [218, 232, 255], dis: [120, 180, 255], bloom: .6,  bg: 'kabel' },
   linja:   { mf: [4, 9, 20],  tint: [228, 238, 255], dis: [150, 190, 235], bloom: .45, bg: 'kjeller' },
 };
 function stemningFor(tx, ty) {
+  if (ty >= 200) return 'data';
   if (ty >= 159) return inne(tx, ty) ? 'kulvert' : 'sump';
   if (ty >= 118) return inne(tx, ty) ? 'galleri' : 'dam';
   if (ty >= 72) return 'linja';
