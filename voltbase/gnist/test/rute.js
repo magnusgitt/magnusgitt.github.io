@@ -729,6 +729,73 @@ async function datasenter(b) {
   await ctx.close();
 }
 
+async function nordlyset(b) {
+  console.log('Fase 4: Nordlyset, Sentralen og ny runde+');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  const ev = { dobbel: true, hansker: true, stot: true, krok: true, liv: true, liv2: true, tester: true, sliper: true, liv4: true, klatre: true, liv5: true, glid: true, liv6: true, jord: true, liv7: true, stovler: true, liv8: true, fiber: true, liv9: true };
+  const lagring = { v: 4, ev, cp: 5, cpLit: [...Array(26).keys()], orb: [], boss: true, boss2: true, boss3: true, boss4: true, boss5: true, boss6: true, boss7: true, boss8: true, oppdrag: { jord: 3, maaler: 3, jordet: 1 }, helt: true, ferdig: true, tid: 1800 };
+  await page.evaluate(([k, l]) => localStorage.setItem(k, JSON.stringify(l)), [KEY, lagring]);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600); await page.evaluate(SIM);
+  sjekk('målet peker mot døra ut mot fjellet', await page.evaluate(() => maalTekst().includes('fjellet')), await page.evaluate(() => maalTekst()));
+  // døra i kraftverket tar montøren opp på fjellet
+  await pos(page, 5, 44); await page.keyboard.down('ArrowLeft'); await vent(page, 600); await page.keyboard.up('ArrowLeft'); await vent(page, 1100);
+  { const s = await page.evaluate(() => ({ sone: spillerSone(), x: P.x / 32, omr: S.omr, cam: cam.y / 32, st: ST.navn })); sjekk('døra tar montøren til Nordlyset', s.sone === 5 && s.x < 9 && s.omr === 'Fjellfoten', s);
+    sjekk('kameraet holder seg på fjellet', s.cam >= 260, s); sjekk('fjellet har nordlysstemning', s.st === 'nord', s); }
+  // båndene bærer ikke uten lynglid
+  { const r = await page.evaluate(() => { fiender.length = 0; P.x = 106 * 32; P.y = 295 * 32 - P.h + 4; P.vx = 200; P.vy = 50; P.onGround = false; oppdaterBandInngang(1 / 60); return !!P.band; });
+    sjekk('uten lynglid glir ikke montøren på nordlyset', !r, r); }
+  await page.evaluate(() => { fiender.length = 0; P.inv = 0; }); await pos(page, 91, 302); await vent(page, 400);
+  sjekk('lynglid plukkes opp i bryterhuset', await page.evaluate(() => S.ev.lynglid));
+  await lukkKort(page);
+  // gli over juvet på båndene
+  await page.evaluate(() => { fiender.length = 0; window.__band = 0; OPPDATER.push(() => { if (P.band) window.__band = Math.max(window.__band, P.x / 32); }); P.inv = 999; });
+  await pos(page, 99, 303); await page.keyboard.down('ArrowRight'); await vent(page, 120); await page.keyboard.down('Space'); await vent(page, 200); await page.keyboard.up('Space');
+  await page.waitForFunction(() => window.__band > 120, null, { timeout: 4000 }).catch(() => {}); await vent(page, 600);
+  await page.keyboard.down('Space'); await vent(page, 150); await page.keyboard.up('Space'); await vent(page, 300);
+  await page.waitForFunction(() => window.__band > 146 || P.x / 32 > 150, null, { timeout: 4000 }).catch(() => {}); await vent(page, 1500); await page.keyboard.up('ArrowRight');
+  { const r = await page.evaluate(() => ({ maks: window.__band, x: P.x / 32, y: (P.y + P.h) / 32, dod: S.dodsfall }));
+    sjekk('nordlyset bærer montøren over juvet', r.maks > 120 && r.x > 150 && r.y < 302, r); }
+  // nye fiender
+  { const r = await page.evaluate(() => { lagFiender(); const f = fiender.find(e => e.type === 'stormfugl'), i = fiender.find(e => e.type === 'isbjelle'); if (!f || !i) return { finnes: false };
+      let stup = false; f.fT = 0; for (let k = 0; k < 120; k++) { oppdaterFiende2(f, 1 / 60, f.x + 20, f.y + 4 * 32); if (f.fase === 'stup') stup = true; }
+      const b0 = bolter.length; i.pause = 0; for (let k = 0; k < 90; k++) oppdaterFiende2(i, 1 / 60, i.x + 40, i.y); return { finnes: true, stup, skudd: bolter.length - b0 }; });
+    sjekk('stormfuglen stuper mot montøren', r.finnes && r.stup, r); sjekk('isbjella sender ut en ring av iskuler', r.finnes && r.skudd >= 6, r); }
+  // Sentralen
+  await page.evaluate(() => { fiender.length = 0; bolter.length = 0; P.inv = 0; }); await pos(page, 180, 300); await vent(page, 300);
+  sjekk('Sentralen våkner på toppen', await page.evaluate(() => B9.aktiv && tile(171, 296) === DOOR && tile(197, 296) === DOOR));
+  await page.waitForFunction(() => B9.fase === 'kamp', null, { timeout: 5000 }).catch(() => {});
+  sjekk('bosslinja viser Sentralen', await page.evaluate(() => document.querySelector('#bossNavn').textContent === 'Sentralen'));
+  { const r = await page.evaluate(() => { S.mode = 'pause'; P.inv = 0; B9.angT = 99; B9.laserT = 99; B9.lyn.length = 0; P.x = 178 * 32; P.y = 301 * 32 - P.h; const hp0 = P.hp;
+      B9.lyn.push({ x: P.x + P.w / 2, varsel: .9, aktiv: 0, seed: 1 }); oppdaterBoss9(1 / 60); const forVarsel = P.hp; for (let i = 0; i < 80 && P.hp === hp0; i++) oppdaterBoss9(1 / 60);
+      const etter = P.hp; P.hp = P.max; B9.lyn.length = 0; S.mode = 'spill'; return { hp0, forVarsel, etter }; });
+    sjekk('lynet varsles før det slår ned', r.forVarsel === r.hp0 && r.etter < r.hp0, r); }
+  const f0 = await page.evaluate(() => { P.inv = 999; B9.angT = 99; B9.skjold = true; const hp = B9.hp, [ox, oy] = b9Oye(); P.x = ox - 40 - P.w / 2; P.y = oy - P.h / 2; P.face = 1; P.piskT = .2; oppdaterBoss9(1 / 60); return hp - B9.hp; });
+  sjekk('øyet er skjermet mens linja lyser', f0 === 0, f0);
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => { P.inv = 999; B9.angT = 99; B9.laserT = 99; B9.lyn.length = 0; B9.laser = null; const [ix, iy] = ISOLATORER[B9.linje]; P.x = (ix + .5) * 32 - 40 - P.w / 2; P.y = (iy + .5) * 32 - P.h / 2; P.vy = 0; P.face = 1; P.piskT = .2; P.piskCd = 0; oppdaterBoss9(1 / 60); });
+    const kutt = await page.evaluate(() => !B9.skjold); if (i === 0) sjekk('pisken kutter linja som lyser', kutt);
+    await page.evaluate(() => { const [ox, oy] = b9Oye(); P.x = ox - 40 - P.w / 2; P.y = oy - P.h / 2; P.vy = 0; P.face = 1; P.piskT = .2; P.piskCd = 0; oppdaterBoss9(1 / 60); }); await vent(page, 100); }
+  await page.waitForFunction(() => S.boss9, null, { timeout: 6000 }).catch(() => {});
+  sjekk('Sentralen er slått', await page.evaluate(() => S.boss9 && !B9.aktiv && tile(171, 296) === AIR), await page.evaluate(() => [B9.hp, B9.fase, S.boss9]));
+  // slutten: lyset legger seg i lykta, panoramaet, og rulleteksten
+  await page.waitForFunction(() => SLUTT.t > 5, null, { timeout: 8000 }).catch(() => {});
+  sjekk('lyset legger seg i lykta', await page.evaluate(() => GN.skjult && SLUTT.t > 4));
+  await page.waitForFunction(() => document.querySelector('#lagRull').classList.contains('vis'), null, { timeout: 12000 }).catch(() => {});
+  { const r = await page.evaluate(() => ({ vis: $('#lagRull').classList.contains('vis'), tittel: $('#rulleTittel').textContent, ny: $('#bNyRunde').style.display !== 'none' }));
+    sjekk('rulleteksten forteller at lyset er tilbake', r.vis && r.tittel === 'Lyset er tilbake', r); sjekk('ny runde+ kan startes', r.ny, r); }
+  const l = await page.evaluate(() => { lagre(); return hentLagret(); });
+  sjekk('lagringen tar med Sentralen', l.boss9 === true && l.ev.lynglid, l && { b: l.boss9 });
+  // ny runde+
+  await page.click('#bNyRunde'); await vent(page, 600);
+  { const r = await page.evaluate(() => ({ ng: S.ngPluss, alle: EVNER.filter(k => k !== 'hemmelig').every(k => S.ev[k]), boss: S.boss9 || S.boss8 || S.bossDone, cp: S.cp, mode: S.mode, gn: !GN.skjult }));
+    sjekk('ny runde+ starter fra begynnelsen med alle evner', r.ng && r.alle && !r.boss && r.cp === 0 && r.mode === 'spill' && r.gn, r); }
+  { const r = await page.evaluate(() => { const e = lagEnFiende({ type: 'lus', x0: 10, x1: 14, y: 23 }); drepFiende(e); const etter1 = e.liv; S.t += 1; drepFiende(e); return { etter1, etter2: e.liv }; });
+    sjekk('fiendene tåler mer i ny runde+', r.etter1 === true && r.etter2 === false, r); }
+  sjekk('ny runde+ blir lagret', await page.evaluate(() => hentLagret().ng === true));
+  sjekk('ingen JS-feil (Nordlyset)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function spiker(b) {
   console.log('Spikerpistolen');
   const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
@@ -973,6 +1040,7 @@ async function lydbilde(b) {
     if (med('dam')) await dam(b);
     if (med('sump')) await sump(b);
     if (med('data')) await datasenter(b);
+    if (med('nord')) await nordlyset(b);
     if (med('spiker')) await spiker(b);
     if (med('anim')) await anim(b);
     if (med('intro')) await intro(b);

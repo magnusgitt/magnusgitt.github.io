@@ -70,6 +70,7 @@ const SJEL_ORD = {
   B5: '«Stormen var aldri vær. Den var strøm uten styring, akkurat som den natta.»',
   B6: '«Dammen er stille. Men lyset skal lenger enn hit. Jeg blir med deg.»',
   B8: '«Jeg kjenner igjen dette rommet. Det var her jeg så Sentralen ta mer enn nettet tålte.»',
+  B9: '«Nå kan lyset komme tilbake uten at noe tar det. Takk for at du bar meg hit.»',
   B7: '«Røttene drakk av den samme strømmen. Noe lenger inne i nettet trekker fortsatt i den.»',
 };
 function sjelSier(id) { setTimeout(() => { if (S.mode === 'spill' && !GN.skjult) { hint(null, SJEL_ORD[id], 4); GN.flare = 1; } }, 3800); }

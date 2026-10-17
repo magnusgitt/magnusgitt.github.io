@@ -35,7 +35,7 @@ button { font-family:inherit; touch-action:manipulation; }
 #maal.vis { opacity:1; transform:none; }
 #maal b { color:var(--glod); font-weight:600; }
 
-#boss { position:fixed; left:50%; top:calc(12px + env(safe-area-inset-top)); transform:translateX(-50%);
+#boss { position:fixed; left:50%; top:calc(56px + env(safe-area-inset-top)); transform:translateX(-50%);
   text-align:center; pointer-events:none; opacity:0; transition:opacity .5s; }
 #boss.vis { opacity:1; }
 #boss .navn { font-size:20px; letter-spacing:.06em; color:#f3d9ff; text-shadow:0 0 14px rgba(200,140,255,.8); }
@@ -213,4 +213,6 @@ a.knapp { text-decoration:none; text-align:center; }
 #introTekst.vis { opacity:1; transform:translate(-50%,0); }
 #introTekst.sjel { color:#c9ecff; font-style:italic; text-shadow:0 0 18px rgba(110,210,255,.55), 0 2px 14px rgba(0,0,0,.9); }
 #intro .hopp { position:absolute; right:16px; bottom:calc(env(safe-area-inset-bottom) + 3vh); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.45); }
+html.iSlutt #hud, html.iSlutt #touch, html.iSlutt #verkKnapp, html.iSlutt #maal, html.iSlutt #boss { visibility:hidden; }
+@media (max-width:960px) { .evner { gap:4px; } .evner .ev { width:26px; height:26px; } .evner .ev svg { width:15px; height:15px; } }
 html.iIntro #hud, html.iIntro #touch, html.iIntro #verkKnapp, html.iIntro #hint { visibility:hidden; }

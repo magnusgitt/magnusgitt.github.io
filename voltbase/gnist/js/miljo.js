@@ -1,7 +1,7 @@
 'use strict';
 // Gnist – liv i omgivelsene: gress og planter som svaier i vinden og bøyer seg unna montøren,
 // og en verden som får tilbake lys og varme etter hvert som strømmen kommer tilbake.
-const lysNiva = () => Math.min(1, [S.boss, S.boss2, S.boss3, S.boss4, S.boss5, S.boss6, S.boss7, S.boss8].filter(Boolean).length / 6);
+const lysNiva = () => Math.min(1, [S.boss, S.boss2, S.boss3, S.boss4, S.boss5, S.boss6, S.boss7, S.boss8, S.boss9].filter(Boolean).length / 6);
 // vind i gresset: to langsomme bølger, så ikke alt beveger seg i takt
 const gressVind = x => Math.sin(S.t * .8 + x * .045) * .22 + Math.sin(S.t * 2.1 + x * .13) * .08 + (soneFor(Math.floor(P.y / T)) === 1 ? VIND.styrke * VIND.dir * .5 : 0);
 function tegnGress() {

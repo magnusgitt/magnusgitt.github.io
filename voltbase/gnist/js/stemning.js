@@ -18,9 +18,11 @@ const STEMNINGER = {
   sump:    { mf: [3, 11, 7],  tint: [228, 250, 226], dis: [150, 230, 150], bloom: .55, bg: 'kraft' },
   kulvert: { mf: [3, 10, 10], tint: [220, 244, 232], dis: [110, 220, 170], bloom: .55, bg: 'kabel' },
   data:    { mf: [2, 6, 16],  tint: [218, 232, 255], dis: [120, 180, 255], bloom: .6,  bg: 'kabel' },
+  nord:    { mf: [5, 10, 22], tint: [232, 244, 255], dis: [150, 230, 210], bloom: .55, bg: 'kjeller' },
   linja:   { mf: [4, 9, 20],  tint: [228, 238, 255], dis: [150, 190, 235], bloom: .45, bg: 'kjeller' },
 };
 function stemningFor(tx, ty) {
+  if (ty >= 260) return inneNord(tx, ty) ? 'kulvert' : 'nord';
   if (ty >= 200) return 'data';
   if (ty >= 159) return inne(tx, ty) ? 'kulvert' : 'sump';
   if (ty >= 118) return inne(tx, ty) ? 'galleri' : 'dam';
@@ -271,7 +273,9 @@ function tegnDis(g, w, h) {
 // ---------- montøren og fiendene: skjerf, fotspor, skygger og død ----------
 const FOTSPOR = [], DODE = [];
 function fotspor(x, y) { if (FOTSPOR.length > 26) FOTSPOR.shift(); FOTSPOR.push({ x, y, t0: S.t }); }
-function drepFiende(e) { e.liv = false; DODE.push({ e: Object.assign({}, e), t: .5 }); }
+// ny runde+: fiendene tåler ett slag før de går ut (et kort vindu hindrer at samme slag teller to ganger)
+function drepFiende(e) { if (S.ngPluss) { if (!e.taalt) { e.taalt = S.t; gnister(e.x + e.w / 2, e.y + e.h / 2, 8, 'g'); return; } if (S.t - e.taalt < .3) return; }
+  e.liv = false; DODE.push({ e: Object.assign({}, e), t: .5 }); }
 // refleksskjerfet: en kort kjede av punkter som henger etter hjelmen
 const HALE = Array.from({ length: 9 }, () => ({ x: 0, y: 0, px: 0, py: 0 }));
 function haleAnker() { const f = ANIM.face || P.face; return [P.x + P.w / 2 - f * 4 * P.sx, P.y + P.h + (ANIM.dy - 30) * P.sy]; }
