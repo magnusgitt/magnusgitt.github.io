@@ -855,7 +855,8 @@ function render(){
   setPtop();
   $$('#tabs button').forEach(b=>{if(b.dataset.v===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   ['cal','gantt','list','set'].forEach(v=>$('v-'+v).hidden=v!==view);
-  $$('.fab').forEach(f=>f.hidden=!(view==='cal'||view==='gantt'||view==='list'));
+  /* tom plan: Kom i gang-kortet har egen knapp, så den runde knappen skjules og dekker ingenting */
+  $$('.fab').forEach(f=>f.hidden=!(view==='cal'||view==='gantt'||view==='list')||!S.acts.length);
   if(view==='cal')renderCal();else if(view==='gantt')renderGantt();else if(view==='list')renderList();else renderSettings();
 }
 function go(v){view=v;pending=null;saveUI();render();window.scrollTo({top:0})}
