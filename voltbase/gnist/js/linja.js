@@ -219,7 +219,7 @@ function b5Treff() {
 }
 function sluttBoss5() {
   S.boss5 = true; B5.aktiv = false; B5.fase = ''; aapneArena5(); S.flash = 1; S.flashF = '220,235,255'; sprut(B5.x, B5.y, 100, 'c', 420); ring(B5.x, B5.y, 30, 'h', 380); lyd('slutt'); vib([40, 60, 120]);
-  banner('Stormen har stilnet', 'Lynfuglen er slått', 3.5); lagre(); hud(); sjekkMaal(true);
+  banner('Stormen har stilnet', 'Lynfuglen er slått', 3.5); sjelSier('B5'); lagre(); hud(); sjekkMaal(true);
 }
 function oppdaterBoss5(dt) {
   const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;

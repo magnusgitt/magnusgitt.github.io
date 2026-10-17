@@ -354,7 +354,7 @@ function oppdaterBoss(dt) {
     if (Math.random() < .7) sprut(B.x + (Math.random() - .5) * 60, B.y + (Math.random() - .5) * 50, 3, Math.random() < .5 ? 'p' : 'c', 260);
     if (B.dod <= 0) { S.bossDone = true; B.aktiv = false; B.fase = ''; rect(73, 13, 73, 18, CUR); rect(101, 13, 101, 18, AIR); S.flash = 1; S.flashF = '230,210,255';
       sprut(B.x, B.y, 90, 'p', 420); sprut(B.x, B.y, 50, 'w', 300); ring(B.x, B.y, 30, 'h', 380); lyd('dor'); lagre(); hud();
-      banner('Overspenningen er slått ut', 'Lyset i hallen er tilbake', 3); }
+      banner('Overspenningen er slått ut', 'Lyset i hallen er tilbake', 3); sjelSier('B1'); }
     return;
   }
   const raseri = 3 - B.hp;
@@ -416,7 +416,7 @@ function oppdaterBoss2(dt) {
     if (Math.random() < .7) sprut(B2.x + (Math.random() - .5) * 50, B2.y + (Math.random() - .5) * 40, 3, Math.random() < .5 ? 'c' : 'w', 260);
     if (B2.dod <= 0) { S.boss2 = true; B2.aktiv = false; B2.fase = ''; rect(140, 54, 140, 56, AIR); rect(166, 52, 166, 56, AIR); chunks.clear(); S.flash = 1; S.flashF = '200,240,255';
       sprut(B2.x, B2.y, 90, 'c', 420); sprut(B2.x, B2.y, 50, 'w', 300); ring(B2.x, B2.y, 30, 'h', 380); lyd('dor'); lagre(); hud();
-      banner('Kortslutningen er slått ut', 'Døra mot stigesjakten er åpen', 3); }
+      banner('Kortslutningen er slått ut', 'Døra mot stigesjakten er åpen', 3); sjelSier('B2'); }
     return;
   }
   const raseri = 3 - B2.hp;
@@ -533,7 +533,7 @@ function skudd3(n) { const [kx, ky] = b3Kjerne(), pcx = P.x + P.w / 2, pcy = P.y
 function sluttBoss3() {
   S.boss3 = true; S.helt = true; B3.aktiv = false; B3.fase = ''; aapneGard(); S.flash = 1; S.flashF = '255,240,200';
   sprut(B3.x, B3.y - 60, 120, 'o', 460); sprut(B3.x, B3.y - 60, 60, 'w', 320); ring(B3.x, B3.y - 60, 34, 'h', 420); lyd('slutt'); hud();
-  banner('Trafokjempen er slått ut', 'Strømmen er tilbake i hele byen', 3.5);
+  banner('Trafokjempen er slått ut', 'Strømmen er tilbake i hele byen', 3.5); sjelSier('B3');
   const tid = S.tid; let rekord = false;
   if (S.tidsmodus) { try { const r = parseFloat(localStorage.getItem(NOKKEL + '-rekord')); if (!(r > 0) || tid < r) { localStorage.setItem(NOKKEL + '-rekord', String(Math.round(tid))); rekord = true; } } catch (e) {} }
   lagre(); S.ending2 = .001; S.nyRekord = rekord;
@@ -605,7 +605,7 @@ function oppdaterBoss4(dt) {
 function sluttBoss4() {
   S.boss4 = true; B4.aktiv = false; B4.fase = ''; B4.borste = -1; rect(53, 57, 53, 60, AIR); chunks.clear();
   const [hx, hy] = b4Navn(); S.flash = 1; S.flashF = '210,245,255'; sprut(hx, hy, 120, 'c', 460); sprut(hx, hy, 60, 'w', 320); ring(hx, hy, 34, 'h', 420); lyd('slutt'); vib([40, 60, 120]);
-  banner('Generatoren er stanset', 'Kraftverket går rolig igjen', 3.5); lagre(); hud(); sjekkMaal(true);
+  banner('Generatoren er stanset', 'Kraftverket går rolig igjen', 3.5); sjelSier('B4'); lagre(); hud(); sjekkMaal(true);
 }
 function oppdaterProsj(dt) {
   const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;

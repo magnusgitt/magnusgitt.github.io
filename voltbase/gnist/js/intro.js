@@ -62,6 +62,16 @@ function oppdaterIntro(dt) {
   if (i !== INTRO.tekst) { INTRO.tekst = i; const el = $('#introTekst'); el.classList.remove('vis'); if (i >= 0) setTimeout(() => { if (INTRO.tekst === i) { el.textContent = INTRO_TEKST[i][2]; el.classList.toggle('sjel', INTRO_TEKST[i][3] === 'sjel'); el.classList.add('vis'); } }, 380); }
   if (t >= INTRO_SLUTT) sluttIntro();
 }
+// sjelen til elektrikeren forteller videre etter hver boss
+const SJEL_ORD = {
+  B1: '«Hallen har lys igjen. Jeg kjenner strømmen i veggene, som et hjerte som slår.»',
+  B2: '«Jeg koblet disse rommene for lenge siden. Den natta klarte jeg ikke å stoppe det som skjedde.»',
+  B3: '«Byen våkner. Men strømmen ble ikke borte av seg selv. Noen slo den av.»',
+  B4: '«Kraftverket går igjen. Linja opp mot fjellet fører til dammen. Der begynte det.»',
+  B5: '«Stormen var aldri vær. Den var strøm uten styring, akkurat som den natta.»',
+  B6: '«Dammen er stille. Men lyset skal lenger enn hit. Jeg blir med deg.»',
+};
+function sjelSier(id) { setTimeout(() => { if (S.mode === 'spill' && !GN.skjult) { hint(null, SJEL_ORD[id], 4); GN.flare = 1; } }, 3800); }
 // brystet til skjelettet, der sjelen hans ennå lyser svakt
 function sjelPunkt() { return [ELEKTRIKER.x * T + 29, (ELEKTRIKER.y + 1) * T - 15]; }
 // lyset som lokker vandreren gjennom ruinene: det svever foran ham, venter, og synker til slutt inn i brystet til skjelettet

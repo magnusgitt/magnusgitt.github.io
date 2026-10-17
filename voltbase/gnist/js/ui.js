@@ -6,7 +6,7 @@ let hintTid = 0, toastTid = 0, maalTid = 0, bannerTid = 0;
 let hintVent = null;
 function hint(key, tekst, varighet) { if (key && S.hintSett.has(key)) return; if (key) S.hintSett.add(key); if (key && !INNST.tips) return;
   if (bannerTid > 0) { hintVent = [tekst, varighet]; return; }
-  const h = $('#hint'); h.textContent = tekst; h.classList.toggle('lav', anyBoss()); h.classList.add('vis'); hintTid = Math.min(varighet || 3.5, 4); }
+  const h = $('#hint'); h.textContent = tekst; h.classList.toggle('sjel', tekst[0] === '«'); h.classList.toggle('lav', anyBoss()); h.classList.add('vis'); hintTid = Math.min(varighet || 3.5, 4); }
 function banner(stor, liten, tid, rolig) { $('#bannerStor').textContent = stor; $('#bannerLiten').textContent = liten || ''; $('#banner').classList.toggle('rolig', !!rolig); $('#banner').classList.add('vis');
   if (hintTid > 0) $('#hint').classList.add('lav'); bannerTid = tid || 3; }
 function toast(tekst) { const t = $('#toast'); t.textContent = tekst; t.classList.add('vis'); toastTid = 2.4; }

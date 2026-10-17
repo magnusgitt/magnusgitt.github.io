@@ -766,6 +766,9 @@ async function intro(b) {
   sjekk('han tar utstyret, og gnisten våkner', t.tatt && t.drakt === 'montor' && !t.skjult, t);
   await steg(page, 10); t = await page.evaluate(() => ({ mode: S.mode, vis: $('#intro').classList.contains('vis'), hud: getComputedStyle($('#hud')).visibility }));
   sjekk('introen ender i vanlig spill', t.mode === 'spill' && !t.vis && t.hud === 'visible', t);
+  await steg(page, 5); await page.evaluate(() => sjelSier('B1')); await vent(page, 4300);
+  t = await page.evaluate(() => ({ sjel: $('#hint').classList.contains('sjel'), tekst: $('#hint').textContent, n: Object.keys(SJEL_ORD).length }));
+  sjekk('sjelen sier noe etter en boss', t.sjel && t.tekst.includes('Hallen') && t.n === 6, t);
   sjekk('ingen JS-feil (intro)', errs.length === 0, errs); await ctx.close();
   // hoppe over med et trykk, på mobil i stående format
   ({ ctx, page, errs } = await nySide(b, devices['iPhone 13']));

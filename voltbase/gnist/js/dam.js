@@ -131,7 +131,7 @@ function b6Treff() {
 }
 function sluttBoss6() {
   S.boss6 = true; B6.aktiv = false; B6.fase = ''; S.flash = 1; S.flashF = '200,250,255'; sprut(B6.x, B6.y, 90, 'c', 400); lyd('slutt'); vib([40, 60, 120]);
-  banner('Magasinet er stille', 'Spenningsålen er slått', 3.5); lagre(); hud(); sjekkMaal(true);
+  banner('Magasinet er stille', 'Spenningsålen er slått', 3.5); sjelSier('B6'); lagre(); hud(); sjekkMaal(true);
 }
 function oppdaterBoss6(dt) {
   const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
