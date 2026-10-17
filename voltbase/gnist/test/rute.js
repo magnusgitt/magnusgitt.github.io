@@ -159,7 +159,8 @@ async function omraade2(b) {
   }
   sjekk('gulvet får strøm', golvSett);
   sjekk('treff med strømstøt fra gulvet', treffMedStot);
-  await vent(page, 3000);
+  // dødsanimasjonen går i spilltid med sakte film, så vi venter på at den er ferdig i stedet for et fast antall sekunder
+  await page.waitForFunction(() => __gnist.S.boss2, null, { timeout: 10000 }).catch(() => {}); await vent(page, 300);
   const ferdig2 = await page.evaluate(() => ({ boss2: __gnist.S.boss2, dor: __gnist.tile(166, 54), inn: __gnist.tile(140, 55) }));
   sjekk('Kortslutningen slått, dørene åpne', ferdig2.boss2 && ferdig2.dor === 0 && ferdig2.inn === 0, ferdig2);
   await page.evaluate(() => { __gnist.P.inv = 0; }); await pos(page, 153, 55); await vent(page, 800);
