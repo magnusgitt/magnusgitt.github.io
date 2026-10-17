@@ -274,7 +274,8 @@ PAL.kraft = { c: ['#000', '#33402f', '#293427', '#202a1f', '#192119', '#141a14',
 PAL.fjell = { c: ['#000', '#36404f', '#2b3443', '#222a37', '#1b212c', '#151a23', '#10141b'], mose: '#dfe8f2', stra: ['#7d8f86', '#97a89c', '#66786e'], gress: true, rim: 'rgba(230,245,255,.5)' };
 PAL.betong = { c: ['#000', '#3a4446', '#2f383a', '#262e30', '#1e2527', '#181e20', '#121719'], mose: '#3f6a5c', stra: ['#5c8f7a', '#74a890', '#4a7866'], gress: true, rim: 'rgba(170,240,220,.4)' };
 PAL.ute.rim = 'rgba(190,255,225,.4)'; PAL.kjeller.rim = 'rgba(255,215,170,.3)'; PAL.hall.rim = 'rgba(205,190,255,.32)'; PAL.kabel.rim = 'rgba(150,240,250,.3)'; PAL.kraft.rim = 'rgba(190,255,170,.32)';
-const palAt = (x, y) => y >= 118 ? PAL.betong : y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
+PAL.sump = { c: ['#000', '#2f3a2c', '#273123', '#1f281c', '#192017', '#141a12', '#0f140d'], mose: '#4f7a3c', stra: ['#5f8a4a', '#7aa25c', '#4c7038'], gress: true, rim: 'rgba(190,240,160,.35)' };
+const palAt = (x, y) => y >= 159 ? PAL.sump : y >= 118 ? PAL.betong : y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
 const chunks = new Map();
@@ -410,7 +411,7 @@ function planke(g, x, y) {
 }
 // detaljer inne i fast grunn: steiner, knuste betongblokker med armeringsjern, sprekker, røtter og rustrenner.
 // Tegnes én gang per bit av kartet, så det koster ingenting per bilde.
-const BYPAL = new Set([PAL.ute, PAL.kjeller, PAL.hall, PAL.betong]);
+const BYPAL = new Set([PAL.ute, PAL.kjeller, PAL.hall, PAL.betong, PAL.sump]);
 function detalj(g, x, y, pal, d) {
   const X = x * T, Y = y * T, hv = k => hs(x, y, k), farge = pal.c[Math.min(6, Math.max(1, d - 1))];
   // steiner og grus, mest et stykke inn i grunnen

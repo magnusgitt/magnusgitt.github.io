@@ -14,7 +14,7 @@ function pop(sel) { const e = $(sel); if (!e) return; e.classList.remove('pop');
 function hud() {
   $('#liv').innerHTML = Array.from({ length: P.max }, (_, i) => `<i class="${i < P.hp ? '' : 'tom'}"></i>`).join('');
   $('#orbtall').textContent = '✦ ' + S.orbTatt.size + ' / ' + ORBER.length;
-  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']); if (S.ev.tester) e.push(['tester', 'Spenningstester']); if (S.ev.sliper) e.push(['sliper', 'Vinkelsliper']); if (S.ev.klatre) e.push(['klatre', 'Klatrejern']); if (S.ev.glid) e.push(['glid', 'Glideskjerm']); if (S.ev.jord) e.push(['jord', 'Jordspyd']);
+  const e = []; if (S.ev.dobbel) e.push(['dobbel', 'Stigesko']); if (S.ev.hansker) e.push(['hansker', 'Isolerte hansker']); if (S.ev.stot) e.push(['stot', 'Strømstøt']); if (S.ev.krok) e.push(['krok', 'Kabeltrommel']); if (S.ev.tester) e.push(['tester', 'Spenningstester']); if (S.ev.sliper) e.push(['sliper', 'Vinkelsliper']); if (S.ev.klatre) e.push(['klatre', 'Klatrejern']); if (S.ev.glid) e.push(['glid', 'Glideskjerm']); if (S.ev.jord) e.push(['jord', 'Jordspyd']); if (S.ev.stovler) e.push(['stovler', 'Isolerstøvler']);
   PISK_LENGDE = S.kjop.pisk2 ? 120 : 92;
   $('#evner').innerHTML = e.map(([id, n]) => `<div class="ev" id="ev-${id}" title="${n}">${IKON[id]}</div>`).join('');
   sistKlar = null;
@@ -76,6 +76,11 @@ function maalTekst() {
   if (!S.ev.liv7) return 'Ta livsgnisten i magasinet';
   if (S.oppdrag.maaler === 2) return 'Gi isolasjonsmåleren tilbake til Sigrid';
   if (S.oppdrag.jord === 2) return 'Gi jordingsstanga tilbake til Gamle Ivar';
+  if (!S.boss7) { if (B7.aktiv) return 'Slå kjernen når roten synker ned';
+    if (ty < SY0) return 'Finn porten bak magasinet';
+    if (!S.ev.stovler) return 'Finn noe som tåler strømmen i vannet';
+    return 'Vass gjennom undergangen til rotskogen'; }
+  if (!S.ev.liv8) return 'Ta livsgnisten i rotreiret';
   if (S.oppdrag.jord === 1) return 'Finn jordingsstanga til Ivar nede i Vindskaret';
   return 'Finn alle lysorber, fagkort og gjemmesteder';
 }
@@ -101,6 +106,8 @@ function maalPunkt() {
   if (!S.ev.liv7) return [178.5, 156.5];
   if (S.oppdrag.maaler === 2) return [16.5, 149];
   if (S.oppdrag.jord === 2) return [12.5, 104];
+  if (!S.boss7) { if (B7.aktiv) return null; if (P.y < SY0 * T) return [198.5, 137]; if (!S.ev.stovler) return [89.5, 171]; return [172, 182]; }
+  if (!S.ev.liv8) return [184.5, 184.5];
   if (S.oppdrag.jord === 1) return [163.5, 109.5];
   return null;
 }
@@ -121,7 +128,7 @@ function settTilHex(a) { let h = ''; for (let i = 0; i < a.length; i += 4) h += 
 function hexTilSett(h) { const a = new Uint8Array(KW * KH); if (typeof h !== 'string') return a;
   for (let j = 0; j < h.length && j * 4 < a.length; j++) { const n = parseInt(h[j], 16) || 0; for (let b = 0; b < 4; b++) if (j * 4 + b < a.length) a[j * 4 + b] = (n >> b) & 1; } return a; }
 function lagre() { if (S.tidsmodus) return; try { localStorage.setItem(NOKKEL, JSON.stringify({ v: LAGRE_VERSJON, ev: S.ev, cp: S.cp, cpLit: [...S.cpLit], orb: [...S.orbTatt],
-  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop, knust: [...S.knust], boss3: S.boss3, boss4: S.boss4, boss5: S.boss5, boss6: S.boss6, oppdrag: S.oppdrag, helt: S.helt,
+  fag: [...S.fag], sett: settTilHex(S.sett), brukt: S.brukt, kjop: S.kjop, knust: [...S.knust], boss3: S.boss3, boss4: S.boss4, boss5: S.boss5, boss6: S.boss6, boss7: S.boss7, oppdrag: S.oppdrag, helt: S.helt,
   boss: S.bossDone, boss2: S.boss2, tid: Math.round(S.tid), ferdig: S.ferdig, dod: S.dodsfall })); } catch (e) {} }
 function hentLagret() {
   try { const d = JSON.parse(localStorage.getItem(NOKKEL) || 'null'); if (!d || typeof d !== 'object' || !d.ev || typeof d.ev !== 'object') return null;
@@ -130,7 +137,7 @@ function hentLagret() {
     return { ev, cp: Number.isInteger(d.cp) && d.cp >= 0 && d.cp < SJEKK.length ? d.cp : 0, cpLit: heltall(d.cpLit, SJEKK.length), orb: heltall(d.orb, ORBER.length),
       fag: heltall(d.fag, FAG.length), sett: hexTilSett(d.sett), brukt: Number.isInteger(d.brukt) && d.brukt >= 0 ? d.brukt : 0,
       kjop: Object.fromEntries([...OPPGRADERINGER.map(o => o.id), 'pisk2'].map(id => [id, !!(d.kjop && d.kjop[id] === true)])),
-      boss5: d.boss5 === true, boss6: d.boss6 === true, oppdrag: Object.fromEntries(Object.entries(d.oppdrag && typeof d.oppdrag === 'object' ? d.oppdrag : {}).filter(([k, v]) => /^[a-z]+$/.test(k) && Number.isInteger(v) && v >= 0 && v <= 3)),
+      boss5: d.boss5 === true, boss6: d.boss6 === true, boss7: d.boss7 === true, oppdrag: Object.fromEntries(Object.entries(d.oppdrag && typeof d.oppdrag === 'object' ? d.oppdrag : {}).filter(([k, v]) => /^[a-z]+$/.test(k) && Number.isInteger(v) && v >= 0 && v <= 3)),
       knust: heltall(d.knust, SVAKE.length), boss3: d.boss3 === true, boss4: d.boss4 === true, helt: d.helt === true,
       boss: d.boss === true, boss2: d.boss2 === true, tid: typeof d.tid === 'number' && d.tid > 0 ? d.tid : 0, ferdig: d.ferdig === true, dod: Number.isInteger(d.dod) ? d.dod : 0 };
   } catch (e) { return null; }

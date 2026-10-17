@@ -160,7 +160,9 @@ function masteGlod() { for (const m of MASTER) { const X = m.x * T, Y = m.y0 * T
 // ---------- nye fiender ----------
 // jager: svever stille til montøren kommer nær, så jager den. skytter: sikter og skyter lyskuler.
 // skjold: går med et skjold foran seg. Slå den bakfra, eller hopp på den.
+const FIENDE_TYPER = {};   // fiendetyper fra de nye områdene: { ny(f), oppdater(e, dt, pcx, pcy), tegn(e), glod?(e) }
 function nyFiende2(f) {
+  if (FIENDE_TYPER[f.type]) return FIENDE_TYPER[f.type].ny(f);
   if (f.type === 'jager') return { type: 'jager', hx: f.x * T + T / 2, hy: f.y * T + T / 2, x: f.x * T, y: f.y * T, w: 20, h: 18, vx: 0, vy: 0, dir: 1, liv: true, t: Math.random() * 6, jakt: false };
   if (f.type === 'skytter') return { type: 'skytter', x: f.x * T + 5, y: (f.y + 1) * T - 24, w: 22, h: 24, dir: -1, liv: true, t: 0, lad: 0, pause: 1.2 };
   if (f.type === 'skjold') return { type: 'skjold', x: (f.x0 + f.x1) / 2 * T, y: (f.y + 1) * T - 20, w: 26, h: 20, x0: f.x0 * T, x1: (f.x1 + 1) * T, dir: 1, liv: true, t: 0, snu: 0 };
@@ -168,6 +170,7 @@ function nyFiende2(f) {
 }
 const NG = () => S.ngPluss ? 1.35 : 1;   // ny runde+: fiendene er raskere
 function oppdaterFiende2(e, dt, pcx, pcy) {
+  if (FIENDE_TYPER[e.type]) { FIENDE_TYPER[e.type].oppdater(e, dt, pcx, pcy); return true; }
   if (e.type === 'jager') {
     const dx = pcx - (e.x + e.w / 2), dy = pcy - (e.y + e.h / 2), d = Math.hypot(dx, dy);
     if (!e.jakt && d < 7 * T) { e.jakt = true; lyd('jager'); } else if (e.jakt && d > 11 * T) e.jakt = false;
@@ -192,6 +195,7 @@ function oppdaterFiende2(e, dt, pcx, pcy) {
 const skjoldForan = (e, px) => e.type === 'skjold' && Math.sign(px - (e.x + e.w / 2)) === e.dir;
 function prellAv(e) { lyd('prell'); gnister(e.x + e.w / 2 + e.dir * 14, e.y + e.h / 2, 10, 'w'); P.vx = (P.x + P.w / 2 < e.x + e.w / 2 ? -1 : 1) * 330; P.vy = Math.min(P.vy, -200); P.dashT = 0; S.shake = Math.max(S.shake, .12); hint('skjold', 'Skjoldet tar slaget! Slå bakfra, eller hopp på den.', 3.5); }
 function tegnFiende2(e) {
+  if (FIENDE_TYPER[e.type]) { FIENDE_TYPER[e.type].tegn(e); return true; }
   if (e.type === 'jager') { const X = e.x + e.w / 2, Y = e.y + e.h / 2, t = e.t, va = e.jakt ? 1 : 0;
     ctx.save(); ctx.translate(X, Y); ctx.scale(e.dir * 1.3, 1.3); ctx.rotate(clamp(e.vx / 600, -.4, .4));
     ctx.fillStyle = 'rgba(255,200,170,.35)'; const v = Math.sin(t * 45) * 3; ctx.beginPath(); ctx.ellipse(-2, -8, 9, 3 + v * .4, -.5, 0, 7); ctx.ellipse(-2, 8, 9, 3 - v * .4, .5, 0, 7); ctx.fill();
@@ -220,6 +224,7 @@ function tegnFiende2(e) {
   return false;
 }
 function fiende2Glod(e) {
+  if (FIENDE_TYPER[e.type] && FIENDE_TYPER[e.type].glod) FIENDE_TYPER[e.type].glod(e);
   if (e.type === 'skytter' && e.lad > 0) glod(SPR.o, e.x + e.w / 2, e.y + 9, 14 + e.lad * 40, .5 + e.lad * .5);
   if (e.type === 'skjold') glod(SPR.c, e.x + e.w / 2 + e.dir * 14, e.y + e.h / 2, 18, .35);
 }

@@ -9,6 +9,7 @@ function jagget(x1, y1, x2, y2, utslag, n, seed) { const r = rng(seed); ctx.begi
 function synlig(x, y, m) { const vw = cssW / skala, vh = cssH / skala; return x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m; }
 
 function tegnBakgrunn(kx, ky) {
+  if (ky >= SY0 * T - 1) return tegnSumpBg(kx, ky);
   if (ky >= DY0 * T - 1) return tegnDamBg(kx, ky);
   if (ky >= LY0 * T - 1) return tegnLinjaBg(kx, ky);
   const cw = cv.width, ch = cv.height;
@@ -101,6 +102,7 @@ function tegnFunn(f) {
   else if (f.id === 'krok') { ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(-1, -2, 5, 0, 7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(4, -2); ctx.quadraticCurveTo(9, 4, 2, 8); ctx.stroke(); ctx.fillRect(-2, -3, 2, 2); }
   else if (f.id === 'klatre') { ctx.fillRect(-2, -9, 4, 14); ctx.beginPath(); ctx.moveTo(2, -2); ctx.lineTo(9, -6); ctx.lineTo(9, -3); ctx.lineTo(2, 1); ctx.fill(); ctx.beginPath(); ctx.moveTo(-2, 5); ctx.lineTo(2, 5); ctx.lineTo(0, 10); ctx.fill(); }
+  else if (f.id === 'stovler') { ctx.beginPath(); ctx.moveTo(-6, -9); ctx.lineTo(0, -9); ctx.lineTo(0, 1); ctx.lineTo(6, 3); ctx.lineTo(7, 7); ctx.lineTo(-7, 7); ctx.lineTo(-7, 4); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#1d2228'; ctx.fillRect(-7, 5, 14, 2); }
   else if (f.id.startsWith('liv')) { ctx.fillStyle = '#bff4ff'; ctx.beginPath(); ctx.moveTo(0, 7); ctx.bezierCurveTo(-9, 1, -7, -8, 0, -3); ctx.bezierCurveTo(7, -8, 9, 1, 0, 7); ctx.fill(); }
   else { ctx.beginPath(); ctx.moveTo(2, -9); ctx.lineTo(-5, 1); ctx.lineTo(0, 1); ctx.lineTo(-2, 9); ctx.lineTo(5, -2); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill(); }
   ctx.restore();

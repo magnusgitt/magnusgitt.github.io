@@ -601,6 +601,67 @@ async function dam(b) {
   await ctx.close();
 }
 
+async function sump(b) {
+  console.log('Fase 2: Sumpen');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  const ev = { dobbel: true, hansker: true, stot: true, krok: true, liv: true, liv2: true, tester: true, sliper: true, liv4: true, klatre: true, liv5: true, glid: true, liv6: true, jord: true, liv7: true };
+  const lagring = { v: 4, ev, cp: 21, cpLit: [...Array(22).keys()], orb: [], boss: true, boss2: true, boss3: true, boss4: true, boss5: true, boss6: true, oppdrag: { jord: 3, maaler: 3, jordet: 1 }, helt: true, ferdig: true, tid: 1500 };
+  await page.evaluate(([k, l]) => localStorage.setItem(k, JSON.stringify(l)), [KEY, lagring]);
+  await page.reload(); await vent(page, 400); await page.click('#bFortsett'); await vent(page, 600); await page.evaluate(SIM);
+  sjekk('målet peker mot Sumpen etter dammen', await page.evaluate(() => maalTekst().includes('porten bak magasinet')), await page.evaluate(() => maalTekst()));
+  // porten bak magasinet tar montøren til Sumpen
+  await pos(page, 196, 138); await page.keyboard.down('ArrowRight'); await vent(page, 600); await page.keyboard.up('ArrowRight'); await vent(page, 1100);
+  { const s = await page.evaluate(() => ({ sone: spillerSone(), x: P.x / 32, omr: S.omr, cam: cam.y / 32, st: ST.navn })); sjekk('porten tar montøren til Sumpen', s.sone === 3 && s.x < 9 && s.omr === 'Sumpkanten', s);
+    sjekk('kameraet holder seg i sumpsonen', s.cam >= 159, s); sjekk('sumpen har sin egen stemning', s.st === 'sump', s); }
+  // vannet står under spenning
+  { const r = await page.evaluate(() => { S.mode = 'pause'; fiender.length = 0; __sett(45, 183); P.inv = 0; const hp0 = P.hp; __sim(90, () => {}); const hp = P.hp; P.hp = P.max; S.mode = 'spill'; return { hp0, hp }; });
+    sjekk('vannet i sumpen slår montøren uten støvler', r.hp < r.hp0, r); }
+  // isolerstøvlene i blokka
+  await page.evaluate(() => { P.inv = 0; }); await pos(page, 89, 171); await vent(page, 400);
+  sjekk('isolerstøvlene plukkes opp', await page.evaluate(() => S.ev.stovler));
+  await lukkKort(page);
+  sjekk('støvlene vises i evnelinja', await page.evaluate(() => !!document.querySelector('#ev-stovler')));
+  { const r = await page.evaluate(() => { S.mode = 'pause'; fiender.length = 0; __sett(45, 183); P.inv = 0; const hp0 = P.hp; __sim(90, () => {}); const r = { hp0, hp: P.hp, rad: Math.floor((P.y + P.h - 1) / 32) }; S.mode = 'spill'; return r; });
+    sjekk('med støvler kan montøren vasse', r.hp === r.hp0 && r.rad === 185, r); }
+  // gjennom undergangen
+  { const r = await page.evaluate(() => { S.mode = 'pause'; fiender.length = 0; __sett(100, 184); const hp0 = P.hp; let stopp = 0; __sim(2000, i => { TS.right = true; stopp = P.onGround && Math.abs(P.vx) < 5 ? stopp + 1 : 0; if (stopp > 6) { I.jumpP = true; TS.jump = true; stopp = 0; } else if (P.vy > 0) TS.jump = false; }); TS.right = TS.jump = false;
+      const r = { x: P.x / 32, hp0, hp: P.hp }; S.mode = 'spill'; return r; });
+    sjekk('montøren vasser gjennom undergangen', r.x > 141 && r.hp === r.hp0, r); }
+  // nye fiender
+  { const r = await page.evaluate(() => { lagFiender(); const p = fiender.find(e => e.type === 'padde'), s = fiender.find(e => e.type === 'sverm'); if (!p || !s) return { finnes: false };
+      P.x = p.x + 4 * 32; P.y = p.y + p.h - P.h; const y0 = p.y; let minY = p.y; for (let i = 0; i < 400 && !(minY < y0 - 20 && p.bakke); i++) { oppdaterFiende2(p, 1 / 60, P.x + P.w / 2, P.y + P.h / 2); minY = Math.min(minY, p.y); }
+      const sx0 = s.x; P.x = s.x + 5 * 32; P.y = s.y; for (let i = 0; i < 120; i++) oppdaterFiende2(s, 1 / 60, P.x + P.w / 2, P.y + P.h / 2);
+      return { finnes: true, hopp: y0 - minY, landet: p.bakke, sverm: s.x - sx0 }; });
+    sjekk('spolepadda hopper mot montøren', r.finnes && r.hopp > 20 && r.landet, r); sjekk('gnistsvermen driver etter montøren', r.finnes && r.sverm > 20, r); }
+  // Kvelerroten
+  await page.evaluate(() => { lagFiender(); fiender.length = 0; P.inv = 0; }); await pos(page, 178, 184); await vent(page, 300);
+  sjekk('Kvelerroten våkner i rotreiret', await page.evaluate(() => B7.aktiv && tile(171, 180) === DOOR && tile(197, 180) === DOOR));
+  await page.waitForFunction(() => B7.fase === 'kamp', null, { timeout: 5000 }).catch(() => {});
+  sjekk('bosslinja viser Kvelerroten', await page.evaluate(() => document.querySelector('#boss').classList.contains('vis') && document.querySelector('#bossNavn').textContent === 'Kvelerroten'));
+  { const r = await page.evaluate(() => { S.mode = 'pause'; Object.assign(B7, { syklus: 'angrep', sT: 99, rotT: 99, skuddT: 99, x: 190 * 32, y: 170 * 32 }); B7.rotter.length = 0; P.inv = 0; const hp0 = P.hp;
+      nyRot(P.x + P.w / 2); oppdaterBoss7(1 / 60); const forVarsel = P.hp; for (let i = 0; i < 90 && P.hp === hp0; i++) oppdaterBoss7(1 / 60); const etter = P.hp; P.hp = P.max; B7.rotter.length = 0; S.mode = 'spill'; return { hp0, forVarsel, etter }; });
+    sjekk('roten varsles før den skyter opp', r.forVarsel === r.hp0 && r.etter < r.hp0, r); }
+  const f0 = await page.evaluate(() => { P.inv = 999; Object.assign(B7, { syklus: 'angrep', sT: 99, rotT: 99 }); const hp = B7.hp; B7.x = P.x + 40; B7.y = P.y; P.face = 1; P.piskT = .2; oppdaterBoss7(1 / 60); return hp - B7.hp; });
+  sjekk('kjernen tåler pisken når den henger høyt', f0 === 0, f0);
+  for (let i = 0; i < 3; i++) { await page.evaluate(() => { Object.assign(B7, { syklus: 'lav', sT: 3, x: P.x + P.w / 2 + 40, y: (ARENA7.gulv - 1.15) * 32 }); B7.rotter.length = 0; P.face = 1; P.piskT = .2; P.piskCd = 0; }); await vent(page, 150); }
+  await page.waitForFunction(() => __gnist.S.boss7 === true || S.boss7, null, { timeout: 6000 }).catch(() => {});
+  sjekk('Kvelerroten er slått', await page.evaluate(() => S.boss7 && !B7.aktiv && tile(171, 180) === AIR), await page.evaluate(() => [B7.hp, B7.fase, B7.syklus, S.boss7]));
+  await page.evaluate(() => { P.inv = 0; }); await pos(page, 184, 184); await vent(page, 400);
+  sjekk('livsgnist 8 etter Kvelerroten', await page.evaluate(() => S.ev.liv8 && P.max === maksLiv()));
+  await page.evaluate(() => { if (S.mode === 'evne') lukkEvne(); });
+  // lagring og kart
+  await page.evaluate(() => lagre()); const l = await page.evaluate(() => hentLagret());
+  sjekk('lagringen tar med Sumpen', l.boss7 === true && l.ev.stovler && l.ev.liv8, l && { b: l.boss7, ev: l.ev });
+  await page.keyboard.press('Tab'); await vent(page, 300);
+  sjekk('kartet har en fane for Sumpen', await page.evaluate(() => !!document.querySelector('#kartSoner button[data-sone="3"]') && kartSone === 3));
+  await page.keyboard.press('Tab'); await vent(page, 200);
+  // porten tilbake til dammen
+  await pos(page, 5, 184); await page.keyboard.down('ArrowLeft'); await vent(page, 500); await page.keyboard.up('ArrowLeft'); await vent(page, 1100);
+  sjekk('porten tilbake til dammen', await page.evaluate(() => spillerSone() === 2 && Math.abs(P.x / 32 - 196) < 2.5), await tilstand(page));
+  sjekk('ingen JS-feil (Sumpen)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function spiker(b) {
   console.log('Spikerpistolen');
   const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
@@ -775,8 +836,8 @@ async function intro(b) {
   await steg(page, 10); t = await page.evaluate(() => ({ mode: S.mode, vis: $('#intro').classList.contains('vis'), hud: getComputedStyle($('#hud')).visibility }));
   sjekk('introen ender i vanlig spill', t.mode === 'spill' && !t.vis && t.hud === 'visible', t);
   await steg(page, 5); await page.evaluate(() => sjelSier('B1')); await vent(page, 4300);
-  t = await page.evaluate(() => ({ sjel: $('#hint').classList.contains('sjel'), tekst: $('#hint').textContent, n: Object.keys(SJEL_ORD).length }));
-  sjekk('sjelen sier noe etter en boss', t.sjel && t.tekst.includes('Hallen') && t.n === 6, t);
+  t = await page.evaluate(() => ({ sjel: $('#hint').classList.contains('sjel'), tekst: $('#hint').textContent, n: Object.keys(SJEL_ORD).length - BOSSER.length }));
+  sjekk('sjelen sier noe etter en boss', t.sjel && t.tekst.includes('Hallen') && t.n === 4, t);
   sjekk('ingen JS-feil (intro)', errs.length === 0, errs); await ctx.close();
   // hoppe over med et trykk, på mobil i stående format
   ({ ctx, page, errs } = await nySide(b, devices['iPhone 13']));
@@ -843,6 +904,7 @@ async function lydbilde(b) {
     if (med('grafikk')) await grafikk(b);
     if (med('linja')) await linja(b);
     if (med('dam')) await dam(b);
+    if (med('sump')) await sump(b);
     if (med('spiker')) await spiker(b);
     if (med('anim')) await anim(b);
     if (med('intro')) await intro(b);

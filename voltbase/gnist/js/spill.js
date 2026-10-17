@@ -16,13 +16,13 @@ function lagFiender() { fiender.length = 0; bolter.length = 0;
     else if (f.type === 'rele') fiender.push({ type: 'rele', x: f.x * T + 5, y: (f.y + 1) * T - 22, w: 22, h: 22, dir: 1, liv: true, t: 0, lad: 0, pause: 1 });
     else fiender.push({ type: 'lus', x: (f.x0 + f.x1) / 2 * T, y: (f.y + 1) * T - 14, w: 22, h: 14, x0: f.x0 * T, x1: (f.x1 + 1) * T, dir: 1, liv: true, t: Math.random() * 6 });
   } }
-const maksLiv = () => 4 + (S.ev.liv ? 1 : 0) + (S.ev.liv2 ? 1 : 0) + (S.kjop.liv3 ? 1 : 0) + (S.ev.liv4 ? 1 : 0) + (S.ev.liv5 ? 1 : 0) + (S.ev.liv6 ? 1 : 0) + (S.ev.liv7 ? 1 : 0);
+const maksLiv = () => 4 + (S.ev.liv ? 1 : 0) + (S.ev.liv2 ? 1 : 0) + (S.kjop.liv3 ? 1 : 0) + (S.ev.liv4 ? 1 : 0) + (S.ev.liv5 ? 1 : 0) + (S.ev.liv6 ? 1 : 0) + (S.ev.liv7 ? 1 : 0) + (S.ev.liv8 ? 1 : 0);
 function nyttSpill(lagret) {
   byggKart();
-  S.ev = nyeEvner(); S.fag = new Set(); S.sett.fill(0); S.brukt = 0; S.kjop = {}; S.knust = new Set(); S.boss3 = false; S.boss4 = false; S.boss5 = false; S.boss6 = false; S.oppdrag = {}; S.helt = false; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
+  S.ev = nyeEvner(); S.fag = new Set(); S.sett.fill(0); S.brukt = 0; S.kjop = {}; S.knust = new Set(); S.boss3 = false; S.boss4 = false; S.boss5 = false; S.boss6 = false; S.boss7 = false; S.oppdrag = {}; S.helt = false; S.cp = 0; S.cpLit = new Set([0]); S.orbTatt = new Set(); S.bossDone = false; S.boss2 = false; S.tid = 0; S.ferdig = false;
   S.ending = 0; S.ending2 = 0; S.power = 0; S.dod = 0; S.hintSett = new Set(); S.dodsfall = 0; S.omr = ''; S.maal = ''; S.hallLys = 0; S.slow = 0; S.evneVent = 0; S.laas = 0;
   if (lagret) { Object.assign(S.ev, lagret.ev); S.cp = lagret.cp; S.cpLit = new Set([0, ...lagret.cpLit, lagret.cp]); S.orbTatt = new Set(lagret.orb);
-    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.fag = new Set(lagret.fag); S.sett.set(lagret.sett); S.brukt = lagret.brukt; Object.assign(S.kjop, lagret.kjop); S.knust = new Set(lagret.knust); S.boss3 = lagret.boss3; S.boss4 = lagret.boss4; S.helt = lagret.helt; S.boss5 = !!lagret.boss5; S.boss6 = !!lagret.boss6; Object.assign(S.oppdrag, lagret.oppdrag || {}); S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
+    S.bossDone = lagret.boss; S.boss2 = lagret.boss2; S.fag = new Set(lagret.fag); S.sett.set(lagret.sett); S.brukt = lagret.brukt; Object.assign(S.kjop, lagret.kjop); S.knust = new Set(lagret.knust); S.boss3 = lagret.boss3; S.boss4 = lagret.boss4; S.helt = lagret.helt; S.boss5 = !!lagret.boss5; S.boss6 = !!lagret.boss6; S.boss7 = !!lagret.boss7; Object.assign(S.oppdrag, lagret.oppdrag || {}); S.tid = lagret.tid; S.ferdig = lagret.ferdig; S.dodsfall = lagret.dod; }
   BRYTERE.forEach(b => b.av = S.bossDone);
   if (S.bossDone) { rect(101, 13, 101, 18, AIR); S.hallLys = 1; }
   if (S.ferdig) { S.power = 1; if (!BG.midtLys) BG.midtLys = lagMidt(true); rect(125, 19, 128, 19, AIR); }
@@ -33,6 +33,7 @@ function nyttSpill(lagret) {
   B4.aktiv = false; B4.fase = ''; B4.hp = S.boss4 ? 0 : 4; B4.borste = -1;
   B5.aktiv = false; B5.fase = ''; B5.hp = S.boss5 ? 0 : 4; B5.lyn.length = 0; S.overgang = null;
   B6.aktiv = false; B6.fase = ''; B6.hp = S.boss6 ? 0 : 3;
+  B7.aktiv = false; B7.fase = ''; B7.hp = S.boss7 ? 0 : 3; B7.rotter.length = 0;
   P.max = maksLiv();
   B2.aktiv = false; B2.fase = ''; B2.hp = S.boss2 ? 0 : 3; bolter.length = 0; sveip.length = 0;
   B.aktiv = false; B.fase = ''; B.hp = S.bossDone ? 0 : 3; B.dod = 0; prosj.length = 0; bolger.length = 0; striker.length = 0; partikler.length = 0;
@@ -221,7 +222,7 @@ function oppdaterSpiller(dt) {
   // feller (strømførende kabler)
   const x0 = Math.floor((p.x + 3) / T), x1 = Math.floor((p.x + p.w - 3) / T), y0 = Math.floor(p.y / T), y1 = Math.floor((p.y + p.h - 1) / T);
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const t = tile(x, y);
-    if ((t === HAZ || t === VANN) && p.y + p.h > y * T + T * .55) { if (t === VANN) { lyd('plask'); sprut(p.x + p.w / 2, y * T + 6, 22, 'c', 220); } skade(0, true); return; } }
+    if ((t === HAZ || (t === VANN && !S.ev.stovler)) && p.y + p.h > y * T + T * .55) { if (t === VANN) { lyd('plask'); sprut(p.x + p.w / 2, y * T + 6, 22, 'c', 220); } skade(0, true); return; } }
   // trygt sted å komme tilbake til
   if (p.onGround && !p.paKran) { const fy = Math.floor((p.y + p.h + 1) / T), lx = Math.floor(p.x / T), hx = Math.floor((p.x + p.w) / T);
     const farlig = t => t === HAZ || t === VANN || t === BVANN;
@@ -388,7 +389,7 @@ function knusVegg(i) { const v = SVAKE[i]; if (S.knust.has(i)) return;
   lyd('slipe'); S.shake = .45; vib([40, 30, 60]);
   for (let y = v.y0; y <= v.y1; y++) { gnister((v.x0 + v.x1 + 1) / 2 * T, y * T + T / 2, 8, 'o'); stov((v.x0 + v.x1 + 1) / 2 * T, (y + 1) * T, 3, 1.2); }
   toast('Veggen er skåret opp!'); }
-function funnSynlig(f) { return !S.ev[f.id] && !(f.boss && !S.bossDone) && !(f.boss2 && !S.boss2) && !(f.boss4 && !S.boss4) && !(f.boss5 && !S.boss5) && !(f.boss6 && !S.boss6); }
+function funnSynlig(f) { return !S.ev[f.id] && !(f.boss && !S.bossDone) && !(f.boss2 && !S.boss2) && !(f.boss4 && !S.boss4) && !(f.boss5 && !S.boss5) && !(f.boss6 && !S.boss6) && !(f.boss7 && !S.boss7); }
 
 // ---------- Kortslutningen (bossen i koblingsrommet) ----------
 const ARENA2 = { x0: 141, x1: 165, gulv: 57, midt: 153.5 };
@@ -663,12 +664,14 @@ function oppdaterKamera(dt, snap) {
   const iArena2 = B2.aktiv || erArena2(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T));
   const sone = SONER[soneFor(pty)], iArena5 = B5.aktiv || (soneFor(pty) === 1 && ptx >= ARENA5.x0 && ptx <= ARENA5.x1);
   const iArena6 = B6.aktiv || (soneFor(pty) === 2 && ptx >= ARENA6.x0 && ptx <= ARENA6.x1 && pty >= 139);
+  const iArena7 = B7.aktiv || (soneFor(pty) === 3 && ptx >= ARENA7.x0 && ptx <= ARENA7.x1 && pty >= ARENA7.tak);
   const zMaal = iHall ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 23 : 29) * T * grunnSkala), cssH / ((erTouch ? 19.5 : 15) * T * grunnSkala))
     : iArena2 ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 20 : 27) * T * grunnSkala), cssH / ((erTouch ? 20 : 16) * T * grunnSkala))
     : iGard ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 29) * T * grunnSkala), cssH / ((erTouch ? 21 : 19) * T * grunnSkala))
     : iTurbin ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 35) * T * grunnSkala), cssH / ((erTouch ? 19 : 16) * T * grunnSkala))
     : iArena5 ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 30) * T * grunnSkala), cssH / ((erTouch ? 20 : 17) * T * grunnSkala))
     : iArena6 ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 31) * T * grunnSkala), cssH / ((erTouch ? 22 : 19) * T * grunnSkala))
+    : iArena7 ? Math.min(1, cssW / ((erTouch && cssH > cssW ? 22 : 28) * T * grunnSkala), cssH / ((erTouch ? 22 : 21) * T * grunnSkala))
     : iSal2 ? Math.min(1, cssH / (16 * T * grunnSkala)) : 1;
   cam.zoom = snap ? zMaal : cam.zoom + (zMaal - cam.zoom) * Math.min(1, dt * 2.5);
   skala = grunnSkala * cam.zoom;
@@ -688,6 +691,7 @@ function oppdaterKamera(dt, snap) {
   if (iTurbin) { tx = lerp(tx, TURBIN.midt * T - vw / 2, B4.aktiv ? (B4.fase === 'intro' ? 1 : .7) : .5); ty = erTouch ? 61.4 * T - .8 * vh : 62.3 * T - vh; }
   if (iArena5) { tx = lerp(tx, ARENA5.midt * T - vw / 2, B5.aktiv ? (B5.fase === 'intro' ? 1 : .8) : .5); ty = erTouch ? (ARENA5.gulv + .4) * T - (cssH > cssW ? .6 : .72) * vh : (ARENA5.gulv + 1.3) * T - vh; }
   if (iArena6) { tx = lerp(tx, ARENA6.midt * T - vw / 2, B6.aktiv ? (B6.fase === 'intro' ? 1 : .8) : .5); ty = erTouch ? (ARENA6.gulv + .4) * T - (cssH > cssW ? .6 : .79) * vh : (ARENA6.gulv + 1.3) * T - vh; }
+  if (iArena7) { tx = lerp(tx, ARENA7.midt * T - vw / 2, B7.aktiv ? (B7.fase === 'intro' ? 1 : .8) : .5); ty = erTouch ? (ARENA7.gulv + .4) * T - (cssH > cssW ? .6 : .79) * vh : (ARENA7.gulv + 1.3) * T - vh; }
   // kameraet holder seg innenfor sonen montøren er i
   const sy0 = sone.y0 * T, sh = (sone.y1 + 1 - sone.y0) * T;
   tx = clamp(tx, 0, MW * T - vw); // magasinet ligger nederst i sonen: på mobil får kameraet gå litt under, så gulvet ikke havner bak knappene

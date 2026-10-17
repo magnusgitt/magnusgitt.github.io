@@ -1,7 +1,7 @@
 'use strict';
 // Gnist – liv i omgivelsene: gress og planter som svaier i vinden og bøyer seg unna montøren,
 // og en verden som får tilbake lys og varme etter hvert som strømmen kommer tilbake.
-const lysNiva = () => [S.boss, S.boss2, S.boss3, S.boss4, S.boss5, S.boss6].filter(Boolean).length / 6;
+const lysNiva = () => Math.min(1, [S.boss, S.boss2, S.boss3, S.boss4, S.boss5, S.boss6, S.boss7].filter(Boolean).length / 6);
 // vind i gresset: to langsomme bølger, så ikke alt beveger seg i takt
 const gressVind = x => Math.sin(S.t * .8 + x * .045) * .22 + Math.sin(S.t * 2.1 + x * .13) * .08 + (soneFor(Math.floor(P.y / T)) === 1 ? VIND.styrke * VIND.dir * .5 : 0);
 function tegnGress() {
@@ -61,7 +61,7 @@ const DRAPER = Array.from({ length: 170 }, () => ({ x: Math.random(), y: Math.ra
 const bygeStyrke = () => .2 + .8 * clamp(Math.sin(S.t * .045) * 1.8 - .4, 0, 1);
 function oppdaterVaer(dt) {
   const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T), sone = soneFor(ty), ute = !inne(tx, ty);
-  const regnMaal = ute && sone === 0 ? bygeStyrke() * (1 - lysNiva() * .5) : 0, takeMaal = ute && sone === 2 ? 1 : 0;
+  const regnMaal = ute && sone === 0 ? bygeStyrke() * (1 - lysNiva() * .5) : 0, takeMaal = ute && sone >= 2 ? 1 : 0;
   VAER.regn += (regnMaal - VAER.regn) * Math.min(1, dt * .8); VAER.take += (takeMaal - VAER.take) * Math.min(1, dt * .6);
 }
 function tegnVaer() {
