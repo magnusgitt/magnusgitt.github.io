@@ -5,8 +5,8 @@ const ELEKTRIKER = { x: 9, y: 23 };                    // under det sammenraste 
 const INTRO = { aktiv: false, t: 0, tekst: -1, tatt: true, kam: null };
 const INTRO_TEKST = [
   [1, 5.2, 'For hundre år siden forsvant strømmen fra verden.'],
-  [6, 9.6, 'Lys er blitt en myte. Likevel fulgte en vandrer et lite lys gjennom ruinene.'],
-  [10.4, 14, 'Det førte ham til den siste elektrikeren. Lyset var sjelen hans.'],
+  [6, 9.6, 'Ingen husker lenger hvorfor. Lys er blitt en myte.'],
+  [10.4, 14, 'Her ble den siste elektrikeren liggende.'],
   [15, 18.6, '«Jeg holdt lyset i gang så lenge jeg kunne. Ta verktøyet mitt.»', 'sjel'],
   [20, 24.4, '«Kraftverket står der ennå. Hjelp meg å tenne det igjen.»', 'sjel'],
 ];
@@ -33,7 +33,7 @@ function sluttIntro() {
   if (erTouch && cssH > cssW && !snuVist) { snuVist = true; S.mode = 'snu'; visLag('#lagSnu'); }
   banner('Gnist', 'Byggeplassen'); S.hintSett.add('omr-Byggeplassen');
   setTimeout(() => hint(null, erTouch ? 'Gå med venstre tommel. Hopp med høyre. Hold inne for høyere hopp.' : 'Gå med piltastene. Hopp med mellomrom. Hold inne for høyere hopp.', 5), 1600);
-  setTimeout(() => { if (S.mode === 'spill') hint(null, '«Står du stille, viser jeg deg veien videre.» Lyset er sjelen til elektrikeren.', 5); }, 8500);
+  setTimeout(() => { if (S.mode === 'spill') hint(null, '«Står du stille, viser jeg deg veien videre.»', 5); }, 8500);
 }
 function oppdaterIntro(dt) {
   const t = (INTRO.t += dt), vw = cssW / skala, vh = cssH / skala, kx = ELEKTRIKER.x * T;
@@ -41,7 +41,6 @@ function oppdaterIntro(dt) {
   const gaar = t > 7 && P.x < kx - 1.6 * T;
   P.piskT = -1; P.dashT = 0; P.spor.length = 0;
   P.vx = gaar ? 62 : 0; P.face = 1; P.onGround = true; P.vy = 0;
-  const l = lokkeLys(); if (l && Math.random() < dt * 8) part(l[0], l[1], (Math.random() - .5) * 16, 8 + Math.random() * 14, .7, 3, 'c', 0);
   if (gaar) { const f = Math.sin(P.anim); P.x += 62 * dt; P.anim += dt * 62 * .075; if (Math.sign(f) !== Math.sign(Math.sin(P.anim))) { fottrinn(); stov(P.x + P.w / 2, P.y + P.h, 1, .3); } }
   // han ser ned på skjelettet, kneler og tar utstyret
   if (t > 7 && !gaar && t <= 12.6) ANIM.overstyr = { b1: [-.08, .14], b2: [.08, .14], a1: [-.15, .2], a2: [.15, .25], bob: 0, hode: .4, lean: .06, tilt: .3, fart: 4 };
@@ -74,20 +73,12 @@ const SJEL_ORD = {
 function sjelSier(id) { setTimeout(() => { if (S.mode === 'spill' && !GN.skjult) { hint(null, SJEL_ORD[id], 4); GN.flare = 1; } }, 3800); }
 // brystet til skjelettet, der sjelen hans ennå lyser svakt
 function sjelPunkt() { return [ELEKTRIKER.x * T + 29, (ELEKTRIKER.y + 1) * T - 15]; }
-// lyset som lokker vandreren gjennom ruinene: det svever foran ham, venter, og synker til slutt inn i brystet til skjelettet
-function lokkeLys() {
-  const t = INTRO.t; if (!INTRO.aktiv || INTRO.tatt || t < 5.4 || t > 10.6) return null;
-  const [sx, sy] = sjelPunkt(), fx = Math.min(P.x + P.w / 2 + 92, sx) + Math.sin(t * 1.7) * 10, fy = P.y - 6 + Math.sin(t * 2.3) * 7;
-  const k = glatt(9.4, 10.6, t); return [mix(fx, sx, k), mix(fy, sy, k), glatt(5.4, 6.6, t) * (1 - k * .6)];
-}
 function sjelGlod() {
-  const l = lokkeLys(); if (l) { const [x, y, a] = l; glod(SPR.c, x, y, 26, .6 * a); glod(SPR.h, x, y, 4, .9 * a); }
   if (!INTRO.aktiv || INTRO.tatt || INTRO.t < 9.5) return; const [x, y] = sjelPunkt(); if (!synlig(x, y, 80)) return;
   const k = glatt(9.5, 15, INTRO.t), p = .75 + .25 * Math.sin(INTRO.t * 2.6);
   glod(SPR.c, x, y, 10 + 22 * k, (.15 + .55 * k) * p); glod(SPR.h, x, y, 2 + 3 * k, (.3 + .6 * k) * p);
 }
 TEGN_GLOD.push(sjelGlod);
-LYSKILDER.push(L => { const l = lokkeLys(); if (l) L(l[0], l[1], 110, .7 * l[2]); });
 function fjernForskyv(lw) {
   const vw = cssW / grunnSkala, kxF = clamp(ELEKTRIKER.x * T - 1.6 * T + 12 - vw * .42 + 10 * T, 0, MW * T - vw);
   return .66 * cv.width - 1380 * lw / LW + kxF * grunnSkala * dpr * .08;
