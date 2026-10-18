@@ -536,7 +536,7 @@ function oppdaterBoss3(dt) {
 function skudd3(n) { const [kx, ky] = b3Kjerne(), pcx = P.x + P.w / 2, pcy = P.y + P.h / 2, tf = 1.2; lyd('skudd');
   for (let i = 0; i < n; i++) prosj.push({ x: kx, y: ky, vx: (pcx - kx) / tf + (i - (n - 1) / 2) * 90, vy: (pcy - ky - .5 * 700 * tf * tf) / tf, liv: 4, f: 'o' }); }
 function sluttBoss3() {
-  S.boss3 = true; S.helt = true; B3.aktiv = false; B3.fase = ''; aapneGard(); S.flash = 1; S.flashF = '255,240,200';
+  S.boss3 = true; S.helt = true; B3.aktiv = false; B3.fase = ''; aapneGard(); rect(42, 32, 43, 32, AIR); chunks.clear();   // luka i kjellergulvet åpnes med en gang, ikke først ved neste lasting S.flash = 1; S.flashF = '255,240,200';
   sprut(B3.x, B3.y - 60, 120, 'o', 460); sprut(B3.x, B3.y - 60, 60, 'w', 320); ring(B3.x, B3.y - 60, 34, 'h', 420); lyd('slutt'); hud();
   banner('Trafokjempen er slått ut', 'Strømmen er tilbake i hele byen', 3.5); sjelSier('B3');
   const tid = S.tid; let rekord = false;

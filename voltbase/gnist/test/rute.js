@@ -260,6 +260,7 @@ async function fase5(b) {
   sjekk('strømstøt fra bakken treffer brystplaten', stotTreff);
   sjekk('gulvet får strøm i fase 2', golv3);
   sjekk('rulletekst etter sluttbossen', await page.waitForFunction(() => document.querySelector('#lagRull').classList.contains('vis'), null, { timeout: 15000 }).then(() => true, () => false));
+  sjekk('luka i kjellergulvet åpnes med en gang etter Trafokjempen', await page.evaluate(() => tile(42, 32) === AIR));
   sjekk('spillet er fullført og lagret', await page.evaluate(() => { const l = hentLagret(); return l.helt && l.boss3 && l.knust.includes(0) && l.ev.sliper; }));
   // tidsmodus
   await page.reload(); await vent(page, 400);
