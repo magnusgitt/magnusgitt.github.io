@@ -4,7 +4,8 @@
 // Alt er forhåndstegnet på små lerreter og bare flyttes og farges per bilde, så det koster lite.
 
 // ---------- forhåndstegnede lag ----------
-function myk(g, px) { try { g.filter = `blur(${px}px)`; } catch (e) {} }
+// uskarphet legges på én gang til slutt (et filter på hver enkelt figur ble svært tregt)
+function uskarp(c, px) { const u = nyC(c.width, c.height), g = u.getContext('2d'); try { g.filter = `blur(${px}px)`; } catch (e) {} g.drawImage(c, 0, 0); return u; }
 // en lang, myk lysstråle: lys ved kilden, borte mot enden, myke kanter
 const STRALE2 = (() => { const c = nyC(512, 64), g = c.getContext('2d');
   const l = g.createLinearGradient(0, 0, 512, 0); l.addColorStop(0, 'rgba(255,255,255,1)'); l.addColorStop(.35, 'rgba(255,255,255,.45)'); l.addColorStop(1, 'rgba(255,255,255,0)');
@@ -26,7 +27,7 @@ const FORGRUNN = {};
 function forgrunnFor(tema) {
   if (FORGRUNN[tema]) return FORGRUNN[tema];
   const W = 2048, bunn = nyC(W, 240), topp = nyC(W, 200), rnd = rng(503 + tema.length * 7);
-  const gb = bunn.getContext('2d'), gt = topp.getContext('2d'); myk(gb, 2.5); myk(gt, 2.5);
+  const gb = bunn.getContext('2d'), gt = topp.getContext('2d');
   const farge = '#03050a';
   gb.fillStyle = farge; gb.strokeStyle = farge; gt.fillStyle = farge; gt.strokeStyle = farge;
   const gress = (x, h, n) => { for (let i = 0; i < n; i++) { const bx = x + (rnd() - .5) * 60, hh = h * (.5 + rnd() * .6), b = (rnd() - .5) * 50;
@@ -55,7 +56,7 @@ function forgrunnFor(tema) {
     for (let x = 0; x < W; x += 450 + rnd() * 450) stein(x, 140 + rnd() * 160, 30 + rnd() * 40);
     for (let x = 80; x < W; x += 220 + rnd() * 320) ranke(x, 50 + rnd() * 100);
   }
-  return (FORGRUNN[tema] = { bunn, topp });
+  return (FORGRUNN[tema] = { bunn: uskarp(bunn, 2.5), topp: uskarp(topp, 2.5) });
 }
 const temaFor = navn => ['kjeller', 'hall', 'kabel', 'pumpe', 'stasjon', 'kraft', 'turbin', 'galleri', 'kulvert', 'data'].includes(navn) ? 'inne' : navn === 'sump' ? 'sump' : navn === 'dam' ? 'dam' : navn === 'linja' || navn === 'nord' ? 'fjell' : 'ute';
 
@@ -81,11 +82,11 @@ function tegnBaklys() {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter';
   // en stor, myk lyskilde høyt oppe (bare når himmelen synes)
   if (u > .05) { const [sx, sy] = kildePos(), R = Math.max(cw, ch) * 1.05, gr = ctx.createRadialGradient(sx, sy, 0, sx, sy, R);
-    gr.addColorStop(0, disFarge(.15 * u, .5)); gr.addColorStop(.35, disFarge(.06 * u, .25)); gr.addColorStop(1, disFarge(0));
+    gr.addColorStop(0, disFarge(.22 * u, .5)); gr.addColorStop(.35, disFarge(.09 * u, .25)); gr.addColorStop(1, disFarge(0));
     ctx.fillStyle = gr; ctx.fillRect(0, 0, cw, ch); }
   // to tåkelag som driver sakte sidelengs i hver sin dybde
   const tk = taakeFor(ST.navn), tw = 1024 * m * 1.6, th = 256 * m * 1.6;
-  for (const [p, fart, yk, a] of [[.18, 9, .42, .5], [.42, 20, .62, .38]]) {
+  for (const [p, fart, yk, a] of [[.18, 9, .42, .75], [.42, 20, .62, .6]]) {
     let x = -(((camX * p + S.t * fart) * m) % tw); if (x > 0) x -= tw; const y = ch * yk - th / 2 - (camY * m * p * .25) % (th * .25);
     ctx.globalAlpha = a * (.55 + .45 * u); for (; x < cw; x += tw) ctx.drawImage(tk, x, y, tw + 1, th); }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
