@@ -227,7 +227,7 @@ document.documentElement.classList.toggle('touch', erTouch);
 const PISK = ['KeyF', 'KeyV'], SPIKERTAST = ['KeyG', 'KeyR'];
 const HOPP = ['ArrowUp', 'KeyW', 'Space', 'KeyZ', 'KeyK'], STOT = ['ShiftLeft', 'ShiftRight', 'KeyX', 'KeyJ', 'KeyL'], KROK = ['KeyC', 'KeyE'];
 function oppdaterTaster() {
-  I.left = !!(K.ArrowLeft || K.KeyA || TS.left); I.right = !!(K.ArrowRight || K.KeyD || TS.right); I.down = !!(K.ArrowDown || K.KeyS);
+  I.left = !!(K.ArrowLeft || K.KeyA || TS.left); I.right = !!(K.ArrowRight || K.KeyD || TS.right); I.down = !!(K.ArrowDown || K.KeyS || TS.down);
   I.jumpHeld = HOPP.some(k => K[k]) || TS.jump;
   I.krokHeld = KROK.some(k => K[k]) || TS.krok;
 }
@@ -258,11 +258,12 @@ addEventListener('pointerdown', e => { if (e.pointerType === 'touch' && !erTouch
 document.addEventListener('touchmove', e => { if (S.mode === 'spill' || S.mode === 'evne') e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
-const pad = $('#pad'); let padId = null;
-function padSett(e) { const r = pad.getBoundingClientRect(), v = e.clientX - r.left < r.width / 2; TS.left = v; TS.right = !v; pad.dataset.dir = v ? 'v' : 'h'; oppdaterTaster(); }
-pad.addEventListener('pointerdown', e => { e.preventDefault(); padId = e.pointerId; try { pad.setPointerCapture(e.pointerId); } catch (x) {} lydInit(); padSett(e); });
+const pad = $('#pad'); let padId = null, padY0 = 0;
+// dra fingeren nedover på styrefeltet for å slippe deg ned gjennom planker (som å holde ↓ på tastaturet)
+function padSett(e) { const r = pad.getBoundingClientRect(), v = e.clientX - r.left < r.width / 2; TS.left = v; TS.right = !v; TS.down = e.clientY - padY0 > 26; pad.dataset.dir = v ? 'v' : 'h'; oppdaterTaster(); }
+pad.addEventListener('pointerdown', e => { e.preventDefault(); padId = e.pointerId; padY0 = e.clientY; try { pad.setPointerCapture(e.pointerId); } catch (x) {} lydInit(); padSett(e); });
 pad.addEventListener('pointermove', e => { if (e.pointerId === padId) padSett(e); });
-const slippPad = e => { if (e.pointerId !== padId) return; padId = null; TS.left = TS.right = false; pad.dataset.dir = ''; oppdaterTaster(); };
+const slippPad = e => { if (e.pointerId !== padId) return; padId = null; TS.left = TS.right = TS.down = false; pad.dataset.dir = ''; oppdaterTaster(); };
 pad.addEventListener('pointerup', slippPad); pad.addEventListener('pointercancel', slippPad); pad.addEventListener('lostpointercapture', slippPad);
 function trykkKnapp(el, ned, opp) {
   el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) {} el.classList.add('trykk'); lydInit(); ned(); });

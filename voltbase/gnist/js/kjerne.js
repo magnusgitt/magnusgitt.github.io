@@ -54,7 +54,7 @@ const prosj = [], bolger = [], striker = [], partikler = [], lys = [], fiender =
 let lyn = null;
 const cam = { x: 0, y: 0, look: 0, anker: 0, zoom: 1 };
 const I = { left: false, right: false, down: false, jumpHeld: false, jumpP: false, dashP: false, krokHeld: false, piskP: false };
-const K = {}, TS = { left: false, right: false, jump: false, dash: false, krok: false };
+const K = {}, TS = { left: false, right: false, jump: false, dash: false, krok: false, down: false };
 
 // ---------- innstillinger (egen nøkkel, påvirker ikke lagret fremgang) ----------
 const INNST = { vib: true, rist: true, mus: true, tips: true, grafikk: 'auto', knapper: {} };

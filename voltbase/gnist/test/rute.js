@@ -875,6 +875,12 @@ async function touch(b, navn, opts) {
   await pos(page, 50, 18); await vent(page, 300);
   await berør('touchStart', [{ x: hopp.x, y: hopp.y, id: 2 }]); await vent(page, 120); await berør('touchEnd', []); await vent(page, 120);
   { const t = await tilstand(page); sjekk('hoppknappen virker', t.y < 18.9, t); }
+  // dra ned på styrefeltet: montøren slipper seg ned gjennom en planke
+  { const pl = await page.evaluate(() => { for (let y = 3; y < 30; y++) for (let x = 3; x < 120; x++) if (tile(x, y) === ONE && tile(x, y - 1) === AIR && tile(x, y - 2) === AIR && tile(x, y + 1) === AIR && tile(x, y + 2) === AIR) return [x, y]; return null; });
+    await page.evaluate(([x, y]) => { __gnist.fiender.length = 0; const P = __gnist.P; P.x = x * 32 + 7; P.y = y * 32 - P.h; P.vx = P.vy = 0; P.inv = 99; }, pl); await vent(page, 300);
+    const st = await tilstand(page);
+    await berør('touchStart', [{ x: pad.x, y: pad.y - 10, id: 8 }]); await berør('touchMove', [{ x: pad.x, y: pad.y + 30, id: 8 }]); await vent(page, 350); await berør('touchEnd', []); await vent(page, 100);
+    const t = await tilstand(page); sjekk('dra ned på styrefeltet slipper montøren gjennom planken', st.y <= pl[1] + .05 && t.y > pl[1] + .5, { pl, st: st.y, etter: t.y }); }
   await pos(page, 76, 18); await vent(page, 1500); await page.waitForFunction(() => __gnist.B.fase === 'kamp', null, { timeout: 8000 }).catch(() => {});
   sjekk('bosskamp på touch', (await tilstand(page)).fase === 'kamp');
   sjekk('ingen scroll', (await page.evaluate(() => scrollY)) === 0);
