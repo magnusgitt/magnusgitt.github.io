@@ -1,7 +1,7 @@
 // Cloudflare Workers: publiserer hele nettstedet som statiske filer.
 // GitHub Pages bruker ikke denne filen.
 {
-  "name": "magnusgitt-github-io",
+  "name": "base",
   "compatibility_date": "2026-10-18",
   "assets": {
     "directory": "."
