@@ -799,6 +799,48 @@ async function nordlyset(b) {
   await ctx.close();
 }
 
+async function verksted(b) {
+  console.log('Verkstedet');
+  const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
+  await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ v: 4, ev: { dobbel: true, hansker: true, stot: true, krok: true }, cp: 2, cpLit: [0, 1, 2], orb: [], boss: false, tid: 60 })), KEY);
+  await page.reload(); await vent(page, 400); await page.evaluate(() => document.querySelector('#bFortsett').click()); await vent(page, 600);
+  sjekk('de nye kjøpene finnes', await page.evaluate(() => ['sikring', 'luftstot', 'gjenvinner', 'spiker2', 'magnet', 'soker'].every(id => OPPGRADERINGER.some(o => o.id === id))));
+  await page.evaluate(() => { for (let i = 0; i < 150; i++) S.orbTatt.add(1000 + i); });
+  sjekk('gjennomslag krever spikerpistolen', await page.evaluate(() => kjop('spiker2') === false && !S.kjop.spiker2));
+  sjekk('verkstedet viser kravet', await page.evaluate(() => { S.verkNaer = 0; visVerk(); const t = document.querySelector('#verkListe').textContent; lukkPanel(); return t.includes('Krever Spikerpistol'); }));
+  // gjennomslag: én spiker tar to fiender på rad
+  { const r = await page.evaluate(() => { kjop('spiker'); kjop('spiker2'); fiender.length = 0; SPIKER.length = 0; P.face = 1; P.inv = 99;
+      const lag = dx => { const e = { type: 'rele', x: P.x + dx, y: P.y + P.h - 22, w: 22, h: 22, dir: 1, liv: true, t: 0, lad: 0, pause: 9 }; fiender.push(e); return e; };
+      const a = lag(110), c = lag(170); I.spikerP = true; for (let i = 0; i < 30; i++) oppdaterVerden(1 / 60); return { a: a.liv, c: c.liv }; });
+    sjekk('gjennomslag: spikeren går gjennom to fiender', !r.a && !r.c, r); }
+  // nødsikring
+  { const r = await page.evaluate(() => { fiender.length = 0; kjop('sikring'); P.inv = 0; P.dashT = 0; P.hp = 1; skade(P.x + 50, false); const forst = { hp: P.hp, dod: S.dod };
+      P.inv = 0; skade(P.x + 50, false); const andre = { hp: P.hp, dod: S.dod > 0 }; return { forst, andre }; });
+    sjekk('nødsikringen redder ett dødelig treff', r.forst.hp === 1 && !(r.forst.dod > 0), r);
+    sjekk('nødsikringen virker bare én gang før sjekkpunkt', r.andre.dod, r); }
+  await page.waitForFunction(() => S.dod <= 0 && P.hp === P.max, null, { timeout: 5000 }).catch(() => {});
+  sjekk('nødsikringen lades opp igjen', await page.evaluate(() => !P.sikringBrukt));
+  // luftstøt
+  { const r = await page.evaluate(() => { kjop('luftstot'); fiender.length = 0; P.inv = 99; P.y -= 120; P.vy = 0; P.onGround = false; P.canDash = false; P.face = 1; P.piskT = .15; P.piskTraff = false;
+      const e = { type: 'rele', x: P.x + P.w / 2 + 30, y: P.y + 4, w: 22, h: 22, dir: 1, liv: true, t: 0, lad: 0, pause: 9 }; fiender.push(e); oppdaterVerden(1 / 60); return { dod: !e.liv, dash: P.canDash }; });
+    sjekk('luftstøt: pisketreff i lufta gir nytt strømstøt', r.dod && r.dash, r); }
+  // gjenvinner
+  { const r = await page.evaluate(() => { kjop('gjenvinner'); for (let i = 0; i < 90; i++) oppdaterVerden(1 / 60); P.hp = P.max - 1; const rnd = Math.random; Math.random = () => 0;
+      const e = { type: 'rele', x: P.x + 200, y: P.y, w: 22, h: 22, dir: 1, liv: true, t: 0 }; drepFiende(e); Math.random = rnd; const n = LIVDROPP.length;
+      if (n) { LIVDROPP[0].x = P.x + P.w / 2; LIVDROPP[0].y = P.y + P.h / 2; } const hp0 = P.hp; oppdaterVerden(1 / 60); return { n, opp: P.hp === hp0 + 1 }; });
+    sjekk('gjenvinner: fienden slipper en livsgnist', r.n === 1, r); sjekk('livsgnisten gir ett liv tilbake', r.opp, r); }
+  // orbmagnet: finn en orb med fri sikt to ruter til siden
+  { const r = await page.evaluate(() => { const i = ORBER.findIndex(([x, y], i) => !S.orbTatt.has(i) && !fast(x - 2, y) && !fast(x - 1, y) && !fast(x - 2, y + 1) && fast(x - 2, y + 2));
+      if (i < 0) return { ingen: true }; const [x, y] = ORBER[i]; const sett = () => { P.x = (x - 2) * T + T / 2 - P.w / 2; P.y = (y + 2) * T - P.h; P.vx = P.vy = 0; };
+      sett(); oppdaterVerden(1 / 60); const uten = S.orbTatt.has(i); kjop('magnet'); sett(); oppdaterVerden(1 / 60); return { uten, med: S.orbTatt.has(i), fly: FLYORB.length }; });
+    sjekk('orbmagnet trekker inn en orb i nærheten', (!r.uten && r.med && r.fly > 0), r); }
+  sjekk('orbsøkeren tegner på kartet uten feil', await page.evaluate(() => { kjop('soker'); visKart(); const ok = S.mode === 'kart'; lukkPanel(); return ok; }));
+  await page.evaluate(() => lagre());
+  sjekk('de nye kjøpene lagres', await page.evaluate(() => { const k = hentLagret().kjop; return k.sikring && k.luftstot && k.gjenvinner && k.spiker2 && k.magnet && k.soker; }));
+  sjekk('ingen JS-feil (verksted)', errs.length === 0, errs);
+  await ctx.close();
+}
+
 async function spiker(b) {
   console.log('Spikerpistolen');
   const { ctx, page, errs } = await nySide(b, { viewport: { width: 1280, height: 720 } });
@@ -1051,6 +1093,7 @@ async function lydbilde(b) {
     if (med('data')) await datasenter(b);
     if (med('nord')) await nordlyset(b);
     if (med('spiker')) await spiker(b);
+    if (med('verksted')) await verksted(b);
     if (med('anim')) await anim(b);
     if (med('intro')) await intro(b);
     if (med('bosser')) await bosstegning(b);

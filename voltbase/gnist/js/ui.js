@@ -310,6 +310,8 @@ function tegnKart() {
     g.fillStyle = lit ? '#ffe9a8' : '#59627a'; g.beginPath(); g.arc(px, py, Math.max(4, sk * 1.1), 0, 7); g.fill();
     if (lit) { g.strokeStyle = 'rgba(255,233,168,.5)'; g.lineWidth = 2; g.beginPath(); g.arc(px, py, Math.max(7, sk * 1.8), 0, 7); g.stroke(); }
     if (VERKSTED.includes(i)) { g.fillStyle = '#ffc56b'; g.font = `bold ${Math.max(10, sk * 2.2) | 0}px system-ui`; g.textAlign = 'center'; g.fillText('⚒', px, py - Math.max(8, sk * 2)); } });
+  // orbsøkeren viser lysorber som er igjen i det som er utforsket
+  if (S.kjop.soker) { g.fillStyle = '#8ff0ff'; ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i) || soneFor(y) !== kartSone || !S.sett[Math.floor(y / KC) * KW + Math.floor(x / KC)]) return; const [px, py] = pkt(x + .5, y + .5); g.beginPath(); g.arc(px, py, Math.max(1.6, sk * .45), 0, 7); g.fill(); }); }
   for (const p of PORTER) { if (soneFor(p.y0) !== kartSone || !S.sett[Math.floor(p.y0 / KC) * KW + Math.floor(p.x / KC)]) continue; const [px, py] = pkt(p.x + .5, (p.y0 + p.y1 + 1) / 2);
     g.strokeStyle = p.krav() ? '#8ff0ff' : '#59627a'; g.lineWidth = 2; g.strokeRect(px - Math.max(3, sk), py - Math.max(5, sk * 2), Math.max(6, sk * 2), Math.max(10, sk * 4)); }
   if (spillerSone() !== kartSone) return;
@@ -324,8 +326,11 @@ function lukkPanel() { if (S.mode !== 'kart' && S.mode !== 'verk') return; S.mod
 function visVerk() { if (S.mode !== 'spill' || S.verkNaer < 0) return; S.mode = 'verk'; nullInput(); visLag('#lagVerk'); tegnVerk(); }
 function tegnVerk() {
   $('#verkOrb').textContent = `✦ ${orbIgjen()} lysorber å bruke`;
-  $('#verkListe').innerHTML = OPPGRADERINGER.map(o => { const har = !!S.kjop[o.id], kan = !har && orbIgjen() >= o.pris;
-    return `<div class="oppg${har ? ' kjopt' : ''}"><div><b>${o.navn}</b><span>${o.tekst}</span></div><button data-id="${o.id}"${kan ? '' : ' disabled'}>${har ? 'Kjøpt' : '✦ ' + o.pris}</button></div>`; }).join('');
+  // det som ikke er kjøpt står øverst, så nye kjøp ikke drukner under det du allerede har
+  const liste = [...OPPGRADERINGER.filter(o => !S.kjop[o.id]), ...OPPGRADERINGER.filter(o => S.kjop[o.id])];
+  $('#verkListe').innerHTML = liste.map(o => { const har = !!S.kjop[o.id], laast = o.krever && !S.kjop[o.krever], kan = !har && !laast && orbIgjen() >= o.pris;
+    const tekst = laast ? `Krever ${OPPGRADERINGER.find(k => k.id === o.krever).navn}.` : o.tekst;
+    return `<div class="oppg${har ? ' kjopt' : ''}"><div><b>${o.navn}</b><span>${tekst}</span></div><button data-id="${o.id}"${kan ? '' : ' disabled'}>${har ? 'Kjøpt' : '✦ ' + o.pris}</button></div>`; }).join('');
 }
 $('#verkListe').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (b && kjop(b.dataset.id)) { tegnVerk(); toast('Oppgradert!'); } });
 function visFag() {

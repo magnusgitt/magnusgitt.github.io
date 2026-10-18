@@ -7,8 +7,8 @@ let spikerCd = 0;
 I.spikerP = false;
 function skytSpiker() {
   if (!S.kjop.spiker || spikerCd > 0 || S.dod > 0 || S.mode !== 'spill') return false;
-  spikerCd = .32; const d = P.face || 1;
-  SPIKER.push({ x: P.x + P.w / 2 + d * 14, y: P.y + P.h * .42, vx: d * 980, liv: .42 });
+  spikerCd = S.kjop.spiker2 ? .2 : .32; const d = P.face || 1;
+  SPIKER.push({ x: P.x + P.w / 2 + d * 14, y: P.y + P.h * .42, vx: d * 980, liv: .42, gjennom: !!S.kjop.spiker2 });
   P.vx -= d * 40; lyd('spiker'); vib(8); gnister(P.x + P.w / 2 + d * 16, P.y + P.h * .42, 3, 'w'); return true;
 }
 function oppdaterSpiker(dt) {
@@ -19,6 +19,7 @@ function oppdaterSpiker(dt) {
     if (!borte) for (const e of fiender) { if (!e.liv) continue; const lo = Math.min(x0, s.x), hi = Math.max(x0, s.x);
       if (hi > e.x - 2 && lo < e.x + e.w + 2 && s.y > e.y - 4 && s.y < e.y + e.h + 4) {
         borte = true;
+        if (s.gjennom && !skjoldForan(e, x0)) { borte = false; drepFiende(e); lyd('piskTreff'); sprut(e.x + e.w / 2, e.y + e.h / 2, 16, 'c', 200); continue; }
         if (skjoldForan(e, x0)) { gnister(e.x + e.w / 2 + e.dir * 14, s.y, 8, 'w'); lyd('prell'); hint('skjoldspiker', 'Skjoldet stopper spikeren. Skyt den bakfra.', 3); }
         else { drepFiende(e); lyd('piskTreff'); sprut(e.x + e.w / 2, e.y + e.h / 2, 16, 'c', 200); gnister(e.x + e.w / 2, e.y + e.h / 2, 8, 'w'); }
         break; } }

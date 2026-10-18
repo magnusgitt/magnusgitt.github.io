@@ -275,7 +275,7 @@ const FOTSPOR = [], DODE = [];
 function fotspor(x, y) { if (FOTSPOR.length > 26) FOTSPOR.shift(); FOTSPOR.push({ x, y, t0: S.t }); }
 // ny runde+: fiendene tåler ett slag før de går ut (et kort vindu hindrer at samme slag teller to ganger)
 function drepFiende(e) { if (S.ngPluss) { if (!e.taalt) { e.taalt = S.t; gnister(e.x + e.w / 2, e.y + e.h / 2, 8, 'g'); return; } if (S.t - e.taalt < .3) return; }
-  e.liv = false; DODE.push({ e: Object.assign({}, e), t: .5 }); }
+  e.liv = false; DODE.push({ e: Object.assign({}, e), t: .5 }); for (const f of ETTER_DRAP) f(e); }
 // refleksskjerfet: en kort kjede av punkter som henger etter hjelmen
 const HALE = Array.from({ length: 9 }, () => ({ x: 0, y: 0, px: 0, py: 0 }));
 function haleAnker() { const f = ANIM.face || P.face; return [P.x + P.w / 2 - f * 4 * P.sx, P.y + P.h + (ANIM.dy - 30) * P.sy]; }

@@ -50,7 +50,7 @@ const B5 = { aktiv: false, fase: '', introT: 0, hp: 5, x: 0, y: 0, t: 0, stun: 0
 // Spenningsålen: bossen i magasinet ved vannkraftdammen
 const B6 = { aktiv: false, fase: '', introT: 0, hp: 3, t: 0, x: 0, y: 0, dir: 1, syklus: '', sT: 0, niva: 146, strom: '', stromT: 0, skuddT: 2, dod: 0 };
 // krokpunkter for nye områder: hver sone og hvert system legger seg til her i stedet for å endre spill.js
-const OPPDATER = [], TEGN_BAK = [], TEGN_VERDEN = [], TEGN_OVER = [], TEGN_FORAN = [], TEGN_GLOD = [], LYSKILDER = [], TILBAKESTILL = [], BOSSER = [];
+const OPPDATER = [], TEGN_BAK = [], TEGN_VERDEN = [], TEGN_OVER = [], TEGN_FORAN = [], TEGN_GLOD = [], LYSKILDER = [], TILBAKESTILL = [], BOSSER = [], ETTER_DRAP = [];
 const prosj = [], bolger = [], striker = [], partikler = [], lys = [], fiender = [], bolter = [], sveip = [];
 let lyn = null;
 const cam = { x: 0, y: 0, look: 0, anker: 0, zoom: 1 };

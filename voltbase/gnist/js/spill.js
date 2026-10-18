@@ -44,7 +44,7 @@ function nyttSpill(lagret) {
 function respawn(stille) {
   const c = SJEKK[S.cp];
   P.x = c.x * T + T / 2 - P.w / 2; P.y = (c.y + 1) * T - P.h; P.vx = P.vy = 0; P.hp = P.max; P.inv = stille ? 0 : 1; P.dashT = 0; P.safeX = P.x; P.safeY = P.y;
-  P.air = 0; P.spor.length = 0; P.onGround = true; P.canDash = true; P.paKran = false; P.krok = null; P.krokCd = 0;
+  P.air = 0; P.spor.length = 0; P.onGround = true; P.canDash = true; P.paKran = false; P.krok = null; P.krokCd = 0; P.sikringBrukt = false;
   if (B.aktiv && !S.bossDone) resetBoss();
   if (B2.aktiv && !S.boss2) resetBoss2();
   if (B3.aktiv && !S.boss3) resetBoss3();
@@ -70,6 +70,8 @@ function skade(fraX, felle) {
   P.krok = null;
   P.hp--; P.inv = 1.3; S.shake = .35; S.flash = .45; S.flashF = '255,60,60'; lyd('au'); S.slow = .12; vib(P.hp <= 0 ? [60, 40, 120] : 70);
   sprut(P.x + P.w / 2, P.y + P.h / 2, 14, 'r', 220); hud(); pop('#liv');
+  // nødsikringen løser ut i stedet for montøren, én gang per sjekkpunkt
+  if (P.hp <= 0 && S.kjop.sikring && !P.sikringBrukt) { P.hp = 1; P.sikringBrukt = true; P.inv = 2; S.flash = .6; S.flashF = '255,220,120'; lyd('bryter'); ring(P.x + P.w / 2, P.y + P.h / 2, 22, 'w', 200); toast('Nødsikringen løste ut!'); hud(); }
   if (P.hp <= 0) { S.dod = 1.2; S.dodsfall++; lyd('dod'); sprut(P.x + P.w / 2, P.y + P.h / 2, 40, 'c', 300); return; }
   if (felle) { P.x = P.safeX; P.y = P.safeY; P.vx = P.vy = 0; P.dashT = 0; ring(P.x + P.w / 2, P.y + P.h / 2, 12, 'c', 120); }
   else { P.vx = (P.x + P.w / 2 < fraX ? -1 : 1) * 330; P.vy = -360; P.dashT = 0; }
@@ -95,7 +97,7 @@ function faaFag(i) {
 // hurtigreise: til et tent sjekkpunkt fra kartet
 function reiseTil(i) { if (!S.cpLit.has(i) || anyBoss() || S.dod > 0 || S.overgang) return false;
   S.cp = i; respawn(true); lagre(); lyd('gjenoppstaa'); ring(P.x + P.w / 2, P.y + P.h / 2, 18, 'c', 160); S.hintSett.add('omr-' + omraade(Math.floor((P.x + P.w / 2) / T), Math.floor((P.y + P.h / 2) / T))); return true; }
-function kjop(id) { const o = OPPGRADERINGER.find(o => o.id === id); if (!o || S.kjop[id] || orbIgjen() < o.pris) return false;
+function kjop(id) { const o = OPPGRADERINGER.find(o => o.id === id); if (!o || S.kjop[id] || orbIgjen() < o.pris || (o.krever && !S.kjop[o.krever])) return false;
   S.kjop[id] = true; S.brukt += o.pris; if (id === 'liv3') { P.max = maksLiv(); P.hp = P.max; } lagre(); lyd('evne'); hud(); return true; }
 const orbIgjen = () => S.orbTatt.size - S.brukt;
 function lukkEvne() { if (S.mode !== 'evne') return; S.mode = 'spill'; sist = performance.now(); nullInput(); visLag(null); sjekkMaal(true);
@@ -243,10 +245,11 @@ function oppdaterVerden(dt) {
   SJEKK.forEach((c, i) => { const cx = c.x * T + T / 2, cy = c.y * T + T / 2;
     if (Math.abs(pcx - cx) < T * 1.2 && Math.abs(pcy - cy) < T * 1.4) {
       if (!S.cpLit.has(i)) { S.cpLit.add(i); lyd('rele'); lyd('lampe'); sprut(cx, cy - 10, 24, 'w', 160); toast('Sjekkpunkt tent'); }
-      if (S.cp !== i || P.hp < P.max) { if (P.hp < P.max) pop('#liv'); S.cp = i; P.hp = P.max; hud(); lagre(); } } });
+      if (S.cp !== i || P.hp < P.max || P.sikringBrukt) { if (P.hp < P.max) pop('#liv'); S.cp = i; P.hp = P.max; P.sikringBrukt = false; hud(); lagre(); } } });
   // lysorber
   ORBER.forEach(([x, y], i) => { if (S.orbTatt.has(i)) return; const ox = x * T + T / 2, oy = y * T + T / 2 + Math.sin(S.t * 2 + i) * 4;
-    if (Math.abs(pcx - ox) < 22 && Math.abs(pcy - oy) < 26) { S.orbTatt.add(i); lyd('orb'); sprut(ox, oy, 16, 'c', 140); hud(); pop('#orbtall'); lagre();
+    const mag = S.kjop.magnet && Math.hypot(pcx - ox, pcy - oy) < 3.2 * T && fritSikt(pcx, pcy, ox, oy);
+    if (mag || (Math.abs(pcx - ox) < 22 && Math.abs(pcy - oy) < 26)) { S.orbTatt.add(i); if (mag) FLYORB.push({ x: ox, y: oy, t: 0 }); lyd('orb'); sprut(ox, oy, 16, 'c', 140); hud(); pop('#orbtall'); lagre();
       if (S.orbTatt.size === ORBER.length) toast('Alle lysorbene funnet!'); } });
   // hemmelig rom
   if (!S.ev.hemmelig) { const tx = Math.floor(pcx / T), ty = Math.floor(pcy / T);
@@ -282,7 +285,7 @@ function oppdaterVerden(dt) {
     else if (!oppdaterFiende2(e, dt, pcx, pcy)) { e.x += e.dir * 46 * dt; if (e.x < e.x0) { e.x = e.x0; e.dir = 1; } if (e.x + e.w > e.x1) { e.x = e.x1 - e.w; e.dir = -1; } }
     if (pisk && e.x + e.w > pisk.x0 && e.x < pisk.x1 && e.y + e.h > pisk.y0 && e.y < pisk.y1) {
       if (skjoldForan(e, pcx)) { if (!P.piskTraff) { P.piskTraff = true; prellAv(e); } continue; }
-      drepFiende(e); P.piskTraff = true; lyd('piskTreff'); vib(20); S.shake = Math.max(S.shake, .15); sprut(e.x + e.w / 2, e.y + e.h / 2, 22, 'c', 240); gnister(e.x + e.w / 2, e.y + e.h / 2, 10, 'w'); continue; }
+      drepFiende(e); P.piskTraff = true; if (S.kjop.luftstot && !P.onGround && !P.canDash) { P.canDash = true; gnister(pcx, pcy, 6, 'c'); } lyd('piskTreff'); vib(20); S.shake = Math.max(S.shake, .15); sprut(e.x + e.w / 2, e.y + e.h / 2, 22, 'c', 240); gnister(e.x + e.w / 2, e.y + e.h / 2, 10, 'w'); continue; }
     if (P.x + P.w > e.x && P.x < e.x + e.w && P.y + P.h > e.y && P.y < e.y + e.h) {
       const trakk = P.vy > 0 && P.y + P.h - e.y < 14;
       if (P.dashT > 0 && !trakk && skjoldForan(e, pcx)) { prellAv(e); continue; }
