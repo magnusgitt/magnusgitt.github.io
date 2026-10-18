@@ -384,7 +384,7 @@ function oppdaterAnim(p) {
   // verktøyet: en dempet pendel som reagerer på fartsendringer
   A.verkV += (-A.verk * 140 - A.verkV * 7 + clamp(A.acc * p.face, -3000, 3000) * .018 + (bakke ? 0 : clamp(p.vy, -800, 800) * .01)) * dt; A.verk = clamp(A.verk + A.verkV * dt, -1.1, 1.1);
   // snuing: figuren klemmes kort sammen i stedet for å speile seg på ett bilde
-  A.face = mot(A.face, p.face, dt / .09);
+  A.face = mot(A.face, p.face, dt / .07);
   const maal = poseFor(p);
   if (!A.p) A.p = kopiPose(maal);
   blandPose(A.p, maal, 1 - Math.exp(-(maal.fart || 18) * dt)); A.p.blunk = maal.blunk; A.p.hjelm = maal.hjelm && Math.abs(A.p.a2[0] - 2.4) < .25 ? 1 : 0;
@@ -405,7 +405,8 @@ function tegnSpiller() {
         ctx.globalAlpha = k * st * .22; ctx.strokeStyle = '#7fdcff'; ctx.lineWidth = 2 + k * 7; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.lineCap = 'butt'; } }
   if (!(p.inv > 0 && Math.floor(p.inv * 18) % 2)) tegnHale();
-  const fs = Math.sign(A.face) || p.face, fx = fs * Math.max(.3, Math.abs(A.face));
+  // snuing: kroppen dreies litt (smalere et øyeblikk) og speiles midtveis, men blir aldri en tynn strek
+  const fs = Math.sign(A.face) || p.face, fx = fs * (.8 + .2 * Math.abs(A.face));
   ctx.save(); ctx.translate(p.x + p.w / 2, p.y + p.h); ctx.scale(fx * p.sx, p.sy);
   // i lufta vipper hele kroppen litt i fartsretningen
   const vipp = !p.onGround && !p.krok && A.flipT <= 0 ? clamp(p.vx * p.face / RUN, -1, 1.4) * .12 + clamp(p.vy / 900, -1, 1) * .04 : 0; A.tilt += (vipp - A.tilt) * .2;
@@ -873,6 +874,7 @@ function tegn() {
   tegnMotes(false);
   const m = skala * dpr;
   tegnInneBg(camX, camY);
+  for (const f of TEGN_BAK) f();
   // bitene tegnes på hele skjermpiksler uten overlapp, så den halvgjennomsiktige bakveggen ikke får striper
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const vw = cssW / skala, vh = cssH / skala, pad = 2 * chunkRes;
@@ -905,7 +907,7 @@ function tegn() {
   tegnBoss3();
   tegnBoss4();
   if (S.dod <= 0 && !P.krok) tegnSkygge(P.x + P.w / 2, P.y + P.h, P.w);
-  tegnSpiller();
+  tegnMontorMedLys();
   tegnSkjerm(P);
   tegnVann();
   for (const f of TEGN_OVER) f();
@@ -924,3 +926,38 @@ function tegn() {
   if (S.dod > 0) { ctx.fillStyle = `rgba(2,4,12,${clamp((1.2 - S.dod) / .6, 0, 1) * .85})`; ctx.fillRect(0, 0, cv.width, cv.height); }
   tegnOvergang();
 }
+
+// ---------- montøren med volum og kantlys ----------
+// Figuren tegnes på et eget lite lerret. Der får den skygge på siden bort fra lyset, og en lys kant
+// på siden mot lyset som følger ham (eller lyset ovenfra når det er borte). Kanten legges på etter mørket, så den gløder.
+const MLYS = { c: nyC(8, 8), r: nyC(8, 8), x: 0, y: 0, w: 0, h: 0, klar: false, a: 0 };
+function lysRetning() {
+  const px = P.x + P.w / 2, py = P.y + P.h * .4;
+  if (!GN.skjult && S.dod <= 0) { const dx = GN.x - px, dy = GN.y - py, l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l, clamp(1.25 - l / 260, .35, 1)]; }
+  return [-.45, -.9, .45];
+}
+function tegnMontorMedLys() {
+  MLYS.klar = false;
+  if (S.kval < 1 || S.dod > 0 || P.ror) { tegnSpiller(); return; }
+  const m = skala * dpr, bx = P.x - 34, by = P.y - 30, bw = P.w + 68, bh = P.h + 46, W = Math.ceil(bw * m), H = Math.ceil(bh * m);
+  if (W > 900 || H > 900) { tegnSpiller(); return; }
+  const c = MLYS.c; if (c.width !== W || c.height !== H) { c.width = W; c.height = H; MLYS.r.width = W; MLYS.r.height = H; }
+  const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
+  g.setTransform(m, 0, 0, m, -bx * m, -by * m);
+  ctx = g; try { tegnSpiller(); } finally { ctx = hovedCtx; }
+  const [lx, ly, styrke] = lysRetning();
+  // volum: mørkere på siden bort fra lyset og nederst
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop';
+  const cx = W / 2, cy = H * .55, R = Math.max(W, H) * .32, gr = g.createLinearGradient(cx + lx * R, cy + ly * R, cx - lx * R, cy - ly * R);
+  gr.addColorStop(0, 'rgba(255,240,220,.10)'); gr.addColorStop(.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(6,10,30,.38)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over';
+  ctx.drawImage(c, bx, by, bw, bh);
+  // kantlyset: silhuetten minus en kopi flyttet bort fra lyset
+  const r = MLYS.r.getContext('2d'), sk = 1.5 * m; r.setTransform(1, 0, 0, 1, 0, 0);
+  r.globalCompositeOperation = 'copy'; r.drawImage(c, 0, 0);
+  r.globalCompositeOperation = 'source-in'; r.fillStyle = S.ngPluss ? '#b8ffd8' : '#c8f0ff'; r.fillRect(0, 0, W, H);
+  r.globalCompositeOperation = 'destination-out'; r.drawImage(c, -lx * sk, -ly * sk);
+  r.globalCompositeOperation = 'source-over';
+  Object.assign(MLYS, { x: bx, y: by, w: bw, h: bh, klar: true, a: styrke * (P.inv > 0 && Math.floor(P.inv * 18) % 2 ? .4 : 1) });
+}
+TEGN_GLOD.push(() => { if (!MLYS.klar) return; ctx.globalAlpha = MLYS.a * .7; ctx.drawImage(MLYS.r, MLYS.x, MLYS.y, MLYS.w, MLYS.h); ctx.globalAlpha = 1; });

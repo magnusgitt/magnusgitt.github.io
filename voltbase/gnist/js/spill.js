@@ -337,7 +337,10 @@ function oppdaterVerden(dt) {
   }
   if (S.ending2 > 0) { S.ending2 += dt; S.power = 1;
     if (Math.random() < dt * 40) part(cam.x + Math.random() * cssW / skala, cam.y + cssH / skala + 10, (Math.random() - .5) * 20, -60 - Math.random() * 90, 3 + Math.random() * 2, 5 + Math.random() * 8, Math.random() < .5 ? 'w' : 'o', -5);
-    if (S.ending2 > 4.5 && S.mode === 'spill') { S.ending2 = 0; S.mode = 'slutt'; visRulle(); } }
+    if (S.ending2 > 4.5 && S.mode === 'spill') { S.ending2 = 0;
+      // tidsmodus slutter her; ellers fortsetter eventyret, så rulleteksten venter til Sentralen er slått
+      if (S.tidsmodus) { S.mode = 'slutt'; visRulle(); }
+      else { banner('Byen har lys igjen', 'Men nettet under byen er fortsatt mørkt', 3.5); setTimeout(() => sjekkMaal(true), 3800); } } }
   if (S.ending > 0) {
     S.ending += dt; S.power = clamp((S.ending - .4) / 2.5, 0, 1);
     if (!BG.midtLys) BG.midtLys = lagMidt(true);
@@ -538,7 +541,8 @@ function oppdaterBoss3(dt) {
 function skudd3(n) { const [kx, ky] = b3Kjerne(), pcx = P.x + P.w / 2, pcy = P.y + P.h / 2, tf = 1.2; lyd('skudd');
   for (let i = 0; i < n; i++) prosj.push({ x: kx, y: ky, vx: (pcx - kx) / tf + (i - (n - 1) / 2) * 90, vy: (pcy - ky - .5 * 700 * tf * tf) / tf, liv: 4, f: 'o' }); }
 function sluttBoss3() {
-  S.boss3 = true; S.helt = true; B3.aktiv = false; B3.fase = ''; aapneGard(); rect(42, 32, 43, 32, AIR); chunks.clear();   // luka i kjellergulvet åpnes med en gang, ikke først ved neste lasting S.flash = 1; S.flashF = '255,240,200';
+  S.boss3 = true; S.helt = true; B3.aktiv = false; B3.fase = ''; aapneGard(); S.flash = 1; S.flashF = '255,240,200';
+  rect(42, 32, 43, 32, AIR); chunks.clear();   // luka i kjellergulvet åpnes med en gang, ikke først ved neste lasting
   sprut(B3.x, B3.y - 60, 120, 'o', 460); sprut(B3.x, B3.y - 60, 60, 'w', 320); ring(B3.x, B3.y - 60, 34, 'h', 420); lyd('slutt'); hud();
   banner('Trafokjempen er slått ut', 'Strømmen er tilbake i hele byen', 3.5); sjelSier('B3');
   const tid = S.tid; let rekord = false;

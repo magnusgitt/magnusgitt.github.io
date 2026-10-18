@@ -259,7 +259,8 @@ async function fase5(b) {
   sjekk('alle tre fasene', faser.size === 3, [...faser]);
   sjekk('strømstøt fra bakken treffer brystplaten', stotTreff);
   sjekk('gulvet får strøm i fase 2', golv3);
-  sjekk('rulletekst etter sluttbossen', await page.waitForFunction(() => document.querySelector('#lagRull').classList.contains('vis'), null, { timeout: 15000 }).then(() => true, () => false));
+  await page.waitForFunction(() => __gnist.S.boss3 && __gnist.S.ending2 === 0, null, { timeout: 15000 }).catch(() => {});
+  sjekk('ingen rulletekst etter Trafokjempen, eventyret fortsetter', await page.evaluate(() => !document.querySelector('#lagRull').classList.contains('vis') && __gnist.S.mode === 'spill' && __gnist.S.boss3));
   sjekk('luka i kjellergulvet åpnes med en gang etter Trafokjempen', await page.evaluate(() => tile(42, 32) === AIR));
   sjekk('spillet er fullført og lagret', await page.evaluate(() => { const l = hentLagret(); return l.helt && l.boss3 && l.knust.includes(0) && l.ev.sliper; }));
   // tidsmodus

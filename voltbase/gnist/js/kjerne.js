@@ -5,7 +5,8 @@
 //  All grafikk og lyd lages med kode (canvas og Web Audio).
 // =============================================================
 const $ = s => document.querySelector(s);
-const cv = $('#c'), ctx = cv.getContext('2d');
+const cv = $('#c'), hovedCtx = cv.getContext('2d');
+let ctx = hovedCtx;   // byttes kort mot et eget lerret når montøren tegnes med kantlys
 const T = 32, MW = 200, MH = 320;  // verden vokser nedover: hver sone har sine egne rader. Bredden må aldri endres (kartrutene i lagringen)
 // flistyper: VANN = strømførende vann, BVANN = vannet i koblingsrommet (farlig bare når bossen setter strøm på), LUKE = luka ved hovedtavla
 // GHO = spøkelsesplattform (fast bare med spenningstesteren), SVAK = svak vegg som vinkelsliperen skjærer gjennom
@@ -49,7 +50,7 @@ const B5 = { aktiv: false, fase: '', introT: 0, hp: 5, x: 0, y: 0, t: 0, stun: 0
 // Spenningsålen: bossen i magasinet ved vannkraftdammen
 const B6 = { aktiv: false, fase: '', introT: 0, hp: 3, t: 0, x: 0, y: 0, dir: 1, syklus: '', sT: 0, niva: 146, strom: '', stromT: 0, skuddT: 2, dod: 0 };
 // krokpunkter for nye områder: hver sone og hvert system legger seg til her i stedet for å endre spill.js
-const OPPDATER = [], TEGN_VERDEN = [], TEGN_OVER = [], TEGN_FORAN = [], TEGN_GLOD = [], LYSKILDER = [], TILBAKESTILL = [], BOSSER = [];
+const OPPDATER = [], TEGN_BAK = [], TEGN_VERDEN = [], TEGN_OVER = [], TEGN_FORAN = [], TEGN_GLOD = [], LYSKILDER = [], TILBAKESTILL = [], BOSSER = [];
 const prosj = [], bolger = [], striker = [], partikler = [], lys = [], fiender = [], bolter = [], sveip = [];
 let lyn = null;
 const cam = { x: 0, y: 0, look: 0, anker: 0, zoom: 1 };
