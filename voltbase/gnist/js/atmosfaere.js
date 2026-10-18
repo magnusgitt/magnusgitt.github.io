@@ -76,34 +76,37 @@ const disFarge = (a, lys) => { const [r, g, b] = ST.dis, k = lys || 0; return `r
 const kildePos = () => { const cw = cv.width, ch = cv.height, m = skala * dpr; return [cw * .68 - ((camX * m * .02) % (cw * .3)), -ch * .32]; };   // over skjermkanten, så strålene kommer inn ovenfra uten et synlig midtpunkt
 
 // ---------- bak banen: baklys og drivende tåke ----------
+// baklys, tåke og stråler er myke, så de tegnes i en tredjedels oppløsning og skaleres opp (mye billigere)
+let atmC = null, atmG = null;
+function lavOppl(fn) {
+  const w = Math.ceil(cv.width / 3), h = Math.ceil(cv.height / 3);
+  if (!atmC || atmC.width !== w || atmC.height !== h) { atmC = nyC(w, h); atmG = atmC.getContext('2d'); }
+  const g = atmG; g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, w, h);
+  g.globalCompositeOperation = 'lighter'; fn(g, w, h, w / cv.width); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(atmC, 0, 0, cv.width, cv.height); ctx.globalCompositeOperation = 'source-over';
+}
 function tegnBaklys() {
   if (S.kval < 1 || SLUTT_AKTIV()) return;
-  const cw = cv.width, ch = cv.height, m = skala * dpr, u = ATM.ute;
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter';
-  // en stor, myk lyskilde høyt oppe (bare når himmelen synes)
-  if (u > .05) { const [sx, sy] = kildePos(), R = Math.max(cw, ch) * 1.05, gr = ctx.createRadialGradient(sx, sy, 0, sx, sy, R);
-    gr.addColorStop(0, disFarge(.22 * u, .5)); gr.addColorStop(.35, disFarge(.09 * u, .25)); gr.addColorStop(1, disFarge(0));
-    ctx.fillStyle = gr; ctx.fillRect(0, 0, cw, ch); }
-  // to tåkelag som driver sakte sidelengs i hver sin dybde
-  const tk = taakeFor(ST.navn), tw = 1024 * m * 1.6, th = 256 * m * 1.6;
-  for (const [p, fart, yk, a] of [[.18, 9, .42, .75], [.42, 20, .62, .6]]) {
-    let x = -(((camX * p + S.t * fart) * m) % tw); if (x > 0) x -= tw; const y = ch * yk - th / 2 - (camY * m * p * .25) % (th * .25);
-    ctx.globalAlpha = a * (.55 + .45 * u); for (; x < cw; x += tw) ctx.drawImage(tk, x, y, tw + 1, th); }
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  lavOppl((g, w, h, k) => { const m = skala * dpr * k, u = ATM.ute;
+    // en stor, myk lyskilde over skjermkanten (bare når himmelen synes)
+    if (u > .05) { const [sx, sy] = kildePos(), R = Math.max(w, h) * 1.05, gr = g.createRadialGradient(sx * k, sy * k, 0, sx * k, sy * k, R);
+      gr.addColorStop(0, disFarge(.22 * u, .5)); gr.addColorStop(.35, disFarge(.09 * u, .25)); gr.addColorStop(1, disFarge(0));
+      g.fillStyle = gr; g.fillRect(0, 0, w, h); }
+    // to tåkelag som driver sakte sidelengs i hver sin dybde
+    const tk = taakeFor(ST.navn), tw = 1024 * m * 1.6, th = 256 * m * 1.6;
+    for (const [p, fart, yk, a] of [[.18, 9, .42, .75], [.42, 20, .62, .6]]) {
+      let x = -(((camX * p + S.t * fart) * m) % tw); if (x > 0) x -= tw; const y = h * yk - th / 2 - (camY * m * p * .25) % (th * .25);
+      g.globalAlpha = a * (.55 + .45 * u); for (; x < w; x += tw) g.drawImage(tk, x, y, tw + 1, th); } });
 }
 const SLUTT_AKTIV = () => typeof SLUTT !== 'undefined' && SLUTT.t > 5;
 
-// ---------- foran: lysstråler, forgrunn, lyskorn og fargetone ----------
+// ---------- foran: lysstråler, forgrunn og lyskorn ----------
 function tegnStralerForan() {
-  if (S.kval < 1 || SLUTT_AKTIV()) return;
-  const cw = cv.width, ch = cv.height, u = ATM.ute; if (u < .05) return;
-  const [sx, sy] = kildePos(), L = Math.hypot(cw, ch) * 1.1;
-  ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 7; i++) { const vin = 1.75 + (i - 3) * .16 + Math.sin(S.t * .11 + i * 1.7) * .05, b = (40 + hs(i, 3, 77) * 90) * dpr * (1 + i % 2),
-      a = (.035 + .03 * Math.sin(S.t * .37 + i * 2.1)) * u * (1 + S.power * .5);
-    ctx.save(); ctx.translate(sx, sy); ctx.rotate(vin); ctx.globalAlpha = Math.max(0, a); ctx.fillStyle = disFarge(1, .6);
-    ctx.drawImage(STRALE2, 0, -b / 2, L, b); ctx.restore(); }
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (S.kval < 1 || SLUTT_AKTIV() || ATM.ute < .05) return;
+  lavOppl((g, w, h, k) => { const u = ATM.ute, [sx, sy] = kildePos(), L = Math.hypot(w, h) * 1.1;
+    for (let i = 0; i < 7; i++) { const vin = 1.75 + (i - 3) * .16 + Math.sin(S.t * .11 + i * 1.7) * .05, b = (40 + hs(i, 3, 77) * 90) * dpr * k * (1 + i % 2),
+        a = (.035 + .03 * Math.sin(S.t * .37 + i * 2.1)) * u * (1 + S.power * .5);
+      g.save(); g.translate(sx * k, sy * k); g.rotate(vin); g.globalAlpha = Math.max(0, a); g.drawImage(STRALE2, 0, -b / 2, L, b); g.restore(); } });
 }
 function tegnForgrunnLag() {
   if (S.kval < 1 || SLUTT_AKTIV() || S.mode === 'meny') return;
@@ -122,12 +125,5 @@ function tegnForgrunnLag() {
     glod(ST.navn === 'ute' && S.power < .5 ? SPR.c : SPR.w, sx, sy, b.r * b.z * dpr, .07 + .05 * Math.sin(S.t * b.f * 3 + b.ph)); }
   ctx.globalCompositeOperation = 'source-over';
 }
-// fargetone: kjølig oppe, varm i lyset, mørkere i hjørnene (gjør bildet rikere uten å endre fargene på banen mye)
-function tegnFargetone() {
-  if (S.kval < 2 || SLUTT_AKTIV()) return;
-  const cw = cv.width, ch = cv.height; ctx.globalCompositeOperation = 'soft-light';
-  const gr = ctx.createLinearGradient(0, 0, 0, ch); gr.addColorStop(0, disFarge(.38, .3)); gr.addColorStop(.55, 'rgba(128,128,128,0)'); gr.addColorStop(1, 'rgba(20,10,30,.5)');
-  ctx.fillStyle = gr; ctx.fillRect(0, 0, cw, ch); ctx.globalCompositeOperation = 'source-over';
-}
 TEGN_BAK.push(tegnBaklys);
-TEGN_FORAN.push(tegnStralerForan, tegnForgrunnLag, tegnFargetone);
+TEGN_FORAN.push(tegnStralerForan, tegnForgrunnLag);

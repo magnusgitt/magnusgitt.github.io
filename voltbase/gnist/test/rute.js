@@ -59,7 +59,8 @@ async function pcRute(b) {
   sjekk('hansker plukket opp', (await tilstand(page)).ev.hansker); await lukkKort(page);
   await pos(page, 70, 18); await vent(page, 300); await page.keyboard.down('ArrowRight'); await vent(page, 900); await page.keyboard.up('ArrowRight');
   await vent(page, 600); sjekk('bossintro starter', (await tilstand(page)).fase === 'intro');
-  await vent(page, 2800); sjekk('bosskamp', (await tilstand(page)).fase === 'kamp');
+  // venter på spilltid, ikke veggklokke: på en treg maskin går introen saktere i sanntid
+  await page.waitForFunction(() => __gnist.B.fase === 'kamp', null, { timeout: 8000 }).catch(() => {}); sjekk('bosskamp', (await tilstand(page)).fase === 'kamp');
   await page.evaluate(() => { __gnist.P.inv = 999; });
   for (const [x, y] of [[78, 14], [87, 9], [96, 14]]) { await pos(page, x, y); await vent(page, 2300); }
   await vent(page, 2800); const etterBoss = await tilstand(page);
