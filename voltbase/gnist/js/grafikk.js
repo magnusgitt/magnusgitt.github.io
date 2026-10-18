@@ -265,7 +265,8 @@ function lagBakgrunn() { BG = { himmel: lagHimmel(), fjell: lagFjell(), fjern: l
 
 // ---------- terreng (malte biter, bufret) ----------
 const PAL = {
-  ute: { c: ['#000', '#2c3d57', '#223046', '#1a2538', '#141d2d', '#101724', '#0c121d'], mose: '#2c6a5e', stra: ['#5cbf9f', '#7fdcbc', '#45a088'] },
+  // byen: terrenget er en mørk silhuett mot den lyse himmelen, med en lysende kant på toppen
+  ute: { c: ['#000', '#2c3d57', '#223046', '#1a2538', '#141d2d', '#101724', '#0c121d'], mose: '#3d8c78', kant: 'rgba(150,200,255,.22)', stra: ['#5cbf9f', '#7fdcbc', '#45a088'] },
   kjeller: { c: ['#000', '#3a3542', '#2e2a35', '#24202b', '#1c1922', '#17141c', '#121016'], mose: '#57515f', stra: ['#6d6676', '#857c8e', '#5d5866'] },
   hall: { c: ['#000', '#30344a', '#26293c', '#1d1f2e', '#171824', '#12131c', '#0e0f16'], mose: '#4b516b', stra: ['#5c6380', '#6b7392', '#4f5670'] },
 };
@@ -273,9 +274,12 @@ PAL.kabel = { c: ['#000', '#2e3a3f', '#253035', '#1d272b', '#172024', '#12191c',
 PAL.kraft = { c: ['#000', '#33402f', '#293427', '#202a1f', '#192119', '#141a14', '#0f140f'], mose: '#4d6340', stra: ['#6f8a5c', '#86a26f', '#5b7349'] };
 PAL.fjell = { c: ['#000', '#36404f', '#2b3443', '#222a37', '#1b212c', '#151a23', '#10141b'], mose: '#dfe8f2', stra: ['#7d8f86', '#97a89c', '#66786e'], gress: true, rim: 'rgba(230,245,255,.5)' };
 PAL.betong = { c: ['#000', '#3a4446', '#2f383a', '#262e30', '#1e2527', '#181e20', '#121719'], mose: '#3f6a5c', stra: ['#5c8f7a', '#74a890', '#4a7866'], gress: true, rim: 'rgba(170,240,220,.4)' };
-PAL.ute.rim = 'rgba(190,255,225,.4)'; PAL.kjeller.rim = 'rgba(255,215,170,.3)'; PAL.hall.rim = 'rgba(205,190,255,.32)'; PAL.kabel.rim = 'rgba(150,240,250,.3)'; PAL.kraft.rim = 'rgba(190,255,170,.32)';
+PAL.ute.rim = 'rgba(200,255,232,.85)'; PAL.kjeller.rim = 'rgba(255,215,170,.3)'; PAL.hall.rim = 'rgba(205,190,255,.32)'; PAL.kabel.rim = 'rgba(150,240,250,.3)'; PAL.kraft.rim = 'rgba(190,255,170,.32)';
 PAL.sump = { c: ['#000', '#2f3a2c', '#273123', '#1f281c', '#192017', '#141a12', '#0f140d'], mose: '#4f7a3c', stra: ['#5f8a4a', '#7aa25c', '#4c7038'], gress: true, rim: 'rgba(190,240,160,.35)' };
 PAL.data = { c: ['#000', '#2c3444', '#242b3a', '#1d2330', '#171c28', '#121620', '#0d1018'], mose: '#3a4a60', stra: ['#4a5a70', '#5a6a80', '#3a4a60'], rim: 'rgba(150,200,255,.35)' };
+// alt terreng blir en mørkere silhuett med sterkere lyskant, så banen skiller seg tydelig fra bakgrunnen
+for (const p of Object.values(PAL)) { p.c = p.c.map(h => { const n = parseInt(h.slice(1), 16), f = c => Math.round(c * .58).toString(16).padStart(2, '0'); return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255); });
+  p.rim = p.rim.replace(/([\d.]+)\)$/, (_, a) => Math.min(.9, a * 1.9).toFixed(2) + ')'); }
 const palAt = (x, y) => y >= 260 ? PAL.fjell : y >= 200 ? PAL.data : y >= 159 ? PAL.sump : y >= 118 ? PAL.betong : y >= 72 ? PAL.fjell : iKraft(x, y) ? PAL.kraft : erHall(x, y) ? PAL.hall : iKjeller2(x, y) && y >= 21 ? PAL.kabel : (y >= 25 && x <= 52) || (x >= 45 && x <= 48 && y >= 19) ? PAL.kjeller : PAL.ute;
 const CH = 12, CPX = CH * T;
 let chunkRes = 1;
@@ -362,8 +366,10 @@ function topp(g, x, y, pal) {
     g.lineTo(X + T + 1, Y + 8); g.closePath(); g.fill();
     const gr = g.createLinearGradient(0, Y, 0, Y + 12); gr.addColorStop(0, 'rgba(20,40,40,0)'); gr.addColorStop(1, 'rgba(10,20,30,.35)'); g.fillStyle = gr; g.fillRect(X, Y + 3, T, 9);
     g.strokeStyle = pal.gress ? pal.rim : 'rgba(160,240,210,.4)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(X, Y - 1); g.lineTo(X + T, Y - 1); g.stroke();
-    const n = 4 + (hv(30) * 6 | 0);
-    for (let i = 0; i < n; i++) { const bx = X + hv(40 + i) * T, bh = 5 + hv(50 + i) * 12, l = (hv(60 + i) - .5) * 9;
+    { const lg = g.createLinearGradient(0, Y - 1, 0, Y + 16); lg.addColorStop(0, pal.rim.replace(/[\d.]+\)$/, '.3)')); lg.addColorStop(1, pal.rim.replace(/[\d.]+\)$/, '0)')); g.fillStyle = lg; g.fillRect(X - .5, Y - 1, T + 1, 17);
+      g.strokeStyle = 'rgba(225,255,240,.9)'; g.lineWidth = .8; g.beginPath(); g.moveTo(X, Y - 1.6); g.lineTo(X + T, Y - 1.6); g.stroke(); }
+    const n = pal === PAL.ute ? 9 + (hv(30) * 8 | 0) : 4 + (hv(30) * 6 | 0);
+    for (let i = 0; i < n; i++) { const bx = X + hv(40 + i) * T, bh = (5 + hv(50 + i) * 12) * (pal === PAL.ute ? 1.35 : 1), l = (hv(60 + i) - .5) * 9;
       g.strokeStyle = pal.stra[i % 3]; g.lineWidth = 1.4; g.beginPath(); g.moveTo(bx, Y + 1); g.quadraticCurveTo(bx + l * .3, Y - bh * .6, bx + l, Y - bh); g.stroke(); }
     if (pal === PAL.ute && hv(70) < .13) { const px = X + 8 + hv(71) * 16, ph = 10 + hv(72) * 10;
       g.strokeStyle = '#3f8f7c'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(px, Y); g.quadraticCurveTo(px + 4, Y - ph * .5, px, Y - ph); g.stroke();
@@ -455,7 +461,7 @@ function lagChunk(cx, cy) {
       g.beginPath(); g.ellipse(x * T + hs(x, y, 20 + k) * T, y * T + hs(x, y, 30 + k) * T, 5 + hs(x, y, 40 + k) * 10, 1.5 + hs(x, y, 50 + k) * 3.5, (hs(x, y, 60 + k) - .5) * .8, 0, 7); g.fill(); }
     if (d >= 2 && d <= 4 && hs(x, y, 77) < .07) { g.fillStyle = 'rgba(70,90,120,.35)'; g.beginPath(); g.ellipse(x * T + 16, y * T + 16, 7, 5, .3, 0, 7); g.fill();
       g.fillStyle = 'rgba(200,220,255,.08)'; g.beginPath(); g.ellipse(x * T + 15, y * T + 13.5, 5, 2, .3, 0, 7); g.fill(); }
-    if (!erSol(x + 1, y)) { g.fillStyle = 'rgba(140,180,230,.12)'; g.fillRect(x * T + T - 5, y * T, 5, T); }
+    if (!erSol(x + 1, y)) { g.fillStyle = palAt(x, y).kant || 'rgba(140,180,230,.12)'; g.fillRect(x * T + T - 5, y * T, 5, T); }
     if (!erSol(x - 1, y)) { g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x * T, y * T, 6, T); }
     if (!erSol(x, y + 1)) { g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x * T, y * T + T - 8, T, 8); } });
   alle((x, y) => { if (erSol(x, y)) detalj(g, x, y, palAt(x, y), dypAt(x, y)); });
@@ -479,7 +485,8 @@ function resize() {
   if (!cssW || !cssH) return;
   cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
   // stående mobil: litt nærmere, så montøren ikke blir for liten
-  grunnSkala = cssH > cssW * 1.15 ? cssW / (T * 14) : Math.min(cssW / (T * 24), cssH / (T * 14));
+  // kameraet står nærme nok til at montøren og verden synes godt; bossarenaene zoomer selv ut til det de trenger
+  grunnSkala = cssH > cssW * 1.15 ? cssW / (T * 14) : Math.min(cssW / (T * 18), cssH / (T * (erTouch ? 10 : 10.5)));
   grunnSkala = clamp(Math.max(grunnSkala, cssH / (T * 45), cssW / (T * MW)), .45, 3);
   skala = grunnSkala * cam.zoom;
   const nr = clamp(grunnSkala * dpr, .75, 2);
