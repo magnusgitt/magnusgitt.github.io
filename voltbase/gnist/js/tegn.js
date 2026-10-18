@@ -654,7 +654,10 @@ function tegnLuke(kx, ky, b) { kx = kx || 125; ky = ky || 19; const X = kx * T, 
   if (tile(kx, ky) === LUKE) { const gr = ctx.createLinearGradient(0, Y, 0, Y + T); gr.addColorStop(0, '#59647f'); gr.addColorStop(1, '#2a3042');
     ctx.fillStyle = gr; ctx.fillRect(X, Y, W, T); ctx.fillStyle = 'rgba(0,0,0,.4)'; for (let i = 1; i < (b || 4); i++) ctx.fillRect(X + i * T - 1, Y + 3, 2, T - 6);
     ctx.fillStyle = 'rgba(240,195,60,.5)'; for (let i = 0; i < (b || 4) * 2; i++) ctx.fillRect(X + 4 + i * 16, Y + 2, 8, 3);
-    ctx.fillStyle = '#c9ced8'; ctx.fillRect(X + W / 2 - 8, Y + T / 2 - 2, 16, 4); }
+    ctx.fillStyle = '#c9ced8'; ctx.fillRect(X + W / 2 - 8, Y + T / 2 - 2, 16, 4);
+    // luka i kjellergulvet er låst til hele byen har strøm: en hengelås som blinker svakt rødt
+    if (b === 2 && !S.helt) { const lx = X + W / 2, ly = Y + T * .7; ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(lx, ly - 6, 5, Math.PI, 0); ctx.stroke();
+      ctx.fillStyle = '#e0a83a'; rr(ctx, lx - 7, ly - 6, 14, 11, 2); ctx.fill(); ctx.fillStyle = `rgba(255,70,50,${.5 + .4 * Math.sin(S.t * 3)})`; ctx.beginPath(); ctx.arc(lx, ly - 1, 2, 0, 7); ctx.fill(); } }
   else { ctx.fillStyle = '#0d1216'; ctx.fillRect(X, Y, W, T); ctx.fillStyle = '#2a3042'; ctx.fillRect(X - 6, Y, 6, T); ctx.fillRect(X + W, Y, 6, T);
     ctx.save(); ctx.translate(X + W + 6, Y); ctx.rotate(-1.25); ctx.fillStyle = '#4a5470'; ctx.fillRect(0, -6, W * .55, 6); ctx.restore(); } }
 function tegnKroker() {

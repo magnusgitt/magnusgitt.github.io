@@ -235,7 +235,7 @@ function oppdaterSpiller(dt) {
     if (ok && !vannVed(p.x + p.w / 2, p.y + p.h - 4)) { p.safeX = p.x; p.safeY = p.y; } }
 }
 function lysbueFase() { const f = S.t % LYSBUE.per; return f < 1.2 ? 0 : f < 1.75 ? 1 : f < 2.95 ? 2 : 0; } // 0 av, 1 varsel, 2 på
-let sistBue = 0;
+let sistBue = 0, paLukaFor = false;
 function oppdaterVerden(dt) {
   const pcx = P.x + P.w / 2, pcy = P.y + P.h / 2;
   if (S.dod > 0) { S.dod -= dt; if (S.dod <= 0) respawn(); return; }
@@ -323,7 +323,8 @@ function oppdaterVerden(dt) {
   if (S.ev.tester && !S.ev.sliper && tx >= 186) hint('taarn2', 'Spenningstesteren viser plattformer opp tårnet!', 4);
   if (tx >= 132 && ty <= 26 && !S.hintSett.has('stasjon')) { hint('stasjon', 'Trafostasjonen. Bak muren venter det som har tatt strømmen.', 4.5); }
   if (S.helt && tx >= 36 && tx <= 48 && ty >= 27 && ty <= 31) hint('luke2', 'Luka i kjellergulvet står åpen. Noe brummer der nede.', 4.5);
-  if (!S.helt && tx >= 40 && tx <= 45 && ty >= 29 && ty <= 31) hint('luke3', 'En låst luke i gulvet. Den åpnes nok når hele byen har strøm.', 4);
+  // den låste luka i kjellergulvet: si fra hver gang montøren går inn på den, ikke bare første gang
+  { const paLuka = !S.helt && tx >= 41 && tx <= 44 && ty >= 29 && ty <= 31; if (paLuka && !paLukaFor) hint(null, 'En låst luke. Den åpnes når hele byen har strøm igjen: slå Trafokjempen i trafostasjonen først.', 4); paLukaFor = paLuka; }
   if (!S.ev.klatre && tx >= 44 && tx <= 49 && ty >= 38 && ty <= 44) hint('pipe', 'Pipa er for høy. Kanskje det finnes verktøy lenger vest?', 4.5);
   if (S.ev.klatre && tx >= 44 && tx <= 49 && ty >= 34 && ty <= 44) hint('pipe2', 'Hopp fra vegg til vegg for å klatre opp.', 4);
   // hovedtavla
