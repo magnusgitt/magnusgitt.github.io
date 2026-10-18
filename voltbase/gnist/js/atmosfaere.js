@@ -127,3 +127,36 @@ function tegnForgrunnLag() {
 }
 TEGN_BAK.push(tegnBaklys);
 TEGN_FORAN.push(tegnStralerForan, tegnForgrunnLag);
+
+// ---------- småpartikler som hører til hvert område ----------
+// støv i lyset innendørs, ildfluer i sumpen, damp i kraftverket, data som stiger i serverhallen, sprut ved dammen og vind på fjellet
+const PTYPE = { kjeller: 'stov', hall: 'stov', kabel: 'stov', pumpe: 'stov', stasjon: 'stov', kulvert: 'stov', galleri: 'stov',
+  kraft: 'damp', turbin: 'damp', sump: 'flue', data: 'data', dam: 'sprut', linja: 'vind', nord: 'vind', ute: 'fro' };
+const PK = { type: 'fro', a: 0, liste: Array.from({ length: 48 }, (_, i) => ({ x: Math.random(), y: Math.random(), z: .45 + Math.random() * .8, ph: Math.random() * 6.28, f: .5 + Math.random() })) };
+function tegnOmradePartikler() {
+  if (S.kval < 1 || SLUTT_AKTIV() || S.mode === 'meny') return;
+  const maal = PTYPE[ST.navn] || 'stov';
+  // bytter type ved å tone ut og inn
+  if (maal !== PK.type) { PK.a -= .04; if (PK.a <= 0) { PK.type = maal; PK.a = 0; } } else PK.a = Math.min(1, PK.a + .02);
+  if (PK.a <= 0) return;
+  const cw = cv.width, ch = cv.height, m = skala * dpr, t = S.t, n = S.kval < 2 ? 28 : PK.liste.length, ty = PK.type;
+  const pos = (p, vx, vy) => { const W = cw + 120, H = ch + 120;
+    return [(((p.x * W - camX * m * p.z + t * vx * p.z * dpr) % W) + W) % W - 60, (((p.y * H - camY * m * p.z + t * vy * p.z * dpr) % H) + H) % H - 60]; };
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (ty === 'vind') { ctx.strokeStyle = '#dfeaff'; ctx.lineCap = 'round';
+    for (let i = 0; i < n; i++) { const p = PK.liste[i], [x, y] = pos(p, -160 - p.f * 90, 18 + Math.sin(t + p.ph) * 10), l = (8 + p.z * 22) * dpr;
+      ctx.globalAlpha = PK.a * (.06 + p.z * .1); ctx.lineWidth = (.6 + p.z * .9) * dpr; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + l, y - l * .12); ctx.stroke(); }
+    ctx.globalAlpha = 1; return; }
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < n; i++) { const p = PK.liste[i];
+    if (ty === 'stov') { const [x, y] = pos(p, 4 + Math.sin(t * .3 + p.ph) * 5, -3 + Math.sin(t * .5 + p.ph) * 4); glod(SPR.w, x, y, (3 + p.z * 5) * dpr, PK.a * (.32 + .2 * Math.sin(t * p.f + p.ph))); }
+    else if (ty === 'flue') { const [x, y] = pos(p, Math.sin(t * .7 * p.f + p.ph) * 22, Math.cos(t * .9 * p.f + p.ph) * 14), b = Math.max(0, Math.sin(t * p.f * 1.6 + p.ph * 3));
+      glod(SPR.g, x, y, (6 + p.z * 8) * dpr, PK.a * b * .55); glod(SPR.h, x, y, (1.4 + p.z) * dpr, PK.a * b * .8); }
+    else if (ty === 'damp') { if (i % 3) continue; const [x, y] = pos(p, 6 + Math.sin(t * .2 + p.ph) * 8, -26 - p.f * 14); glod(SPR.h, x, y, (40 + p.z * 60) * dpr, PK.a * .035); }
+    else if (ty === 'data') { const [x, y] = pos(p, 0, -40 - p.f * 50), k = .5 + .5 * Math.sin(t * 6 * p.f + p.ph); ctx.globalAlpha = PK.a * (.25 + .35 * k); ctx.fillStyle = i % 4 ? '#7fd0ff' : '#b8ffda';
+      ctx.fillRect(x, y, (1.4 + p.z * 1.6) * dpr, (3 + p.z * 5) * dpr); }
+    else if (ty === 'sprut') { const [x, y] = pos(p, 30 + p.f * 20, 10 + Math.sin(t * 1.3 + p.ph) * 12); glod(SPR.c, x, y, (2 + p.z * 3) * dpr, PK.a * .3); }
+    else { const [x, y] = pos(p, 10 + Math.sin(t * .4 + p.ph) * 14, 8 + Math.sin(t * .6 + p.ph) * 6); glod(S.power > .5 ? SPR.w : SPR.c, x, y, (2.5 + p.z * 3) * dpr, PK.a * (.2 + .12 * Math.sin(t * p.f + p.ph))); } }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
+TEGN_FORAN.unshift(tegnOmradePartikler);

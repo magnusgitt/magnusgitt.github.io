@@ -35,12 +35,15 @@ function stemningFor(tx, ty) {
   return 'ute';
 }
 const ST = { navn: 'ute', mf: [3, 7, 20], tint: [255, 255, 255], dis: [120, 170, 255], bloom: .42, bgVekt: { kjeller: 1 } };
+const KALD = [8, 16, 40];
 function oppdaterStemning(dt, snap) {
   const tx = Math.floor((P.x + P.w / 2) / T), ty = Math.floor((P.y + P.h / 2) / T);
   ST.navn = stemningFor(tx, ty); const m = STEMNINGER[ST.navn], k = snap ? 1 : 1 - Math.exp(-dt * 1.6);
   const varme = ST.navn === 'ute' ? Math.max(lysNiva(), S.power) : 0, VARM = { tint: [255, 238, 214], dis: [255, 190, 140] };
-  for (const n of ['mf', 'tint', 'dis']) for (let i = 0; i < 3; i++) { const mal = VARM[n] ? m[n][i] + (VARM[n][i] - m[n][i]) * varme * .6 : m[n][i]; ST[n][i] += (mal - ST[n][i]) * k; }
-  ST.bloom += (m.bloom - ST.bloom) * k;
+  for (const n of ['mf', 'tint', 'dis']) for (let i = 0; i < 3; i++) { let mal = VARM[n] ? m[n][i] + (VARM[n][i] - m[n][i]) * varme * .6 : m[n][i];
+    if (n === 'mf') mal += (KALD[i] - mal) * .25;   // kalde skygger mot det varme lyset
+    ST[n][i] += (mal - ST[n][i]) * k; }
+  ST.bloom += (m.bloom * 1.25 - ST.bloom) * k;
   for (const s of ['kjeller', 'hall', 'kabel', 'kraft']) { const v = ST.bgVekt[s] || 0, mal = m.bg === s ? 1 : 0; ST.bgVekt[s] = v + (mal - v) * k; }
 }
 
@@ -57,7 +60,9 @@ function maalYtelse(rdt) {
   MAAL.spilt += rdt; if (MAAL.spilt < 4) return;          // la oppstarten roe seg først
   MAAL.sum += rdt; MAAL.n++;
   if (MAAL.n >= 120) { const snitt = MAAL.sum / MAAL.n; MAAL.sum = MAAL.n = 0;
-    if (snitt > 1 / 42 && S.kval > 0) { S.kval--; if (S.kval === 0) chunks.clear(); } }
+    // først går bloom bort; resten (parallakse, tåke, lys på montøren) slås bare av hvis bildet blir virkelig tregt.
+    // En telefon i strømsparing låser ofte på 30 bilder i sekundet, og da skal den ikke miste alt.
+    if (S.kval === 2 && snitt > 1 / 42) S.kval = 1; else if (S.kval === 1 && snitt > 1 / 24) { S.kval = 0; chunks.clear(); } }
 }
 const bakveggAlfa = () => S.kval > 0 ? .62 : 1;
 
@@ -146,7 +151,10 @@ function tegnStraler() {
     ctx.save(); ctx.translate(X, Y - T * .3); ctx.rotate(.12 + Math.sin(S.t * .25 + a.x0) * .04); ctx.globalAlpha = (.13 + .04 * Math.sin(S.t * .6 + a.y)) * (1 + S.power * .6);
     ctx.drawImage(STRALE, -w * .8, 0, w * 1.6, 11 * T); ctx.globalAlpha *= .6; ctx.drawImage(STRALE, -w * .35, 0, w * .7, 7 * T); ctx.restore(); }
   for (const [x, y] of KJELLERLYS) { if (x === 6 && !S.ev.hemmelig) continue; const X = x * T + T / 2, Y = y * T + 6; if (!synlig(X, Y + 80, 160)) continue;
-    ctx.globalAlpha = .07; ctx.drawImage(KJEGLE, X - 60, Y, 120, 190); }
+    ctx.globalAlpha = .15; ctx.drawImage(KJEGLE, X - 60, Y, 120, 190);
+    // lyset treffer gulvet: en varm flekk der kjeglen ender
+    let gy = y + 1; while (gy < y + 9 && !fast(x, gy)) gy++;
+    if (fast(x, gy)) { ctx.save(); ctx.translate(X, gy * T); ctx.scale(1, .28); glod(SPR.w, 0, 0, 80, .45); ctx.restore(); } }
   ctx.globalAlpha = 1;
 }
 

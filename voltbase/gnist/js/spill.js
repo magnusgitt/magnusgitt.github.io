@@ -654,7 +654,8 @@ function oppdaterPartikler(dt) {
   oppdaterHale(dt);
   // gnisten følger montøren, med litt eget liv. Står du stille en stund, peker den mot neste mål.
   S.idle = (P.onGround && Math.abs(P.vx) < 10 && S.mode === 'spill') ? S.idle + dt : 0;
-  let tx = P.x + P.w / 2 - P.face * 20 + Math.sin(S.t * 1.3) * 7 + Math.sin(S.t * 3.1) * 2, ty = P.y - 14 + Math.sin(S.t * 2.1) * 6;
+  // litt bak og over hodet, så gløden ikke bleker ut ansiktet
+  let tx = P.x + P.w / 2 - P.face * 30 + Math.sin(S.t * 1.3) * 7 + Math.sin(S.t * 3.1) * 2, ty = P.y - 26 + Math.sin(S.t * 2.1) * 6;
   if (P.dashT > 0) { tx = P.x + P.w / 2 + P.face * 26; ty = P.y + 4; }
   const mp = maalPunkt();
   if (S.idle > 2.5 && mp) { const dx = mp[0] * T - (P.x + P.w / 2), dy = mp[1] * T - (P.y + P.h / 2), l = Math.hypot(dx, dy) || 1, k = Math.min(110, l) * (.6 + .4 * Math.sin(S.idle * 2.2));

@@ -310,6 +310,51 @@ function figur(lean, pose, bakke) {
   menneske(pose, vandrer ? VANDRER : MONTOR, lean, bakke, vandrer ? null : { bak: hy => { ctx.save(); ctx.translate(-5.8, hy + .8); ctx.rotate(ANIM.verk);
     ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 7.5); ctx.stroke(); ctx.fillStyle = '#9aa3ad'; ctx.fillRect(-2.6, 6.5, 5.2, 2.2); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-2.6, 6.5, 5.2, .6); ctx.restore(); } });
 }
+// montøren rett forfra: brukes midt i en snu og når han ser mot kamera, så snuen får tre steg i stedet for et speilvendt bilde
+function figurForfra(pose, d) {
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const hy = KROPP.hofte + pose.bob, hanske = S.ev && S.ev.hansker, sko = S.ev && S.ev.dobbel ? '#c4702a' : d.sko;
+  // beina: side om side, det ene løftes litt når han er midt i et skritt
+  for (const [s, b] of [[-1, pose.b1], [1, pose.b2]]) { const loft = clamp(b[1] - .15, 0, 1.2) * 2.4, fx = s * 2.7, fy = -1 - loft;
+    ctx.fillStyle = s < 0 ? morkere(d.bukse, .8) : d.bukse; lem(s * 2.5, hy, s * 2.9, hy + 7.4 - loft * .5, 5.4, 4.6); lem(s * 2.9, hy + 7.4 - loft * .5, fx, fy, 4.6, 3.6);
+    ctx.fillStyle = morkere(d.bukse, .6); ctx.beginPath(); ctx.ellipse(s * 2.9, hy + 7.6 - loft * .5, 1.9, 1.5, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(232,242,255,.9)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(fx - 2, fy - 3.4); ctx.lineTo(fx + 2, fy - 3.4); ctx.stroke();
+    ctx.fillStyle = s < 0 ? morkere(sko, .8) : sko; rr(ctx, fx - 2.6, fy - 2.2, 5.2, 3.2, 1.4); ctx.fill(); ctx.fillStyle = '#121214'; ctx.fillRect(fx - 2.8, fy + .6, 5.6, 1); }
+  // armene henger ned langs siden og svinger litt fram og tilbake (ses som litt kortere/lengre)
+  const arm = (s, a) => { const sw = Math.sin(a[0]) * 1.4, ex = s * 7.6, ey = hy - 6.5 + sw * .3, hx = s * 7.4, hyH = hy - 1 + sw - a[1] * 1.2;
+    ctx.fillStyle = s < 0 ? morkere(d.jakke, .78) : d.jakke; lem(s * 5.8, hy - 11.6, ex, ey, 3.9, 3.3); lem(ex, ey, hx, hyH, 3.3, 2.8);
+    ctx.fillStyle = '#e8f2ff'; ctx.fillRect(ex - 1.6, ey - .7, 3.2, 1.2);
+    ctx.fillStyle = hanske ? '#f2c23c' : d.hud; ctx.beginPath(); ctx.arc(hx, hyH + .4, 1.9, 0, 7); ctx.fill(); };
+  arm(-1, pose.a1); arm(1, pose.a2);
+  // vesten: lys midt på, mørkere mot sidene, med refleksbånd over skuldrene og rundt magen
+  const torso = () => { ctx.beginPath(); ctx.moveTo(-5.8, hy + .9); ctx.lineTo(5.8, hy + .9); ctx.lineTo(6.6, hy - 6); ctx.lineTo(6.2, hy - 11.4); ctx.lineTo(4, hy - 13.4); ctx.lineTo(-4, hy - 13.4); ctx.lineTo(-6.2, hy - 11.4); ctx.lineTo(-6.6, hy - 6); ctx.closePath(); };
+  const jg = ctx.createLinearGradient(-6.6, 0, 6.6, 0); jg.addColorStop(0, morkere(d.jakke, .72)); jg.addColorStop(.55, d.jakke); jg.addColorStop(1, morkere(d.jakke, .9));
+  ctx.fillStyle = jg; torso(); ctx.fill(); ctx.save(); torso(); ctx.clip();
+  ctx.fillStyle = '#e8f2ff'; ctx.fillRect(-7, hy - 4.6, 14, 1.5); ctx.fillRect(-7, hy - 8.6, 14, 1.5); ctx.fillRect(-4.4, hy - 13.6, 1.5, 10); ctx.fillRect(2.9, hy - 13.6, 1.5, 10);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(-.35, hy - 12.6, .7, 13.4); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(-7, hy - 13.6, 2, 15);
+  ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.fillRect(1, hy - 13, 1.4, 13); ctx.restore();
+  // beltet med spenne midt på og verktøyveska på siden
+  ctx.fillStyle = '#2b241c'; ctx.fillRect(-5.8, hy - 1, 11.6, 2.2); ctx.fillStyle = '#b0a080'; ctx.fillRect(-1.1, hy - 1, 2.2, 2.2); ctx.fillStyle = '#5a4028'; rr(ctx, -8.2, hy - .6, 3.4, 4.8, 1); ctx.fill();
+  // hals og krage
+  ctx.fillStyle = morkere(d.hud, .85); ctx.fillRect(-1.5, hy - 16.6, 3, 3.6);
+  ctx.fillStyle = '#24262c'; ctx.beginPath(); ctx.moveTo(-3.6, hy - 12.8); ctx.lineTo(3.6, hy - 12.8); ctx.lineTo(2.4, hy - 14.8); ctx.lineTo(-2.4, hy - 14.8); ctx.closePath(); ctx.fill();
+  // hodet rett forfra: to øyne, nese, ører og hodelykta midt på hjelmen
+  ctx.save(); const hy0 = hy - 18.8; ctx.translate(0, pose.hode); ctx.translate(0, hy0 + 2); ctx.rotate((pose.tilt || 0) * .5); ctx.translate(0, -(hy0 + 2));
+  ctx.fillStyle = d.hud; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 4.3, hy0 + .3, 1, 1.5, 0, 0, 7); ctx.fill(); }
+  const fg = ctx.createLinearGradient(-4.4, 0, 4.4, 0); fg.addColorStop(0, morkere(d.hud, .84)); fg.addColorStop(.6, d.hud); fg.addColorStop(1, d.hud);
+  ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(0, hy0, 4.2, 4.7, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(220,110,90,.22)'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 2.5, hy0 + 1.5, 1.1, .7, 0, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#1d1d24'; for (const s of [-1, 1]) { if (pose.blunk) ctx.fillRect(s * 1.7 - .8, hy0 - .7, 1.6, .55); else { ctx.beginPath(); ctx.ellipse(s * 1.7, hy0 - .5, .62, .8, 0, 0, 7); ctx.fill(); } }
+  ctx.fillStyle = 'rgba(255,255,255,.8)'; if (!pose.blunk) for (const s of [-1, 1]) ctx.fillRect(s * 1.7 + .1, hy0 - .95, .35, .35);
+  ctx.strokeStyle = 'rgba(40,26,20,.7)'; ctx.lineWidth = .6; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * .9, hy0 - 1.9); ctx.lineTo(s * 2.6, hy0 - 2.1); ctx.stroke(); }
+  ctx.fillStyle = morkere(d.hud, .8); ctx.beginPath(); ctx.ellipse(.15, hy0 + .9, .6, .9, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,40,30,.55)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-1, hy0 + 2.6); ctx.quadraticCurveTo(0, hy0 + 3.2, 1, hy0 + 2.6); ctx.stroke();
+  const hg = ctx.createLinearGradient(-5.8, 0, 5.8, 0); hg.addColorStop(0, morkere(d.hjelm, .74)); hg.addColorStop(.6, d.hjelm); hg.addColorStop(1, morkere(d.hjelm, .92));
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(0, hy0 - 2.1, 5.6, 4.9, 0, Math.PI, 0); ctx.fill(); rr(ctx, -6.6, hy0 - 2.7, 13.2, 1.9, .9); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.ellipse(.6, hy0 - 2.4, 3.6, 3.8, 0, Math.PI * 1.2, Math.PI * 1.7); ctx.stroke();
+  ctx.fillStyle = '#2a2a30'; rr(ctx, -1.5, hy0 - 6.1, 3, 2.7, .8); ctx.fill(); ctx.fillStyle = '#fff7d0'; ctx.beginPath(); ctx.arc(0, hy0 - 4.75, 1, 0, 7); ctx.fill();
+  ctx.restore();
+}
 // målposen for øyeblikket; tegnSpiller blander mot den
 function poseFor(p) {
   const A = ANIM, fart = Math.min(1, Math.abs(p.vx) / RUN), ph = p.anim;
@@ -383,8 +428,10 @@ function oppdaterAnim(p) {
   A.blunkT -= dt; A.blunk -= dt; if (A.blunkT <= 0) { A.blunk = .12; A.blunkT = 2 + Math.random() * 3.5; }
   // verktøyet: en dempet pendel som reagerer på fartsendringer
   A.verkV += (-A.verk * 140 - A.verkV * 7 + clamp(A.acc * p.face, -3000, 3000) * .018 + (bakke ? 0 : clamp(p.vy, -800, 800) * .01)) * dt; A.verk = clamp(A.verk + A.verkV * dt, -1.1, 1.1);
-  // snuing: figuren klemmes kort sammen i stedet for å speile seg på ett bilde
-  A.face = mot(A.face, p.face, dt / .07);
+  // snuing: på bakken dreier figuren seg via en positur rett mot kamera (se figurForfra), i lufta går det raskere.
+  // Etter en stund i ro snur han seg også mot kamera et øyeblikk.
+  const syk = A.stille > 3 ? (A.stille - 3) % 9 : -1, ser = syk >= 6.6 && syk < 8.4 && !A.overstyr && ANIM.drakt !== 'vandrer';
+  A.face = mot(A.face, ser ? 0 : p.face, dt / (bakke ? .1 : .07));
   const maal = poseFor(p);
   if (!A.p) A.p = kopiPose(maal);
   blandPose(A.p, maal, 1 - Math.exp(-(maal.fart || 18) * dt)); A.p.blunk = maal.blunk; A.p.hjelm = maal.hjelm && Math.abs(A.p.a2[0] - 2.4) < .25 ? 1 : 0;
@@ -407,14 +454,15 @@ function tegnSpiller() {
   if (!(p.inv > 0 && Math.floor(p.inv * 18) % 2)) tegnHale();
   // snuing: kroppen dreies litt (smalere et øyeblikk) og speiles midtveis, men blir aldri en tynn strek
   const fs = Math.sign(A.face) || p.face, fx = fs * (.8 + .2 * Math.abs(A.face));
-  ctx.save(); ctx.translate(p.x + p.w / 2, p.y + p.h); ctx.scale(fx * p.sx, p.sy);
+  const forfra = Math.abs(A.face) < .42 && p.onGround && A.flipT <= 0 && A.rullT <= 0 && !p.krok && p.dashT <= 0 && ANIM.drakt !== 'vandrer';
+  ctx.save(); ctx.translate(p.x + p.w / 2, p.y + p.h); ctx.scale(forfra ? p.sx : fx * p.sx, p.sy);
   // i lufta vipper hele kroppen litt i fartsretningen
   const vipp = !p.onGround && !p.krok && A.flipT <= 0 ? clamp(p.vx * p.face / RUN, -1, 1.4) * .12 + clamp(p.vy / 900, -1, 1) * .04 : 0; A.tilt += (vipp - A.tilt) * .2;
   if (Math.abs(A.tilt) > .002) { ctx.translate(0, -15); ctx.rotate(A.tilt); ctx.translate(0, 15); }
   if (A.flipT > 0) { ctx.translate(0, -16); ctx.rotate((1 - A.flipT / .34) * Math.PI * 2); ctx.translate(0, 16); }
   if (A.rullT > 0) { ctx.translate(0, -9); ctx.rotate((1 - A.rullT / .36) * Math.PI * 2); ctx.translate(0, 9); }
   if (p.inv > 0 && Math.floor(p.inv * 18) % 2) ctx.globalAlpha = .45;
-  figur(p.lean * p.face, pose, p.onGround && A.flipT <= 0 && A.rullT <= 0);
+  if (forfra) figurForfra(pose, MONTOR); else figur(p.lean * p.face, pose, p.onGround && A.flipT <= 0 && A.rullT <= 0);
   ctx.restore(); ctx.globalAlpha = 1;
 }
 // felles for bossene: rust, nagler, rustrenner og glødende sømmer

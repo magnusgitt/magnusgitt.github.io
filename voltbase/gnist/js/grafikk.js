@@ -486,8 +486,8 @@ function resize() {
   if (Math.abs(nr - chunkRes) > .15) { chunkRes = nr; chunks.clear(); }
   lysC = nyC(Math.ceil(cv.width / 3), Math.ceil(cv.height / 3)); lysG = lysC.getContext('2d');
   vign = nyC(cv.width / 2, cv.height / 2); const vg = vign.getContext('2d'), w = vign.width, h = vign.height;
-  const gr = vg.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .75);
-  gr.addColorStop(0, 'rgba(0,0,8,0)'); gr.addColorStop(1, 'rgba(0,0,8,.6)'); vg.fillStyle = gr; vg.fillRect(0, 0, w, h);
+  const gr = vg.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .3, w / 2, h / 2, Math.max(w, h) * .75);
+  gr.addColorStop(0, 'rgba(0,2,12,0)'); gr.addColorStop(1, 'rgba(0,2,12,.72)'); vg.fillStyle = gr; vg.fillRect(0, 0, w, h);
   $('#snuTips').style.display = cssH > cssW ? '' : 'none';
   if (S.mode === 'snu' && cssW > cssH) lukkSnu();
   oppdaterKamera(0, true);
