@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flyttet til ny adresse</title>
+<meta name="robots" content="noindex">
+<script>
+  // Send videre til samme sti på den nye adressen (beholder sti, søk og #)
+  (function () {
+    var maal = "https://base.voltbase.workers.dev";
+    var l = window.location;
+    var ny = maal + l.pathname + l.search + l.hash;
+    window.location.replace(ny);
+    document.addEventListener("DOMContentLoaded", function () {
+      var a = document.getElementById("lenke");
+      if (a) { a.href = ny; a.textContent = ny; }
+    });
+  })();
+</script>
+<meta http-equiv="refresh" content="3; url=https://base.voltbase.workers.dev/">
+<style>
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #222; margin: 0; padding: 40px 16px; text-align: center; }
+  a { color: #0a58ca; word-break: break-all; }
+  @media (prefers-color-scheme: dark) { body { background: #181818; color: #eee; } a { color: #6ea8fe; } }
+</style>
+</head>
+<body>
+<h1>Verktøyene har flyttet</h1>
+<p>Du sendes videre nå. Hvis ingenting skjer, trykk her:</p>
+<p><a id="lenke" href="https://base.voltbase.workers.dev/">https://base.voltbase.workers.dev/</a></p>
+</body>
+</html>
